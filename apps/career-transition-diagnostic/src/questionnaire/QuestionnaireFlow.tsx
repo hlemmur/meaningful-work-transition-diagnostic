@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { autosaveAnswerAction, runCheckpointAction, submitAssessmentAction } from "@/server/tracer/actions";
 import { listAvoidedActionLabels, listVisibleQuestionIds, type SafetyLevel } from "@/questionnaire/branching";
-import { getQuestion, questionIds, questions, type QuestionDefinition } from "@/questionnaire/questionnaire.v2";
+import { CHAPTERS, getQuestion, optionLabel, questionIds, questions, type QuestionDefinition } from "@/questionnaire/questionnaire.v2";
+import { chapterProgress, isLastVisibleQuestion } from "@/questionnaire/questionnaire-progress";
 import { CHECKPOINT_AFTER_SECTION } from "@/engine/checkpoints/schema";
 import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
 
@@ -46,10 +47,6 @@ type QuestionnaireFlowProps = {
   initialSupportCopy?: string | null;
 };
 
-function labelFor(option: string) {
-  return option.replaceAll("_", " ");
-}
-
 function resumeQuestionId(visible: string[], answers: Record<string, unknown>) {
   const answered = [...visible].reverse().find((id) => {
     const value = answers[id];
@@ -68,6 +65,14 @@ function clampQuestionId(currentId: string, visible: string[]) {
     visible.at(-1) ??
     visible[0]
   );
+}
+
+function choiceText(option: string) {
+  try {
+    return optionLabel(option);
+  } catch {
+    return option;
+  }
 }
 
 function optionsFor(question: QuestionDefinition, answers: Record<string, unknown>) {
@@ -135,8 +140,9 @@ export function QuestionnaireFlow({
 }: QuestionnaireFlowProps) {
   const [answers, setAnswers] = useState<Record<string, unknown>>(initialAnswers);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [safetyLevel, setSafetyLevel] = useState<SafetyLevel>(initialSafetyLevel);
+  const [confirming, setConfirming] = useState(false);
   const [supportCopy, setSupportCopy] = useState<string | null>(initialSupportCopy);
   const [adaptive, setAdaptive] = useState<AdaptiveQuestionView[]>(initialAdaptive);
   const [preparing, setPreparing] = useState(false);
@@ -161,6 +167,8 @@ export function QuestionnaireFlow({
   );
   const question = resolveQuestion(clampQuestionId(currentId, visible), adaptive);
   const index = Math.max(0, visible.indexOf(question.id));
+  const last = isLastVisibleQuestion(question.id, visible);
+  const progress = chapterProgress(question.id, visible, (id) => resolveQuestion(id, adaptive).section);
 
   function persist(id: string, value: unknown, mode: "now" | "later" = "now") {
     const nextAnswers = { ...answersRef.current, [id]: value };
@@ -297,6 +305,7 @@ export function QuestionnaireFlow({
       if (next) {
         setCurrentId(next);
       }
+      setConfirming(false);
     } finally {
       moving.current = false;
     }
@@ -316,9 +325,10 @@ export function QuestionnaireFlow({
 
   return (
     <section className="flex flex-col gap-5">
-      <p className="text-sm uppercase tracking-[0.2em] text-terracotta">
-        Section {question.section} · {index + 1} of {visible.length}
-      </p>
+      <h1 className="font-display text-3xl font-semibold tracking-tight">
+        {CHAPTERS[question.section] ?? progress.chapter}
+      </h1>
+      <p className="text-sm uppercase tracking-[0.2em] text-terracotta">{progress.label}</p>
       {supportCopy ? (
         <p role="note" className="rounded border border-terracotta bg-paper p-4 text-sm leading-6">
           {supportCopy}
@@ -335,15 +345,12 @@ export function QuestionnaireFlow({
         onChange={(value, mode) => persist(question.id, value, mode)}
       />
       <p aria-live="polite" className="text-sm text-muted">
-        {status === "saving" || pending
-          ? "Saving…"
-          : status === "error"
-            ? "Could not save. Try again."
-            : status === "saved" || answers[question.id] !== undefined
-              ? "Saved."
-              : null}
+        {status === "error" ? "Could not save. Try again." : null}
         {submitted ? " Submitted. Lena will review before any report is delivered." : null}
       </p>
+      {confirming ? (
+        <p className="leading-7">Send your answers to Lena for review?</p>
+      ) : null}
       <div className="flex flex-wrap gap-3">
         <button
           className="rounded-full border border-ink px-5 py-3 text-sm disabled:opacity-40"
@@ -355,28 +362,42 @@ export function QuestionnaireFlow({
         >
           Back
         </button>
-        <button
-          className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
-          type="button"
-          onClick={() => {
-            void go(1);
-          }}
-          disabled={index >= visible.length - 1 || preparing}
-        >
-          Next
-        </button>
-        <button
-          className="rounded-full border border-terracotta px-5 py-3 text-sm text-terracotta disabled:opacity-40"
-          type="button"
-          disabled={locked}
-          onClick={() => {
-            startTransition(() => {
-              void submitNow();
-            });
-          }}
-        >
-          Submit assessment
-        </button>
+        {!last ? (
+          <button
+            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
+            type="button"
+            onClick={() => {
+              void go(1);
+            }}
+            disabled={preparing}
+          >
+            Next
+          </button>
+        ) : confirming ? (
+          <button
+            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
+            type="button"
+            disabled={locked || preparing}
+            onClick={() => {
+              startTransition(() => {
+                void submitNow();
+              });
+            }}
+          >
+            Confirm send
+          </button>
+        ) : (
+          <button
+            className="rounded-full border border-terracotta px-5 py-3 text-sm text-terracotta disabled:opacity-40"
+            type="button"
+            disabled={locked || preparing}
+            onClick={() => {
+              setConfirming(true);
+            }}
+          >
+            Send to Lena
+          </button>
+        )}
       </div>
     </section>
   );
@@ -428,7 +449,7 @@ function QuestionField({
               disabled={locked}
               onChange={() => onChange(option)}
             />
-            {labelFor(option)}
+            {choiceText(option)}
           </label>
         ))}
       </fieldset>
@@ -454,7 +475,7 @@ function QuestionField({
                 onChange(next);
               }}
             />
-            {labelFor(option)}
+            {choiceText(option)}
           </label>
         ))}
       </fieldset>

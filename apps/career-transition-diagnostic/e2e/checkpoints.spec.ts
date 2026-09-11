@@ -1,15 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { test } from "./base";
-
-async function startAssessment(page: Page) {
-  await page.goto("/");
-  await page.getByRole("link", { name: "Continue in mock checkout" }).click();
-  await page.getByRole("button", { name: "Complete mock purchase" }).click();
-  await page.getByRole("link", { name: "Open assessment" }).last().click();
-  await page.locator("#product-consent").check();
-  await page.getByRole("button", { name: "Continue to assessment" }).click();
-  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
-}
+import { startAssessment } from "./questionnaire";
 
 async function advanceTo(page: Page, pattern: RegExp, maxSteps = 80) {
   for (let step = 0; step < maxSteps; step += 1) {
@@ -52,5 +43,5 @@ test("checkpoint LLM failure still continues the form", async ({ page }) => {
   await next.click();
   await expect(page.getByText(/Preparing the next part of your reflection/)).toHaveCount(0);
   await expect(page.getByText(/Imagine that tomorrow you actually do this/i)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "If you actually did it" })).toBeVisible();
 });

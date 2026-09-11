@@ -1,15 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { test } from "./base";
-
-async function startAssessment(page: Page) {
-  await page.goto("/");
-  await page.getByRole("link", { name: "Continue in mock checkout" }).click();
-  await page.getByRole("button", { name: "Complete mock purchase" }).click();
-  await page.getByRole("link", { name: "Open assessment" }).last().click();
-  await page.locator("#product-consent").check();
-  await page.getByRole("button", { name: "Continue to assessment" }).click();
-  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
-}
+import { sendToLena, startAssessment } from "./questionnaire";
 
 async function advanceTo(page: Page, pattern: RegExp, maxSteps = 80) {
   for (let step = 0; step < maxSteps; step += 1) {
@@ -26,7 +17,7 @@ async function advanceTo(page: Page, pattern: RegExp, maxSteps = 80) {
 
 test("shows the optional nuance field after choosing other", async ({ page }) => {
   await startAssessment(page);
-  await page.getByLabel("other").check();
+  await page.getByLabel("Other").check();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText(/don’t misread your situation/i)).toBeVisible();
 });
@@ -50,7 +41,7 @@ test("asks which avoided action matters most when one is named", async ({ page }
 test("asks what was different after a yes on temporary ease", async ({ page }) => {
   await startAssessment(page);
   await advanceTo(page, /temporarily disappeared or became much easier/i);
-  await page.getByLabel("yes").check();
+  await page.getByLabel("Yes").check();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText(/What was different then/i)).toBeVisible();
 });
@@ -61,32 +52,34 @@ test("lets someone name one to three admired figures", async ({ page }) => {
   await page.getByLabel("Admired figure 1").fill("A working potter");
   await page.getByRole("button", { name: "Add another" }).click();
   await page.getByLabel("Admired figure 2").fill("A studio owner");
-  await expect(page.getByText("Saving…").or(page.getByText("Saved."))).toBeVisible();
+  await expect(page.getByLabel("Admired figure 2")).toHaveValue("A studio owner");
 });
 
 test("flushes a typed answer before submit so it is not lost", async ({ page }) => {
   await startAssessment(page);
-  await page.getByLabel("other").check();
-  await expect(page.getByText("Saved.")).toBeVisible();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(page.getByText(/Anything to add/)).toBeVisible();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(page.getByText(/professional background/i)).toBeVisible();
-  await page.locator("textarea").fill("Background in product design.");
-  await page.getByRole("button", { name: "Submit assessment" }).click();
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  while (await next.isVisible()) {
+    await expect(next).toBeEnabled({ timeout: 20_000 });
+    await next.click();
+    await expect(page.getByText(/Preparing the next part of your reflection/)).toHaveCount(0);
+  }
+  await expect(page.getByRole("button", { name: "Send to Lena" })).toBeVisible();
+  await page.locator("textarea").fill("I want the report to see the stall.");
+  await page.getByRole("button", { name: "Send to Lena" }).click();
+  await page.getByRole("button", { name: "Confirm send" }).click();
   await expect(page.getByText(/Lena will review/)).toBeVisible();
-  await expect(page.locator("textarea")).toHaveValue("Background in product design.");
+  await expect(page.locator("textarea")).toHaveValue("I want the report to see the stall.");
   await expect(page.locator("textarea")).toBeDisabled();
 });
 
 test("restores progress after refresh and locks answers after submit", async ({ page }) => {
   await startAssessment(page);
-  await page.getByLabel("other").check();
+  await page.getByLabel("Other").check();
   await expect(async () => {
     await page.reload();
-    await expect(page.getByLabel("other")).toBeChecked();
+    await expect(page.getByLabel("Other")).toBeChecked();
   }).toPass();
-  await page.getByRole("button", { name: "Submit assessment" }).click();
-  await expect(page.getByText(/Lena will review/)).toBeVisible();
-  await expect(page.getByLabel("other")).toBeDisabled();
+  await expect(page.getByText("Saved.")).toHaveCount(0);
+  await sendToLena(page);
+  await expect(page.locator("input, textarea").first()).toBeDisabled();
 });

@@ -1,20 +1,12 @@
 import { expect, test } from "./base";
 import { adminLogin } from "./admin";
+import { sendToLena, startAssessment } from "./questionnaire";
 
 test("keeps unapproved reports off the customer link and delivers after review", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page.getByRole("link", { name: "Continue in mock checkout" }).click();
-  await page.getByRole("button", { name: "Complete mock purchase" }).click();
-  await page.getByRole("link", { name: "Open assessment" }).last().click();
-  await page.locator("#product-consent").check();
-  await page.getByRole("button", { name: "Continue to assessment" }).click();
-  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
-  await expect(async () => {
-    await page.getByRole("button", { name: "Submit assessment" }).click();
-    await expect(page.getByText(/Lena will review/)).toBeVisible({ timeout: 5_000 });
-  }).toPass();
+  await startAssessment(page);
+  await sendToLena(page);
 
   const blocked = await page.goto("/r/not-a-real-report-token");
   expect(blocked?.status()).toBe(404);

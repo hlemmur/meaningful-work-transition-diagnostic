@@ -57,7 +57,6 @@ export default async function AssessmentPage({
   return (
     <JournalShell>
       <main className="flex flex-col gap-6">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Assessment</h1>
         <QuestionnaireFlow
           token={token}
           initialAnswers={assessment.answers}

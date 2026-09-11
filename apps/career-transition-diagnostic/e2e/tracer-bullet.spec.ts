@@ -1,33 +1,25 @@
 import { expect, test } from "./base";
 import { adminLogin } from "./admin";
+import { sendToLena, startAssessment } from "./questionnaire";
 
 test("walks the mock purchase-to-approved-report path", async ({ page }) => {
-  await page.goto("/");
+  await startAssessment(page);
   await expect(page.getByRole("status", { name: "MOCK MODE" })).toBeVisible();
-  await page.getByRole("link", { name: "Continue in mock checkout" }).click();
-  await page.getByRole("button", { name: "Complete mock purchase" }).click();
+  await expect(page.getByText("Situation · 1 of")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Submit assessment" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Send to Lena" })).toHaveCount(0);
 
-  await expect(page.getByRole("heading", { name: "Mock email outbox" })).toBeVisible();
-  await expect(page.getByText("Your assessment link").first()).toBeVisible();
-  await page.getByRole("link", { name: "Open assessment" }).last().click();
-
-  await expect(page.getByRole("heading", { name: "Before you begin" })).toBeVisible();
-  await expect(page.locator("#marketing-opt-in")).not.toBeChecked();
-  await page.locator("#product-consent").check();
-  await page.getByRole("button", { name: "Continue to assessment" }).click();
-
-  await expect(page.getByText(/current situation/i)).toBeVisible();
   await expect(async () => {
-    await page.getByLabel("employed considering").click();
-    await expect(page.getByText("Saved.")).toBeVisible({ timeout: 5_000 });
+    await page.getByLabel("Employed, considering a change").click();
+    await expect(page.getByLabel("Employed, considering a change")).toBeChecked({ timeout: 5_000 });
   }).toPass();
+  await expect(page.getByText("Saved.")).toHaveCount(0);
   await expect(async () => {
     await page.reload();
-    await expect(page.getByLabel("employed considering")).toBeChecked();
+    await expect(page.getByLabel("Employed, considering a change")).toBeChecked();
   }).toPass();
 
-  await page.getByRole("button", { name: "Submit assessment" }).click();
-  await expect(page.getByText(/Lena will review/)).toBeVisible();
+  await sendToLena(page);
 
   await adminLogin(page);
   await page.getByRole("link", { name: "Open case" }).last().click();
