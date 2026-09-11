@@ -57,6 +57,21 @@ describe("tracer repository", () => {
     expect(getRepository()).toBe(created);
   });
 
+  it("does not rewrite tables for a read-only withStore", async () => {
+    const db = new MemoryTracerDb();
+    let replaces = 0;
+    const counting = {
+      loadAll: () => db.loadAll(),
+      async replaceAll(tables: Awaited<ReturnType<MemoryTracerDb["loadAll"]>>) {
+        replaces += 1;
+        await db.replaceAll(tables);
+      },
+    };
+    bindTracerRepository(new TableTracerRepository(counting));
+    await withStore(() => getActiveStore().assessments.length);
+    expect(replaces).toBe(0);
+  });
+
   it("reloads a saved answer from a fresh table repository against the same database", async () => {
     const db = new MemoryTracerDb();
     const writer = new TableTracerRepository(db);

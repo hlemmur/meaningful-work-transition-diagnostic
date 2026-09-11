@@ -44,12 +44,22 @@ export class MemoryTracerRepository implements TracerRepository {
 export class TableTracerRepository implements TracerRepository {
   constructor(private readonly db: TracerDb) {}
 
+  private snapshot: string | undefined;
+
   async begin() {
-    return tablesToStore(await this.db.loadAll());
+    const tables = await this.db.loadAll();
+    this.snapshot = JSON.stringify(tables);
+    return tablesToStore(tables);
   }
 
   async commit(store: TracerStore) {
-    await this.db.replaceAll(storeToTables(store));
+    const tables = storeToTables(store);
+    const serialized = JSON.stringify(tables);
+    if (serialized === this.snapshot) {
+      return;
+    }
+    await this.db.replaceAll(tables);
+    this.snapshot = serialized;
   }
 
   async reset() {
