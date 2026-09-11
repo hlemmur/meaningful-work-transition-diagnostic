@@ -23,6 +23,7 @@ import {
   type MarketingContact,
   type WelcomeConsentInput,
 } from "../consent/copy";
+import { retentionMs } from "@/config/launch-gate";
 
 export type AssessmentStatus = "in_progress" | "review_pending" | "approved";
 
@@ -40,6 +41,7 @@ export type AssessmentRecord = {
   productConsentedAt?: string;
   safetyLevel?: "none" | "high";
   reportDepth?: "full" | "reduced";
+  retentionDeadline?: number;
 };
 
 export type AdaptiveQuestionRecord = ExistingAdaptiveQuestion & {
@@ -462,6 +464,7 @@ export async function submitAssessment(accessToken: string) {
   }
   assessment.status = "review_pending";
   assessment.draftBody = DRAFT_BODY;
+  assessment.retentionDeadline = Date.now() + retentionMs();
   return assessment;
 }
 
@@ -591,18 +594,52 @@ export async function resendReportLink(assessmentId: string) {
   return { reportToken, reportEmail };
 }
 
-export function deleteReportAccess(assessmentId: string) {
-  const assessment = getStore().assessments.find((item) => item.id === assessmentId);
+function purgeAssessmentContent(assessmentId: string) {
+  const store = getStore();
+  const assessment = store.assessments.find((item) => item.id === assessmentId);
   if (!assessment) {
     throw new Error("Assessment not found");
   }
+  assessment.answers = {};
+  assessment.draftBody = undefined;
   assessment.reportAccessTokenHash = undefined;
   assessment.reportAccessExpiresAt = undefined;
-  const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
+  store.adaptiveQuestions = store.adaptiveQuestions.filter((item) => item.assessmentId !== assessmentId);
+  store.caseStateVersions = store.caseStateVersions.filter((item) => item.assessmentId !== assessmentId);
+  store.safetyFlags = store.safetyFlags.filter((item) => item.assessmentId !== assessmentId);
+  store.analysisRuns = store.analysisRuns.filter((item) => item.assessmentId !== assessmentId);
+  const report = store.reports.find((item) => item.assessmentId === assessmentId);
   if (report) {
     report.status = "deleted";
+    report.sections = [];
+    report.editedSections = undefined;
   }
   return assessment;
+}
+
+export function deleteAssessmentData(assessmentId: string) {
+  return purgeAssessmentContent(assessmentId);
+}
+
+export function deleteReportAccess(assessmentId: string) {
+  return deleteAssessmentData(assessmentId);
+}
+
+export function purgeExpiredAssessments(now = Date.now()) {
+  let purged = 0;
+  for (const assessment of getStore().assessments) {
+    if (!assessment.retentionDeadline || assessment.retentionDeadline > now) {
+      continue;
+    }
+    const hadContent =
+      Object.keys(assessment.answers).length > 0 ||
+      Boolean(getStore().reports.find((item) => item.assessmentId === assessment.id && item.status !== "deleted"));
+    purgeAssessmentContent(assessment.id);
+    if (hadContent) {
+      purged += 1;
+    }
+  }
+  return purged;
 }
 
 export function getAdminCase(assessmentId: string) {

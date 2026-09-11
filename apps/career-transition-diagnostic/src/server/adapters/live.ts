@@ -1,5 +1,6 @@
 import "server-only";
 
+import { paymentsEnabled } from "@/config/launch-gate";
 import type { CommerceAdapter, EmailAdapter, LlmAdapter } from "./types";
 
 function missingLiveConfig(vendor: string): never {
@@ -8,7 +9,14 @@ function missingLiveConfig(vendor: string): never {
 
 export const liveCommerceAdapter: CommerceAdapter = {
   async createCheckout() {
-    missingLiveConfig("Lemon Squeezy");
+    if (!paymentsEnabled()) {
+      throw new Error("Paid checkout is disabled until the launch gate is green.");
+    }
+    const checkoutUrl = process.env.LEMON_SQUEEZY_CHECKOUT_URL;
+    if (!checkoutUrl) {
+      missingLiveConfig("Lemon Squeezy");
+    }
+    return { checkoutUrl, orderId: "lemon-pending" };
   },
 };
 
