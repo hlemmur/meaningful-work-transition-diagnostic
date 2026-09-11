@@ -39,12 +39,13 @@ test("rejects invalid webhook signatures and ignores replays", async ({ request 
 
 test("keeps marketing export empty when the opt-in stays unchecked", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Continue in mock checkout" }).click();
+  await page.getByRole("link", { name: "Begin the diagnostic" }).click();
   await page.getByRole("button", { name: "Complete mock purchase" }).click();
   await page.getByRole("link", { name: "Open assessment" }).click();
-  await expect(page.getByRole("heading", { name: "Coaching, not therapy" })).toBeVisible();
-  await expect(page.getByText("processed with artificial intelligence")).toBeVisible();
-  await expect(page.getByText("Copy version product-consent.v1")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A note from Lena" })).toBeVisible();
+  await expect(page.getByText("processed with artificial intelligence")).toHaveCount(0);
+  await expect(page.getByText("product-consent.v1")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Privacy for this diagnostic" }).first()).toBeVisible();
   await expect(page.locator("#marketing-opt-in")).not.toBeChecked();
   await expect(page.getByRole("heading", { name: "Assessment" })).toHaveCount(0);
   await page.locator("#product-consent").check();
@@ -58,7 +59,9 @@ test("keeps marketing export empty when the opt-in stays unchecked", async ({ pa
 test("privacy notice uses the same versioned product copy", async ({ page }) => {
   await page.goto("/privacy");
   await expect(page.getByRole("heading", { name: "Privacy for this diagnostic" })).toBeVisible();
-  await expect(page.getByText("Copy versions product-consent.v1")).toBeVisible();
+  await expect(page.getByText("product-consent.v1")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Coaching, not therapy" })).toBeVisible();
+  await expect(page.getByText("processed with artificial intelligence")).toBeVisible();
   await expect(page.getByText("Raw answers are kept for 90 days")).toBeVisible();
   await expect(page.getByText("This is optional and not required to take the assessment.")).toBeVisible();
 });
