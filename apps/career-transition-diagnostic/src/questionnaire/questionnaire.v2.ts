@@ -758,6 +758,102 @@ export const questions: QuestionDefinition[] = [
 
 export const questionIds = questions.map((question) => question.id);
 
+export const CHAPTERS: Record<number, string> = {
+  0: "Situation",
+  1: "The struggle",
+  2: "What you have tried",
+  3: "If you actually did it",
+  4: "Support and proof",
+  5: "Figures you long for",
+  6: "Figures that sting",
+  7: "An ordinary Tuesday",
+  8: "Money",
+  9: "What staying protects",
+  10: "The scene",
+  11: "Closing",
+};
+
+const OPTION_LABELS: Record<string, string> = {
+  employed_considering: "Employed, considering a change",
+  employed_transitioning: "Employed, already transitioning",
+  leave_sabbatical: "On leave or sabbatical",
+  unemployed: "Unemployed",
+  self_employed: "Self-employed",
+  building_business: "Building a business",
+  retraining: "Retraining",
+  portfolio: "Portfolio career",
+  other: "Other",
+  under_3_months: "Under 3 months",
+  "3_12_months": "3 to 12 months",
+  "1_2_years": "1 to 2 years",
+  "2_5_years": "2 to 5 years",
+  more_than_5_years: "More than 5 years",
+  comes_and_goes: "It comes and goes",
+  dont_know_what_i_want: "I don't know what I want",
+  financial_insecurity: "Financial insecurity",
+  fear_of_failure: "Fear of failure",
+  fear_of_success: "Fear of success",
+  fear_of_judgment: "Fear of judgment",
+  lack_of_confidence: "Lack of confidence",
+  lack_of_skills: "Lack of skills",
+  lack_of_opportunities: "Lack of opportunities",
+  burnout: "Burnout",
+  too_many_possibilities: "Too many possibilities",
+  difficulty_executing: "Difficulty executing",
+  difficulty_committing: "Difficulty committing",
+  responsibilities_to_others: "Responsibilities to others",
+  labor_market: "The labor market",
+  business_marketing: "Business or marketing",
+  something_else: "Something else",
+  none_of_these: "None of these",
+  chest: "Chest",
+  throat: "Throat",
+  stomach: "Stomach",
+  shoulders: "Shoulders",
+  face: "Face",
+  elsewhere: "Elsewhere",
+  nothing_noticeable: "Nothing noticeable",
+  fear: "Fear",
+  shame: "Shame",
+  anger: "Anger",
+  sadness: "Sadness",
+  excitement: "Excitement",
+  relief: "Relief",
+  disgust: "Disgust",
+  helplessness: "Helplessness",
+  yes: "Yes",
+  somewhat: "Somewhat",
+  no: "No",
+  not_sure: "Not sure",
+  unsure: "Unsure",
+  clear_expectations: "Clear expectations",
+  deadlines: "Deadlines",
+  manager_mentor: "A manager or mentor",
+  team: "A team",
+  external_accountability: "External accountability",
+  high_autonomy: "High autonomy",
+  recognition: "Recognition",
+  stable_income: "Stable income",
+  title_status: "Title or status",
+  competition: "Competition",
+  playful_atmosphere: "A playful atmosphere",
+  clear_tasks: "Clear tasks",
+  community: "Community",
+  responsibility_to_others: "Responsibility to others",
+  frequent_feedback: "Frequent feedback",
+  strong_structure: "Strong structure",
+  freedom_from_financial_concern: "Freedom from financial concern",
+  novelty: "Novelty",
+};
+
+export function optionLabel(value: string): string {
+  const label = OPTION_LABELS[value];
+  if (!label) {
+    throw new Error(`Missing human label for option "${value}"`);
+  }
+  return label;
+}
+
 export function getQuestion(id: string): QuestionDefinition | undefined {
   return questions.find((question) => question.id === id);
 }
