@@ -182,6 +182,45 @@ describe("mock vendor adapters", () => {
     expect(body.contents[0].parts[0].text).toContain("a1");
   });
 
+  it("coerces live Gemini numeric strings and null arrays before returning", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.LLM_MODE = "live";
+    process.env.GEMINI_API_KEY = "gemini-test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  content: {
+                    parts: [
+                      {
+                        text: JSON.stringify({
+                          consciousExplanationTags: ["stall"],
+                          unresolvedQuestions: null,
+                          scoring: { evidenceCoverage: "0.4" },
+                        }),
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    const adapters = createVendorAdapters();
+    const result = await adapters.llm.completeStructured({
+      stage: "pass1",
+      input: { assessmentId: "a1" },
+    });
+    expect(result.output.unresolvedQuestions).toEqual([]);
+    expect(result.output.scoring).toEqual({ evidenceCoverage: 0.4 });
+  });
+
   it("ignores leftover OpenAI model ids and still posts to Gemini", async () => {
     process.env.APP_MODE = "mock";
     process.env.LLM_MODE = "live";
