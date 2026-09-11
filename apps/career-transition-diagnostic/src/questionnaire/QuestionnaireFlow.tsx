@@ -77,7 +77,10 @@ export function QuestionnaireFlow({
   const [answers, setAnswers] = useState<Record<string, unknown>>(initialAnswers);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [pending, startTransition] = useTransition();
+  const answersRef = useRef(answers);
   const saveTimer = useRef<number | null>(null);
+  const pendingSave = useRef<{ id: string; value: unknown } | null>(null);
+  const inFlight = useRef(Promise.resolve());
   const visible = useMemo(() => listVisibleQuestionIds(answers), [answers]);
   const [currentId, setCurrentId] = useState(
     () => resumeQuestionId(listVisibleQuestionIds(initialAnswers), initialAnswers),
@@ -86,48 +89,89 @@ export function QuestionnaireFlow({
   const index = Math.max(0, visible.indexOf(question.id));
 
   function persist(id: string, value: unknown, mode: "now" | "later" = "now") {
-    setAnswers((current) => ({ ...current, [id]: value }));
+    const nextAnswers = { ...answersRef.current, [id]: value };
+    answersRef.current = nextAnswers;
+    setAnswers(nextAnswers);
+    pendingSave.current = { id, value };
     if (locked) {
       return;
     }
-    const write = () => {
-      setStatus("saving");
-      startTransition(async () => {
-        try {
-          await autosaveAnswerAction(token, id, JSON.stringify(value));
-          setStatus("saved");
-        } catch {
-          setStatus("error");
-        }
-      });
-    };
     if (saveTimer.current) {
       window.clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
     if (mode === "later") {
       setStatus("saving");
-      saveTimer.current = window.setTimeout(write, 400);
+      saveTimer.current = window.setTimeout(() => {
+        saveTimer.current = null;
+        void flushPending();
+      }, 400);
       return;
     }
-    write();
+    void flushPending();
+  }
+
+  async function flushPending() {
+    if (saveTimer.current) {
+      window.clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    const next = pendingSave.current;
+    if (!next) {
+      await inFlight.current;
+      return true;
+    }
+    if (locked) {
+      return false;
+    }
+    pendingSave.current = null;
+    setStatus("saving");
+    const task = autosaveAnswerAction(token, next.id, JSON.stringify(next.value))
+      .then(() => {
+        setStatus("saved");
+        return true;
+      })
+      .catch(() => {
+        setStatus("error");
+        return false;
+      });
+    inFlight.current = task.then(() => undefined);
+    return task;
+  }
+
+  function currentValue() {
+    return (
+      answersRef.current[question.id] ??
+      (question.inputType === "avoided_actions" ? [] : undefined)
+    );
   }
 
   function go(delta: number) {
-    const currentValue =
-      answers[question.id] ?? (question.inputType === "avoided_actions" ? [] : undefined);
-    if (currentValue !== undefined) {
-      persist(question.id, currentValue, "now");
+    const value = currentValue();
+    if (value !== undefined) {
+      persist(question.id, value, "now");
     }
     const nextVisible = listVisibleQuestionIds({
-      ...answers,
-      [question.id]: currentValue,
+      ...answersRef.current,
+      [question.id]: value,
     });
     const currentIndex = Math.max(0, nextVisible.indexOf(question.id));
     const next = nextVisible[currentIndex + delta];
     if (next) {
       setCurrentId(next);
     }
+  }
+
+  async function submitNow() {
+    const value = currentValue();
+    if (value !== undefined) {
+      pendingSave.current = { id: question.id, value };
+    }
+    const saved = await flushPending();
+    if (saved === false) {
+      return;
+    }
+    await submitAssessmentAction(token);
   }
 
   return (
@@ -169,15 +213,18 @@ export function QuestionnaireFlow({
         >
           Next
         </button>
-        <form action={submitAssessmentAction.bind(null, token)}>
-          <button
-            className="rounded-full border border-[#b65f3e] px-5 py-3 text-sm text-[#7d3c2d] disabled:opacity-40"
-            type="submit"
-            disabled={locked}
-          >
-            Submit assessment
-          </button>
-        </form>
+        <button
+          className="rounded-full border border-[#b65f3e] px-5 py-3 text-sm text-[#7d3c2d] disabled:opacity-40"
+          type="button"
+          disabled={locked}
+          onClick={() => {
+            startTransition(() => {
+              void submitNow();
+            });
+          }}
+        >
+          Submit assessment
+        </button>
       </div>
     </section>
   );
@@ -320,7 +367,10 @@ function QuestionField({
   }
 
   if (question.inputType === "avoided_actions") {
-    const items = Array.isArray(value) ? (value as { action: string }[]) : [];
+    const items =
+      Array.isArray(value) && value.length > 0
+        ? (value as { action: string }[])
+        : [{ action: "" }];
     return (
       <div className="flex flex-col gap-3">
         <p className="text-lg leading-8">{question.prompt}</p>

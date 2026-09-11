@@ -40,7 +40,6 @@ test("uses focal fallback when no avoided actions are named", async ({ page }) =
 test("asks which avoided action matters most when one is named", async ({ page }) => {
   await startAssessment(page);
   await advanceTo(page, /postponed, avoided, or abandoned/i);
-  await page.getByRole("button", { name: "Add another" }).click();
   await page.getByLabel("Avoided action 1").fill("Send the website");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText(/matters most right now/i)).toBeVisible();
@@ -62,6 +61,19 @@ test("lets someone name one to three admired figures", async ({ page }) => {
   await page.getByRole("button", { name: "Add another" }).click();
   await page.getByLabel("Admired figure 2").fill("A studio owner");
   await expect(page.getByText("Saving…").or(page.getByText("Saved."))).toBeVisible();
+});
+
+test("flushes a typed answer before submit so it is not lost", async ({ page }) => {
+  await startAssessment(page);
+  await page.getByLabel("other").check();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText(/professional background/i)).toBeVisible();
+  await page.locator("textarea").fill("Background in product design.");
+  await page.getByRole("button", { name: "Submit assessment" }).click();
+  await expect(page.getByText(/Lena will review/)).toBeVisible();
+  await expect(page.locator("textarea")).toHaveValue("Background in product design.");
+  await expect(page.locator("textarea")).toBeDisabled();
 });
 
 test("restores progress after refresh and locks answers after submit", async ({ page }) => {

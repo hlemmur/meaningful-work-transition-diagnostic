@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { getQuestion } from "@/questionnaire/questionnaire.v2";
 import { createVendorAdapters } from "../adapters";
 import type { OutboxEmail } from "../adapters/types";
 import {
@@ -275,6 +276,49 @@ export function withdrawMarketingConsent(email: string) {
   }
 }
 
+function assertKnownAnswer(questionId: string, value: unknown) {
+  const question = getQuestion(questionId);
+  if (!question) {
+    throw new Error("Unknown question");
+  }
+
+  switch (question.inputType) {
+    case "select":
+    case "yes_no_unsure":
+    case "long_text":
+    case "short_text":
+      if (typeof value !== "string") {
+        throw new Error("Invalid answer");
+      }
+      return;
+    case "scale":
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        throw new Error("Invalid answer");
+      }
+      return;
+    case "control":
+      if (value !== true) {
+        throw new Error("Invalid answer");
+      }
+      return;
+    case "multi_select":
+    case "sentence_completions":
+    case "loop":
+    case "avoided_actions":
+      if (!Array.isArray(value)) {
+        throw new Error("Invalid answer");
+      }
+      return;
+    case "paired_text":
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error("Invalid answer");
+      }
+      return;
+    default:
+      return;
+  }
+}
+
 export async function saveAnswer(accessToken: string, questionId: string, value: unknown) {
   const assessment = requireAssessmentByHash(hashToken(accessToken));
   if (assessment.status !== "in_progress") {
@@ -283,6 +327,7 @@ export async function saveAnswer(accessToken: string, questionId: string, value:
   if (!assessment.productConsentVersion) {
     throw new Error("Consent required");
   }
+  assertKnownAnswer(questionId, value);
   assessment.answers[questionId] = value;
   return assessment;
 }

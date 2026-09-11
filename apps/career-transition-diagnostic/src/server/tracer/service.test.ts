@@ -59,6 +59,13 @@ describe("mock purchase-to-report tracer", () => {
     expect(resumed?.answers["Q2.3"]).toEqual([{ action: "Send the website" }]);
     expect(resumed?.answers["Q0.1"]).toBe("other");
 
+    await expect(saveAnswer(accessToken, "not-a-question", "nope")).rejects.toThrow(
+      "Unknown question",
+    );
+    await expect(saveAnswer(accessToken, "Q1.1", { blob: true })).rejects.toThrow(
+      "Invalid answer",
+    );
+
     await submitAssessment(accessToken);
     await expect(saveAnswer(accessToken, "Q0.1", "employed_considering")).rejects.toThrow(
       "Answers are locked after submit",
