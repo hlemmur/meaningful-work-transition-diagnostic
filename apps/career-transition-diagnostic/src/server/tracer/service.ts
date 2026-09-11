@@ -310,17 +310,19 @@ export function expireAccessToken(accessToken: string) {
   }
 }
 
-export async function requestNewAccessLink(email: string) {
-  const assessment = [...getStore().assessments].reverse().find((item) => item.email === email);
+export async function requestNewAccessLink(expiredToken: string) {
+  const assessment = getStore().assessments.find(
+    (item) => item.accessTokenHash === hashToken(expiredToken),
+  );
   if (!assessment) {
-    throw new Error("Assessment not found");
+    return { sent: false as const };
   }
 
   const accessToken = createToken();
   assessment.accessTokenHash = hashToken(accessToken);
   assessment.accessExpiresAt = Date.now() + accessTtlMs();
-  const accessEmail = await emailAccessLink(email, accessToken);
-  return { accessToken, accessEmail };
+  const accessEmail = await emailAccessLink(assessment.email, accessToken);
+  return { sent: true as const, accessToken, accessEmail };
 }
 
 export async function recordWelcomeConsent(input: WelcomeConsentInput) {

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { assertMockMode } from "@/config/app-mode";
 import { requireAdminSession } from "@/server/admin/session";
 import {
   approveAssessment,
@@ -15,6 +16,7 @@ import {
 import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
 
 export async function completePurchaseAction() {
+  assertMockMode("Mock purchase");
   await completeMockPurchase("buyer@example.com");
   redirect("/mock/outbox");
 }
@@ -53,9 +55,9 @@ export async function recordConsentAction(token: string, formData: FormData) {
 }
 
 export async function requestNewLinkAction(formData: FormData) {
-  const email = String(formData.get("email") ?? "");
-  await requestNewAccessLink(email);
-  redirect("/mock/outbox");
+  const expiredToken = String(formData.get("expiredToken") ?? "");
+  await requestNewAccessLink(expiredToken);
+  redirect("/link-requested");
 }
 
 export async function runAnalysisAction(assessmentId: string) {
