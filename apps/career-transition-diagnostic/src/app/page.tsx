@@ -1,4 +1,13 @@
+import { isMockMode } from "@/config/app-mode";
+import { paymentsEnabled } from "@/config/launch-gate";
+
+export const dynamic = "force-dynamic";
+
 export default function Home() {
+  const mock = isMockMode();
+  const liveCheckoutUrl = process.env.LEMON_SQUEEZY_CHECKOUT_URL;
+  const canSell = !mock && paymentsEnabled() && Boolean(liveCheckoutUrl);
+
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-6 px-6 py-20">
       <p className="text-sm uppercase tracking-[0.2em] text-[#b65f3e]">
@@ -12,12 +21,25 @@ export default function Home() {
         still cannot move. After purchase you receive a private link. Lena
         reviews every report before it is delivered.
       </p>
-      <a
-        className="inline-flex w-fit rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
-        href="/mock/checkout"
-      >
-        Continue in mock checkout
-      </a>
+      {mock ? (
+        <a
+          className="inline-flex w-fit rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
+          href="/mock/checkout"
+        >
+          Continue in mock checkout
+        </a>
+      ) : canSell ? (
+        <a
+          className="inline-flex w-fit rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
+          href={liveCheckoutUrl}
+        >
+          Purchase the diagnostic
+        </a>
+      ) : (
+        <p className="leading-7 text-[#4a3b34]">
+          Paid checkout is not enabled until the launch gate is green.
+        </p>
+      )}
     </main>
   );
 }

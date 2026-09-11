@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/server/admin/session";
 import {
   approveAssessment,
-  deleteReportAccess,
+  deleteAssessmentData,
   resendReportLink,
   runAnalysisPipeline,
   saveReportEdits,
@@ -46,6 +46,6 @@ export async function resendLinkAction(assessmentId: string) {
 
 export async function deleteAccessAction(assessmentId: string) {
   await requireAdminSession();
-  deleteReportAccess(assessmentId);
+  deleteAssessmentData(assessmentId);
   redirect("/admin");
 }
