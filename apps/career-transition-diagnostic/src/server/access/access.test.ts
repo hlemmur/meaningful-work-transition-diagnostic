@@ -1,0 +1,105 @@
+import { createHmac } from "node:crypto";
+import { afterEach, describe, expect, it } from "vitest";
+import { resetMockOutbox } from "../adapters/resend/mock";
+import {
+  completeMockPurchase,
+  expireAccessToken,
+  getAssessmentByAccessToken,
+  requestNewAccessLink,
+  resetMockTracerStore,
+  saveAnswer,
+} from "../tracer/service";
+import {
+  exportMarketingContacts,
+  recordWelcomeConsent,
+  withdrawMarketingConsent,
+} from "../consent/marketing";
+import { processLemonWebhook } from "./webhook";
+
+function sign(rawBody: string) {
+  const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET ?? "mock-webhook-secret";
+  return createHmac("sha256", secret).update(rawBody).digest("hex");
+}
+
+function paidOrderPayload(orderId: string, email = "buyer@example.com") {
+  return JSON.stringify({
+    meta: { event_name: "order_created", webhook_id: `wh-${orderId}` },
+    data: {
+      id: orderId,
+      attributes: { user_email: email, status: "paid" },
+    },
+  });
+}
+
+afterEach(() => {
+  process.env.APP_MODE = "mock";
+  resetMockOutbox();
+  resetMockTracerStore();
+});
+
+describe("paid token access and consent", () => {
+  it("rejects an invalid Lemon Squeezy webhook signature", async () => {
+    process.env.APP_MODE = "mock";
+    const rawBody = paidOrderPayload("order-1");
+
+    await expect(processLemonWebhook(rawBody, "not-valid")).rejects.toThrow(
+      "Invalid webhook signature",
+    );
+  });
+
+  it("creates one assessment when the same paid webhook is replayed", async () => {
+    process.env.APP_MODE = "mock";
+    const rawBody = paidOrderPayload("order-replay");
+    const signature = sign(rawBody);
+
+    const first = await processLemonWebhook(rawBody, signature);
+    const second = await processLemonWebhook(rawBody, signature);
+
+    expect(second.assessmentId).toBe(first.assessmentId);
+    expect(second.created).toBe(false);
+    expect(first.created).toBe(true);
+  });
+
+  it("rejects an expired token and issues a working replacement link", async () => {
+    process.env.APP_MODE = "mock";
+    const purchase = await completeMockPurchase("buyer@example.com");
+    expireAccessToken(purchase.accessToken);
+
+    expect(getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
+
+    const renewed = await requestNewAccessLink("buyer@example.com");
+    expect(getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
+    expect(getAssessmentByAccessToken(renewed.accessToken)?.id).toBe(purchase.assessmentId);
+    expect(renewed.accessEmail.text).toContain(`/a/${renewed.accessToken}`);
+  });
+
+  it("keeps marketing opt-in off by default and isolated from answers", async () => {
+    process.env.APP_MODE = "mock";
+    const { accessToken } = await completeMockPurchase("buyer@example.com");
+
+    await recordWelcomeConsent({
+      accessToken,
+      productConsent: true,
+      marketingOptIn: false,
+    });
+    await saveAnswer(accessToken, "Q1.1", "secret career material");
+
+    expect(exportMarketingContacts()).toEqual([]);
+
+    await recordWelcomeConsent({
+      accessToken,
+      productConsent: true,
+      marketingOptIn: true,
+    });
+    expect(exportMarketingContacts()).toEqual([
+      expect.objectContaining({
+        email: "buyer@example.com",
+        consentCopyVersion: "marketing-consent.v1",
+      }),
+    ]);
+    expect(JSON.stringify(exportMarketingContacts())).not.toContain("secret career material");
+
+    withdrawMarketingConsent("buyer@example.com");
+    expect(exportMarketingContacts()).toEqual([]);
+  });
+});

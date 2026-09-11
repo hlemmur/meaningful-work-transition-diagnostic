@@ -9,8 +9,13 @@ test("walks the mock purchase-to-approved-report path", async ({ page }) => {
   await page.getByRole("button", { name: "Complete mock purchase" }).click();
 
   await expect(page.getByRole("heading", { name: "Mock email outbox" })).toBeVisible();
-  await expect(page.getByText("Your assessment link")).toBeVisible();
-  await page.getByRole("link", { name: "Open assessment" }).click();
+  await expect(page.getByText("Your assessment link").first()).toBeVisible();
+  await page.getByRole("link", { name: "Open assessment" }).last().click();
+
+  await expect(page.getByRole("heading", { name: "Before you begin" })).toBeVisible();
+  await expect(page.locator("#marketing-opt-in")).not.toBeChecked();
+  await page.locator("#product-consent").check();
+  await page.getByRole("button", { name: "Continue to assessment" }).click();
 
   await page.getByLabel(/work\/career situation/).fill(answer);
   await page.getByRole("button", { name: "Save answer" }).click();

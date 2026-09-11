@@ -5,10 +5,21 @@ import {
   completeMockPurchase,
   getAssessmentByAccessToken,
   getAssessmentByReportToken,
+  recordWelcomeConsent,
   resetMockTracerStore,
   saveAnswer,
   submitAssessment,
 } from "./service";
+
+async function purchaseWithConsent(email = "buyer@example.com") {
+  const purchase = await completeMockPurchase(email);
+  await recordWelcomeConsent({
+    accessToken: purchase.accessToken,
+    productConsent: true,
+    marketingOptIn: false,
+  });
+  return purchase;
+}
 
 afterEach(() => {
   process.env.APP_MODE = "mock";
@@ -29,7 +40,7 @@ describe("mock purchase-to-report tracer", () => {
 
   it("saves an answer that survives a later read (resume)", async () => {
     process.env.APP_MODE = "mock";
-    const { accessToken } = await completeMockPurchase("buyer@example.com");
+    const { accessToken } = await purchaseWithConsent();
 
     await saveAnswer(accessToken, "Q1.1", "I left a career that still pays my bills.");
     const resumed = getAssessmentByAccessToken(accessToken);
@@ -39,7 +50,7 @@ describe("mock purchase-to-report tracer", () => {
 
   it("approves a submitted draft and emails a report link without report body", async () => {
     process.env.APP_MODE = "mock";
-    const { accessToken, assessmentId } = await completeMockPurchase("buyer@example.com");
+    const { accessToken, assessmentId } = await purchaseWithConsent();
     await saveAnswer(accessToken, "Q1.1", "The stall survived every plan I wrote.");
     await submitAssessment(accessToken);
 
@@ -52,7 +63,7 @@ describe("mock purchase-to-report tracer", () => {
 
   it("rejects re-submit after approval and keeps the report token valid", async () => {
     process.env.APP_MODE = "mock";
-    const { accessToken, assessmentId } = await completeMockPurchase("buyer@example.com");
+    const { accessToken, assessmentId } = await purchaseWithConsent();
     await saveAnswer(accessToken, "Q1.1", "The stall survived every plan I wrote.");
     await submitAssessment(accessToken);
     const delivery = await approveAssessment(assessmentId);
