@@ -314,7 +314,7 @@ export async function requestNewAccessLink(expiredToken: string) {
   const assessment = getStore().assessments.find(
     (item) => item.accessTokenHash === hashToken(expiredToken),
   );
-  if (!assessment) {
+  if (!assessment || inspectAccessToken(expiredToken) !== "expired") {
     return { sent: false as const };
   }
 

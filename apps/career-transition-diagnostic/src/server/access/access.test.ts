@@ -89,6 +89,15 @@ describe("paid token access and consent", () => {
     expect(getAssessmentByAccessToken(purchase.accessToken)?.id).toBe(purchase.assessmentId);
   });
 
+  it("does not rotate a still-valid access token", async () => {
+    process.env.APP_MODE = "mock";
+    const purchase = await completeMockPurchase("buyer@example.com");
+
+    const refused = await requestNewAccessLink(purchase.accessToken);
+    expect(refused).toEqual({ sent: false });
+    expect(getAssessmentByAccessToken(purchase.accessToken)?.id).toBe(purchase.assessmentId);
+  });
+
   it("keeps marketing opt-in off by default and isolated from answers", async () => {
     process.env.APP_MODE = "mock";
     const { accessToken } = await completeMockPurchase("buyer@example.com");
