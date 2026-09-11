@@ -62,8 +62,11 @@ export async function executeAnalysis(input: {
   answers: Record<string, unknown>;
   previousCaseState?: CaseState;
   completedStages: Iterable<string>;
+  priorRuns?: AnalysisRunRecord[];
+  existingReport?: Report;
   llm: LlmAdapter;
   fixture?: AnalysisFixture;
+  failStage?: AnalysisStage;
   persistRun: (run: AnalysisRunRecord) => void;
   persistCaseState: (stage: AnalysisStage, snapshot: CaseState) => void;
 }): Promise<AnalysisPipelineResult> {
@@ -75,8 +78,10 @@ export async function executeAnalysis(input: {
     input.answers,
     input.previousCaseState,
   );
-  let critiques: z.infer<(typeof passOutputSchemas)["pass4"]>["critiques"] = [];
-  let report: Report | undefined;
+  let critiques = hydrateCritiques(input.priorRuns);
+  let report =
+    input.existingReport ??
+    hydrateReport(input.priorRuns, caseState, input.assessmentId);
 
   for (const stage of ANALYSIS_STAGES) {
     if (completed.has(stage)) {
@@ -97,6 +102,7 @@ export async function executeAnalysis(input: {
           evidenceRef,
           requestedInsight: caseState.userFinalReflection.requestedInsight,
           failSchema: fixture === "schema-fail" && stage === "pass3",
+          failStage: input.failStage,
         },
       });
 
@@ -166,6 +172,33 @@ export async function executeAnalysis(input: {
   return { status: "completed", caseState, report };
 }
 
+function hydrateCritiques(runs: AnalysisRunRecord[] | undefined) {
+  const pass4 = [...(runs ?? [])]
+    .reverse()
+    .find((run) => run.stage === "pass4" && run.status === "success");
+  const parsed = passOutputSchemas.pass4.safeParse(pass4?.output);
+  return parsed.success ? parsed.data.critiques : [];
+}
+
+function hydrateReport(
+  runs: AnalysisRunRecord[] | undefined,
+  caseState: CaseState,
+  assessmentId: string,
+): Report | undefined {
+  const pass9 = [...(runs ?? [])]
+    .reverse()
+    .find((run) => run.stage === "pass9" && run.status === "success");
+  const parsed = passOutputSchemas.pass9.safeParse(pass9?.output);
+  if (!parsed.success) {
+    return undefined;
+  }
+  return {
+    assessmentId,
+    engineVersion: ENGINE_VERSION,
+    sections: sanitizeReportSections(parsed.data.sections, caseState),
+  };
+}
+
 export type PipelineResult = AnalysisPipelineResult;
 
 export type AnalysisStore = {
@@ -174,6 +207,7 @@ export type AnalysisStore = {
   listRuns(id: string): AnalysisRunRecord[];
   saveRun(run: AnalysisRunRecord): void;
   saveReport(report: Report & { status: "draft" }): void;
+  getReport?(id: string): Report | undefined;
 };
 
 export async function runAnalysisPasses(input: {
@@ -181,20 +215,22 @@ export async function runAnalysisPasses(input: {
   answers: Record<string, unknown>;
   llm: LlmAdapter;
   fixture?: AnalysisFixture;
+  failStage?: AnalysisStage;
   store: AnalysisStore;
 }): Promise<PipelineResult> {
-  const completed = input.store
-    .listRuns(input.assessmentId)
-    .filter((run) => run.status === "success")
-    .map((run) => run.stage);
+  const runs = input.store.listRuns(input.assessmentId);
+  const completed = runs.filter((run) => run.status === "success").map((run) => run.stage);
 
   const result = await executeAnalysis({
     assessmentId: input.assessmentId,
     answers: input.answers,
     previousCaseState: input.store.getCaseState(input.assessmentId),
     completedStages: completed,
+    priorRuns: runs,
+    existingReport: input.store.getReport?.(input.assessmentId),
     llm: input.llm,
     fixture: input.fixture,
+    failStage: input.failStage,
     persistRun: input.store.saveRun,
     persistCaseState(stage, snapshot) {
       input.store.saveCaseState(input.assessmentId, stage, snapshot);

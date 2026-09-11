@@ -83,6 +83,15 @@ export const mockLlmAdapter: LlmAdapter = {
           usage: { inputTokens: 12, outputTokens: 4, costUsd: 0.002 },
         };
       }
+      if (input.failStage && String(stage) === String(input.failStage)) {
+        return {
+          stage,
+          fixture,
+          output: {},
+          model,
+          usage: { inputTokens: 12, outputTokens: 4, costUsd: 0.002 },
+        };
+      }
       const assessmentId = String(input.assessmentId ?? "assess-1");
       return {
         stage,

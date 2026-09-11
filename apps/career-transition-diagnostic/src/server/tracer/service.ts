@@ -12,6 +12,7 @@ import {
   type AnalysisPipelineResult,
 } from "@/engine/pipeline/run";
 import type { AnalysisFixture } from "@/engine/pipeline/fixtures";
+import type { AnalysisStage } from "@/engine/pipeline/models";
 import type { CaseState } from "@/engine/schemas/case-state";
 import type { ForkId } from "@/engine/schemas/analysis";
 import type { Report } from "@/engine/schemas/analysis";
@@ -473,7 +474,7 @@ export function getDraftReport(assessmentId: string) {
 
 export async function runAnalysisPipeline(
   assessmentId: string,
-  options: { fixture?: AnalysisFixture } = {},
+  options: { fixture?: AnalysisFixture; failStage?: AnalysisStage } = {},
 ): Promise<AnalysisPipelineResult> {
   const assessment = getStore().assessments.find((item) => item.id === assessmentId);
   if (!assessment) {
@@ -484,20 +485,23 @@ export async function runAnalysisPipeline(
   }
 
   const adapters = createVendorAdapters();
-  const completed = getStore()
-    .analysisRuns.filter((item) => item.assessmentId === assessmentId && item.status === "success")
-    .map((item) => item.stage);
+  const priorRuns = getStore().analysisRuns.filter((item) => item.assessmentId === assessmentId);
+  const completed = priorRuns.filter((item) => item.status === "success").map((item) => item.stage);
   const previous = getStore()
     .caseStateVersions.filter((item) => item.assessmentId === assessmentId)
     .at(-1)?.snapshot;
+  const existingReport = getDraftReport(assessmentId)?.generated;
 
   return executeAnalysis({
     assessmentId,
     answers: assessment.answers,
     previousCaseState: previous,
     completedStages: completed,
+    priorRuns,
+    existingReport,
     llm: adapters.llm,
     fixture: options.fixture,
+    failStage: options.failStage,
     persistRun(run) {
       getStore().analysisRuns.push({
         ...run,

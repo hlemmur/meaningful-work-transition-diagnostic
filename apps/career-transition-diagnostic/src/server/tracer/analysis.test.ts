@@ -126,6 +126,27 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     expect(result.caseState.imageVote?.verdict).toBe("weakens");
   });
 
+  it("keeps critic+constraints resolution when a later stage is resumed", async () => {
+    const { assessmentId } = await submittedAssessment({
+      "Q1.1": "CRITIC_CONSTRAINTS_WIN",
+      "Q0.5": "No savings and a dependent parent.",
+      "Q11.3": "See the contradiction I cannot name",
+    });
+
+    const interrupted = await runAnalysisPipeline(assessmentId, {
+      fixture: "critic-constraints-win",
+      failStage: "pass5",
+    });
+    expect(interrupted.status).toBe("failed");
+    expect(interrupted.failedStage).toBe("pass5");
+
+    const result = await runAnalysisPipeline(assessmentId, {
+      fixture: "critic-constraints-win",
+    });
+    expect(result.status).toBe("completed");
+    expect(result.caseState.hiddenPosition).toBeUndefined();
+  });
+
   it("omits Hidden Position when the critic and constraints win", async () => {
     const { assessmentId } = await submittedAssessment({
       "Q1.1": "CRITIC_CONSTRAINTS_WIN",
