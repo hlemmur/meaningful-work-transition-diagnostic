@@ -32,6 +32,8 @@ test("rejects invalid webhook signatures and ignores replays", async ({ request 
   expect(firstJson.created).toBe(true);
   expect(replayJson.created).toBe(false);
   expect(replayJson.assessmentId).toBe(firstJson.assessmentId);
+  expect(firstJson).not.toHaveProperty("accessToken");
+  expect(JSON.stringify(firstJson)).not.toMatch(/accessToken/);
 });
 
 test("keeps marketing export empty when the opt-in stays unchecked", async ({ page }) => {

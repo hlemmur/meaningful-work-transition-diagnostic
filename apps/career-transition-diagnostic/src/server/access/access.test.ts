@@ -58,6 +58,8 @@ describe("paid token access and consent", () => {
     expect(second.assessmentId).toBe(first.assessmentId);
     expect(second.created).toBe(false);
     expect(first.created).toBe(true);
+    expect(first).toEqual({ assessmentId: first.assessmentId, created: true });
+    expect(first).not.toHaveProperty("accessToken");
   });
 
   it("rejects an expired token and issues a working replacement link", async () => {

@@ -45,9 +45,14 @@ export async function processLemonWebhook(rawBody: string, signature: string) {
     throw new Error("Unsupported webhook payload");
   }
 
-  return completePaidOrder({
+  const result = await completePaidOrder({
     email,
     lemonOrderId: orderId,
     lemonWebhookId: payload.meta?.webhook_id ?? orderId,
   });
+
+  return {
+    assessmentId: result.assessmentId,
+    created: result.created,
+  };
 }
