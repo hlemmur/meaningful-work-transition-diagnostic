@@ -49,7 +49,7 @@ test("keeps marketing export empty when the opt-in stays unchecked", async ({ pa
   await expect(page.getByRole("heading", { name: "Assessment" })).toHaveCount(0);
   await page.locator("#product-consent").check();
   await page.getByRole("button", { name: "Continue to assessment" }).click();
-  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Situation" })).toBeVisible();
   await adminLogin(page);
   await page.goto("/admin/export");
   await expect(page.getByText("No current marketing opt-ins.")).toBeVisible();

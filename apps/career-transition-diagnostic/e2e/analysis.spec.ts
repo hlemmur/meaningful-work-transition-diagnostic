@@ -1,5 +1,6 @@
 import { expect, test } from "./base";
 import { adminLogin } from "./admin";
+import { sendToLena, startAssessment } from "./questionnaire";
 
 test("rejects unauthenticated analysis runs", async ({ request }) => {
   const response = await request.post("/api/analysis", {
@@ -9,15 +10,8 @@ test("rejects unauthenticated analysis runs", async ({ request }) => {
 });
 
 test("admin can run the analysis pipeline without delivering a report", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("link", { name: "Continue in mock checkout" }).click();
-  await page.getByRole("button", { name: "Complete mock purchase" }).click();
-  await page.getByRole("link", { name: "Open assessment" }).last().click();
-  await page.locator("#product-consent").check();
-  await page.getByRole("button", { name: "Continue to assessment" }).click();
-  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
-  await page.getByRole("button", { name: "Submit assessment" }).click();
-  await expect(page.getByText(/Lena will review/)).toBeVisible();
+  await startAssessment(page);
+  await sendToLena(page);
 
   await adminLogin(page);
   const assessmentId = await page.locator("[data-assessment-id]").last().getAttribute("data-assessment-id");
