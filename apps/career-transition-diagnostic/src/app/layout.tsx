@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Newsreader, Source_Sans_3 } from "next/font/google";
 import { MockModeBadge } from "@/components/mock-mode-badge";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sourceSans = Source_Sans_3({
   subsets: ["latin"],
+  variable: "--font-source-sans",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const newsreader = Newsreader({
   subsets: ["latin"],
+  variable: "--font-newsreader",
 });
 
 export const metadata: Metadata = {
@@ -23,9 +23,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sourceSans.variable} ${newsreader.variable} ${sourceSans.className} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#f7f1ea] text-[#2b211c]">
+      <body className="flex min-h-full flex-col bg-paper text-ink">
         <MockModeBadge />
         {children}
       </body>

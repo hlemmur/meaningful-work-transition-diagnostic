@@ -316,11 +316,11 @@ export function QuestionnaireFlow({
 
   return (
     <section className="flex flex-col gap-5">
-      <p className="text-sm uppercase tracking-[0.2em] text-[#b65f3e]">
+      <p className="text-sm uppercase tracking-[0.2em] text-terracotta">
         Section {question.section} · {index + 1} of {visible.length}
       </p>
       {supportCopy ? (
-        <p role="note" className="rounded border border-[#b65f3e] bg-[#f7f1ea] p-4 text-sm leading-6">
+        <p role="note" className="rounded border border-terracotta bg-paper p-4 text-sm leading-6">
           {supportCopy}
         </p>
       ) : null}
@@ -334,7 +334,7 @@ export function QuestionnaireFlow({
         locked={locked}
         onChange={(value, mode) => persist(question.id, value, mode)}
       />
-      <p aria-live="polite" className="text-sm text-[#4a3b34]">
+      <p aria-live="polite" className="text-sm text-muted">
         {status === "saving" || pending
           ? "Saving…"
           : status === "error"
@@ -346,7 +346,7 @@ export function QuestionnaireFlow({
       </p>
       <div className="flex flex-wrap gap-3">
         <button
-          className="rounded-full border border-[#2b211c] px-5 py-3 text-sm disabled:opacity-40"
+          className="rounded-full border border-ink px-5 py-3 text-sm disabled:opacity-40"
           type="button"
           onClick={() => {
             void go(-1);
@@ -356,7 +356,7 @@ export function QuestionnaireFlow({
           Back
         </button>
         <button
-          className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea] disabled:opacity-40"
+          className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
           type="button"
           onClick={() => {
             void go(1);
@@ -366,7 +366,7 @@ export function QuestionnaireFlow({
           Next
         </button>
         <button
-          className="rounded-full border border-[#b65f3e] px-5 py-3 text-sm text-[#7d3c2d] disabled:opacity-40"
+          className="rounded-full border border-terracotta px-5 py-3 text-sm text-terracotta disabled:opacity-40"
           type="button"
           disabled={locked}
           onClick={() => {
@@ -403,7 +403,7 @@ function QuestionField({
         <p>{question.prompt}</p>
         <button
           type="button"
-          className="w-fit rounded-full border border-[#b65f3e] px-4 py-2 text-sm"
+          className="w-fit rounded-full border border-terracotta px-4 py-2 text-sm"
           disabled={locked}
           onClick={() => onChange(true)}
         >
@@ -488,7 +488,7 @@ function QuestionField({
         {items.map((item, index) => (
           <input
             key={index}
-            className="rounded border border-[#e6d8cc] bg-white p-3"
+            className="rounded border border-hairline bg-field p-3"
             value={item}
             disabled={locked}
             aria-label={`Admired figure ${index + 1}`}
@@ -529,7 +529,7 @@ function QuestionField({
         {items.map((item, index) => (
           <input
             key={index}
-            className="rounded border border-[#e6d8cc] bg-white p-3"
+            className="rounded border border-hairline bg-field p-3"
             value={item.action}
             disabled={locked}
             aria-label={`Avoided action ${index + 1}`}
@@ -568,7 +568,7 @@ function QuestionField({
         <label>
           Protecting
           <textarea
-            className="mt-2 min-h-24 w-full rounded border border-[#e6d8cc] bg-white p-3"
+            className="mt-2 min-h-24 w-full rounded border border-hairline bg-field p-3"
             disabled={locked}
             value={pair.protect ?? ""}
             onBlur={(event) => onChange({ ...pair, protect: event.target.value })}
@@ -578,7 +578,7 @@ function QuestionField({
         <label>
           Threatening
           <textarea
-            className="mt-2 min-h-24 w-full rounded border border-[#e6d8cc] bg-white p-3"
+            className="mt-2 min-h-24 w-full rounded border border-hairline bg-field p-3"
             disabled={locked}
             value={pair.threaten ?? ""}
             onBlur={(event) => onChange({ ...pair, threaten: event.target.value })}
@@ -606,7 +606,7 @@ function QuestionField({
           <label key={stem} className="flex flex-col gap-2">
             {stem}
             <input
-              className="rounded border border-[#e6d8cc] bg-white p-3"
+              className="rounded border border-hairline bg-field p-3"
               disabled={locked}
               value={completions[index] ?? ""}
               onBlur={(event) => {
@@ -635,7 +635,7 @@ function QuestionField({
       {isLong ? (
         <textarea
           id={fieldId}
-          className="min-h-40 rounded border border-[#e6d8cc] bg-white p-3"
+          className="min-h-40 rounded border border-hairline bg-field p-3"
           disabled={locked}
           value={typeof value === "string" ? value : ""}
           onBlur={(event) => onChange(event.target.value)}
@@ -644,7 +644,7 @@ function QuestionField({
       ) : (
         <input
           id={fieldId}
-          className="rounded border border-[#e6d8cc] bg-white p-3"
+          className="rounded border border-hairline bg-field p-3"
           disabled={locked}
           value={typeof value === "string" ? value : ""}
           onBlur={(event) => onChange(event.target.value)}
