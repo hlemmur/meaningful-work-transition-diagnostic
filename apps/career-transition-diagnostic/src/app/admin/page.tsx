@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   await requireAdminPage();
-  const queue = listReviewQueueView();
+  const queue = await listReviewQueueView();
 
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-6 py-20">

@@ -32,10 +32,10 @@ function paidOrderPayload(orderId: string, email = "buyer@example.com") {
   });
 }
 
-afterEach(() => {
+afterEach(async () => {
   process.env.APP_MODE = "mock";
   resetMockOutbox();
-  resetMockTracerStore();
+  await resetMockTracerStore();
 });
 
 describe("paid token access and consent", () => {
@@ -66,17 +66,17 @@ describe("paid token access and consent", () => {
   it("rejects an expired token and issues a working replacement link", async () => {
     process.env.APP_MODE = "mock";
     const purchase = await completeMockPurchase("buyer@example.com");
-    expireAccessToken(purchase.accessToken);
+    await expireAccessToken(purchase.accessToken);
 
-    expect(getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
+    expect(await getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
 
     const renewed = await requestNewAccessLink(purchase.accessToken);
     expect(renewed.sent).toBe(true);
     if (!renewed.sent) {
       throw new Error("expected renewal");
     }
-    expect(getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
-    expect(getAssessmentByAccessToken(renewed.accessToken)?.id).toBe(purchase.assessmentId);
+    expect(await getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
+    expect((await getAssessmentByAccessToken(renewed.accessToken))?.id).toBe(purchase.assessmentId);
     expect(renewed.accessEmail.text).toContain(`/a/${renewed.accessToken}`);
   });
 
@@ -86,7 +86,7 @@ describe("paid token access and consent", () => {
 
     const missing = await requestNewAccessLink("not-a-real-token");
     expect(missing).toEqual({ sent: false });
-    expect(getAssessmentByAccessToken(purchase.accessToken)?.id).toBe(purchase.assessmentId);
+    expect((await getAssessmentByAccessToken(purchase.accessToken))?.id).toBe(purchase.assessmentId);
   });
 
   it("does not rotate a still-valid access token", async () => {
@@ -95,7 +95,7 @@ describe("paid token access and consent", () => {
 
     const refused = await requestNewAccessLink(purchase.accessToken);
     expect(refused).toEqual({ sent: false });
-    expect(getAssessmentByAccessToken(purchase.accessToken)?.id).toBe(purchase.assessmentId);
+    expect((await getAssessmentByAccessToken(purchase.accessToken))?.id).toBe(purchase.assessmentId);
   });
 
   it("keeps marketing opt-in off by default and isolated from answers", async () => {
@@ -109,22 +109,22 @@ describe("paid token access and consent", () => {
     });
     await saveAnswer(accessToken, "Q1.1", "secret career material");
 
-    expect(exportMarketingContacts()).toEqual([]);
+    expect(await exportMarketingContacts()).toEqual([]);
 
     await recordWelcomeConsent({
       accessToken,
       productConsent: true,
       marketingOptIn: true,
     });
-    expect(exportMarketingContacts()).toEqual([
+    expect(await exportMarketingContacts()).toEqual([
       expect.objectContaining({
         email: "buyer@example.com",
         consentCopyVersion: MARKETING_CONSENT_COPY.version,
       }),
     ]);
-    expect(JSON.stringify(exportMarketingContacts())).not.toContain("secret career material");
+    expect(JSON.stringify(await exportMarketingContacts())).not.toContain("secret career material");
 
-    withdrawMarketingConsent("buyer@example.com");
-    expect(exportMarketingContacts()).toEqual([]);
+    await withdrawMarketingConsent("buyer@example.com");
+    expect(await exportMarketingContacts()).toEqual([]);
   });
 });

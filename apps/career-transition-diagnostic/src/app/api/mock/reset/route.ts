@@ -10,6 +10,6 @@ export async function POST() {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   resetMockOutbox();
-  resetMockTracerStore();
+  await resetMockTracerStore();
   return NextResponse.json({ ok: true });
 }

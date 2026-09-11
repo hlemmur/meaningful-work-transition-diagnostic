@@ -30,22 +30,22 @@ async function submitted() {
   return purchase;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   process.env.APP_MODE = "mock";
 });
 
-afterEach(() => {
+afterEach(async () => {
   process.env.APP_MODE = "mock";
   resetMockOutbox();
-  resetMockTracerStore();
+  await resetMockTracerStore();
 });
 
 describe("Lena review and private delivery", () => {
   it("keeps unapproved drafts off the customer report token", async () => {
     const { accessToken, assessmentId } = await submitted();
-    expect(getAssessmentByReportToken(accessToken)).toBeUndefined();
-    expect(getDeliveredReport(accessToken)).toBeUndefined();
-    expect(getAssessmentByAccessToken(accessToken)?.status).toBe("review_pending");
+    expect(await getAssessmentByReportToken(accessToken)).toBeUndefined();
+    expect(await getDeliveredReport(accessToken)).toBeUndefined();
+    expect((await getAssessmentByAccessToken(accessToken))?.status).toBe("review_pending");
     expect(assessmentId).toBeTruthy();
   });
 
@@ -53,7 +53,7 @@ describe("Lena review and private delivery", () => {
     process.env.APP_MODE = "mock";
     const { assessmentId } = await submitted();
     await runAnalysisPipeline(assessmentId);
-    saveReportEdits(assessmentId, [
+    await saveReportEdits(assessmentId, [
       {
         id: "problem",
         title: "The problem as you see it",
@@ -64,7 +64,7 @@ describe("Lena review and private delivery", () => {
     const delivery = await approveAssessment(assessmentId);
     expect(delivery.reportEmail.text).toContain(`/r/${delivery.reportToken}`);
     expect(delivery.reportEmail.text).not.toContain("Edited hypothesis language only.");
-    const delivered = getDeliveredReport(delivery.reportToken);
+    const delivered = await getDeliveredReport(delivery.reportToken);
     expect(delivered?.sections[0]?.body).toBe("Edited hypothesis language only.");
   });
 
@@ -76,10 +76,10 @@ describe("Lena review and private delivery", () => {
     const resent = await resendReportLink(assessmentId);
     expect(resent.reportEmail.text).toContain(`/r/${resent.reportToken}`);
     expect(resent.reportEmail.text).not.toContain("structure is being asked");
-    expect(getDeliveredReport(first.reportToken)).toBeUndefined();
-    expect(getDeliveredReport(resent.reportToken)?.sections.length).toBeGreaterThan(0);
-    deleteReportAccess(assessmentId);
-    expect(getDeliveredReport(resent.reportToken)).toBeUndefined();
+    expect(await getDeliveredReport(first.reportToken)).toBeUndefined();
+    expect((await getDeliveredReport(resent.reportToken))?.sections.length).toBeGreaterThan(0);
+    await deleteReportAccess(assessmentId);
+    expect(await getDeliveredReport(resent.reportToken)).toBeUndefined();
   });
 
   it("restricts admin login to the allowlist", () => {
@@ -91,8 +91,8 @@ describe("Lena review and private delivery", () => {
     const purchase = await submitted();
     await runAnalysisPipeline(purchase.assessmentId);
     const delivery = await approveAssessment(purchase.assessmentId);
-    expect(getDeliveredReport(purchase.accessToken)).toBeUndefined();
-    expect(getDeliveredReport(delivery.reportToken)?.sections.length).toBeGreaterThan(0);
+    expect(await getDeliveredReport(purchase.accessToken)).toBeUndefined();
+    expect((await getDeliveredReport(delivery.reportToken))?.sections.length).toBeGreaterThan(0);
   });
 
   it("expires the private report link", async () => {
@@ -101,13 +101,13 @@ describe("Lena review and private delivery", () => {
     process.env.ACCESS_TOKEN_TTL_MS = "1";
     const delivery = await approveAssessment(assessmentId);
     await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(getDeliveredReport(delivery.reportToken)).toBeUndefined();
+    expect(await getDeliveredReport(delivery.reportToken)).toBeUndefined();
     delete process.env.ACCESS_TOKEN_TTL_MS;
   });
 
   it("surfaces safety and analysis status in the review queue", async () => {
     const { assessmentId } = await submitted();
-    expect(listReviewQueueView()).toEqual([
+    expect(await listReviewQueueView()).toEqual([
       expect.objectContaining({
         id: assessmentId,
         status: "review_pending",
@@ -116,7 +116,7 @@ describe("Lena review and private delivery", () => {
       }),
     ]);
     await runAnalysisPipeline(assessmentId);
-    expect(listReviewQueueView()[0]?.analysisStatus).toBe("completed");
+    expect((await listReviewQueueView())[0]?.analysisStatus).toBe("completed");
   });
 
   it("rejects approve before analysis completes and edits after delivery", async () => {
@@ -124,7 +124,7 @@ describe("Lena review and private delivery", () => {
     await expect(approveAssessment(assessmentId)).rejects.toThrow("Analysis must complete");
     await runAnalysisPipeline(assessmentId);
     const delivery = await approveAssessment(assessmentId);
-    expect(() =>
+    await expect(
       saveReportEdits(assessmentId, [
         {
           id: "problem",
@@ -133,8 +133,8 @@ describe("Lena review and private delivery", () => {
           evidenceRefs: [`${assessmentId}:Q1.1`],
         },
       ]),
-    ).toThrow("Approved reports cannot be edited");
-    expect(getDeliveredReport(delivery.reportToken)?.sections[0]?.body).not.toBe(
+    ).rejects.toThrow("Approved reports cannot be edited");
+    expect((await getDeliveredReport(delivery.reportToken))?.sections[0]?.body).not.toBe(
       "Silent rewrite after delivery.",
     );
   });

@@ -28,7 +28,7 @@ export async function saveEditsAction(assessmentId: string, formData: FormData) 
       .map((item) => item.trim())
       .filter(Boolean),
   }));
-  saveReportEdits(assessmentId, sections);
+  await saveReportEdits(assessmentId, sections);
   redirect(`/admin/${assessmentId}?saved=1`);
 }
 
@@ -46,6 +46,6 @@ export async function resendLinkAction(assessmentId: string) {
 
 export async function deleteAccessAction(assessmentId: string) {
   await requireAdminSession();
-  deleteAssessmentData(assessmentId);
+  await deleteAssessmentData(assessmentId);
   redirect("/admin");
 }

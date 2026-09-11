@@ -13,13 +13,13 @@ import {
 } from "@/server/tracer/service";
 import { BENCHMARK_CASES } from "./benchmarks";
 
-afterEach(() => {
+afterEach(async () => {
   process.env.APP_MODE = "mock";
   resetMockOutbox();
-  resetMockTracerStore();
+  await resetMockTracerStore();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   process.env.APP_MODE = "mock";
 });
 
@@ -77,8 +77,8 @@ describe("five benchmark fixtures", () => {
       }
       await submitAssessment(purchase.accessToken);
       const result = await runAnalysisPipeline(purchase.assessmentId);
-      const draft = getDraftReport(purchase.assessmentId);
-      const caseState = listCaseStateVersions(purchase.assessmentId).at(-1)?.snapshot;
+      const draft = await getDraftReport(purchase.assessmentId);
+      const caseState = (await listCaseStateVersions(purchase.assessmentId)).at(-1)?.snapshot;
 
       expect(result.status, benchmark.id).toBe("completed");
       expect(draft?.generated.engineVersion, benchmark.id).toBe("engine.v2");
@@ -87,7 +87,7 @@ describe("five benchmark fixtures", () => {
         caseState,
       });
       expect(rubric.passed, `${benchmark.id}: ${JSON.stringify(rubric.findings)}`).toBe(true);
-      resetMockTracerStore();
+      await resetMockTracerStore();
     }
   });
 });

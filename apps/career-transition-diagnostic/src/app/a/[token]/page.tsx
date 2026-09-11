@@ -23,7 +23,7 @@ export default async function AssessmentPage({
 }: AssessmentPageProps) {
   const { token } = await params;
   const query = await searchParams;
-  const tokenState = inspectAccessToken(token);
+  const tokenState = await inspectAccessToken(token);
 
   if (tokenState === "missing") {
     notFound();
@@ -39,7 +39,7 @@ export default async function AssessmentPage({
     );
   }
 
-  const assessment = getAssessmentByAccessToken(token);
+  const assessment = await getAssessmentByAccessToken(token);
   if (!assessment) {
     notFound();
   }
@@ -49,6 +49,7 @@ export default async function AssessmentPage({
   }
 
   const locked = assessment.status !== "in_progress";
+  const adaptive = await listAdaptiveQuestions(assessment.id);
 
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-6 px-6 py-20">
@@ -58,7 +59,7 @@ export default async function AssessmentPage({
         initialAnswers={assessment.answers}
         locked={locked}
         submitted={query.submitted === "1"}
-        initialAdaptive={listAdaptiveQuestions(assessment.id).map((item) => ({
+        initialAdaptive={adaptive.map((item) => ({
           id: item.id,
           checkpoint: item.checkpoint,
           forkId: item.forkId,
