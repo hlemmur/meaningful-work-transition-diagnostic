@@ -32,6 +32,8 @@ export default defineConfig({
     env: {
       ...process.env,
       APP_MODE: "mock",
+      // Local .env.local may set LLM_MODE=live; e2e must stay on fixtures.
+      LLM_MODE: "",
     },
   },
 });

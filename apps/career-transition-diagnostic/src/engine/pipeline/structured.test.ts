@@ -32,14 +32,16 @@ describe("runStructuredStage", () => {
 
   it("retries a schema failure once and then succeeds", async () => {
     let calls = 0;
+    const seenInputs: Array<Record<string, unknown>> = [];
     const result = await runStructuredStage({
       stage: "pass3",
       schema,
-      input: {},
+      input: { assessmentId: "a1" },
       model: "mock-strong",
       llm: {
-        async completeStructured({ stage }) {
+        async completeStructured({ stage, input }) {
           calls += 1;
+          seenInputs.push(input);
           return {
             stage,
             fixture: "retry",
@@ -52,6 +54,11 @@ describe("runStructuredStage", () => {
     expect(calls).toBe(2);
     expect(result.attempts).toBe(2);
     expect(result.output).toEqual({ ok: true, n: 2 });
+    expect(seenInputs[0]?.schemaIssues).toBeUndefined();
+    expect(seenInputs[1]?.attempt).toBe(2);
+    expect(seenInputs[1]?.schemaIssues).toEqual(
+      expect.arrayContaining([expect.stringMatching(/ok/i)]),
+    );
   });
 
   it("fails after a second schema error without inventing fields", async () => {
@@ -67,6 +74,6 @@ describe("runStructuredStage", () => {
           },
         },
       }),
-    ).rejects.toThrow(/schema/i);
+    ).rejects.toThrow(/schema validation failed for pass3:[\s\S]*ok:/i);
   });
 });

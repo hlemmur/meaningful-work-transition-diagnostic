@@ -11,6 +11,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaseAnswers } from "../case-answers";
 import { ConfirmDeleteAccess } from "../confirm-delete-access";
+import { FailedAnalysisNotice } from "../failed-analysis-notice";
 import { humanAnalysisStatus, humanSafetyLevel, humanStatus } from "../operator-copy";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       <h1 className="text-3xl font-semibold tracking-tight">Case review</h1>
       <p>Safety: {humanSafetyLevel(adminCase.safetyLevel)}</p>
       <p>Analysis: {humanAnalysisStatus(adminCase.analysisStatus.label)}</p>
-      {failedStage ? <p>Failed stage: {failedStage}</p> : null}
+      <FailedAnalysisNotice stage={failedStage} error={adminCase.analysisStatus.error} />
 
       {pending ? (
         <form action={run}>

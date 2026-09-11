@@ -114,15 +114,15 @@ function analysisStatusInStore(assessmentId: string) {
     .reverse()
     .find((run) => run.status === "failure" && !successes.has(run.stage));
   if (failed) {
-    return { label: `failed at ${failed.stage}`, failedStage: failed.stage };
+    return { label: `failed at ${failed.stage}`, failedStage: failed.stage, error: failed.error };
   }
   if (successes.has("pass10")) {
-    return { label: "completed" as const, failedStage: undefined };
+    return { label: "completed" as const, failedStage: undefined, error: undefined };
   }
   if (successes.size === 0) {
-    return { label: "not started" as const, failedStage: undefined };
+    return { label: "not started" as const, failedStage: undefined, error: undefined };
   }
-  return { label: [...successes].at(-1) ?? "in progress", failedStage: undefined };
+  return { label: [...successes].at(-1) ?? "in progress", failedStage: undefined, error: undefined };
 }
 
 export async function analysisStatusFor(assessmentId: string) {

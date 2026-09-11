@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetMockOutbox } from "../adapters/resend/mock";
 import {
   completeMockPurchase,
+  getAdminCase,
   getDraftReport,
   listAnalysisRuns,
   recordWelcomeConsent,
@@ -97,7 +98,10 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     expect(pass3).toHaveLength(1);
     expect(pass3[0]?.status).toBe("failure");
     expect(pass3[0]?.attempt).toBe(2);
-    expect(pass3[0]?.error).toMatch(/schema/i);
+    expect(pass3[0]?.error).toMatch(/schema validation failed for pass3:[\s\S]*hypotheses/i);
+    const admin = await getAdminCase(assessmentId);
+    expect(admin.analysisStatus.failedStage).toBe("pass3");
+    expect(admin.analysisStatus.error).toMatch(/hypotheses/i);
     expect((await listAnalysisRuns(assessmentId)).some((run) => run.stage === "pass4")).toBe(false);
   });
 
