@@ -11,12 +11,11 @@ export default function PrivacyPage() {
     <JournalShell>
       <main className="flex flex-col gap-6">
         <h1 className="font-display text-3xl font-semibold tracking-tight">Privacy for this diagnostic</h1>
-        <p className="text-sm text-muted">
-          Copy versions {product.version} and {marketing.version}. This notice is specific to the
-          Meaningful Work Transition Diagnostic and does not replace Radical Creation Coaching’s
-          general privacy policy.
+        <p className="leading-7 text-muted">
+          This notice is specific to the Meaningful Work Transition Diagnostic and does not replace
+          Radical Creation Coaching’s general privacy policy.
         </p>
-        <section className="flex flex-col gap-3 leading-7 text-muted" data-copy-version={product.version}>
+        <section className="flex flex-col gap-3 leading-7 text-muted">
           <h2 className="text-lg font-semibold tracking-tight text-ink">{product.scope.heading}</h2>
           <p>{product.scope.body}</p>
           <h2 className="text-lg font-semibold tracking-tight text-ink">
@@ -32,7 +31,7 @@ export default function PrivacyPage() {
           <p>{product.privacy.deletion}</p>
           <p>{product.privacy.analytics}</p>
         </section>
-        <section className="flex flex-col gap-3 leading-7 text-muted" data-copy-version={marketing.version}>
+        <section className="flex flex-col gap-3 leading-7 text-muted">
           <h2 className="text-lg font-semibold tracking-tight text-ink">Optional marketing</h2>
           <p>{marketing.checkboxLabel}</p>
           <p>{marketing.withdrawal}</p>

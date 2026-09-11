@@ -1,8 +1,8 @@
 export const PRODUCT_CONSENT_COPY = {
   version: "product-consent.v1",
-  title: "Before you begin",
+  title: "A note from Lena",
   intro:
-    "This diagnostic is self-paced. Lena reviews every report before delivery. Required consent is for the product. Marketing is optional and off by default.",
+    "You will move through this at your own pace. I read every draft before anything reaches you. The consent below is for this diagnostic. Marketing is optional and off unless you choose it.",
   scope: {
     heading: "What this is",
     body: "The Meaningful Work Transition Diagnostic is a paid, self-paced career-transition diagnostic. You answer questions over a private link. After you submit, Lena reviews a draft before anything is sent to you. It is not a job-placement service and it does not create a customer account.",

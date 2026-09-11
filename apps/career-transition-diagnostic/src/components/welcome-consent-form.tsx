@@ -14,46 +14,36 @@ export function WelcomeConsentForm({ action }: WelcomeConsentFormProps) {
     <JournalShell>
       <main className="flex flex-col gap-6">
         <h1 className="font-display text-3xl font-semibold tracking-tight">{product.title}</h1>
-        <p className="leading-7 text-muted">{product.intro}</p>
-
-        <section className="flex flex-col gap-3 text-muted" data-copy-version={product.version}>
-          <h2 className="text-lg font-semibold tracking-tight text-ink">{product.scope.heading}</h2>
-          <p className="leading-7">{product.scope.body}</p>
-          <h2 className="text-lg font-semibold tracking-tight text-ink">
-            {product.aiProcessing.heading}
-          </h2>
-          <p className="leading-7">{product.aiProcessing.body}</p>
-          <h2 className="text-lg font-semibold tracking-tight text-ink">
-            {product.coachingNotTherapy.heading}
-          </h2>
-          <p className="leading-7">{product.coachingNotTherapy.body}</p>
-          <h2 className="text-lg font-semibold tracking-tight text-ink">{product.privacy.heading}</h2>
-          <p className="leading-7">{product.privacy.retention}</p>
-          <p className="leading-7">{product.privacy.deletion}</p>
-          <p className="leading-7">{product.privacy.analytics}</p>
-          <p className="text-sm">
-            Copy version {product.version}. Full notice:{" "}
-            <Link className="underline" href="/privacy">
-              Privacy for this diagnostic
-            </Link>
-            .
-          </p>
-        </section>
-
+        <p className="font-display text-xl leading-9">{product.intro}</p>
+        <p className="text-sm leading-6 text-muted">
+          The full scope, AI disclosure, coaching-not-therapy disclaimer, and privacy notes live on{" "}
+          <Link className="underline" href="/privacy">
+            Privacy for this diagnostic
+          </Link>
+          . Please read them before you continue.
+        </p>
         <form className="flex flex-col gap-4" action={action}>
           <label className="flex items-start gap-3">
-            <input id="product-consent" name="productConsent" type="checkbox" required />
+            <input
+              id="product-consent"
+              className="consent-check mt-1"
+              name="productConsent"
+              type="checkbox"
+              required
+            />
             <span>{product.checkboxLabel}</span>
           </label>
           <label className="flex items-start gap-3">
-            <input id="marketing-opt-in" name="marketingOptIn" type="checkbox" />
+            <input
+              id="marketing-opt-in"
+              className="consent-check mt-1"
+              name="marketingOptIn"
+              type="checkbox"
+            />
             <span>
               {marketing.checkboxLabel} {marketing.withdrawal}
             </span>
           </label>
-          <p className="text-sm text-muted" data-copy-version={marketing.version}>
-            Marketing copy version {marketing.version}.
-          </p>
           <button
             className="w-fit rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper"
             type="submit"

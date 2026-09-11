@@ -41,6 +41,20 @@ body {
   outline-offset: 3px;
 }
 
+.consent-check {
+  appearance: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  border: 1px solid var(--ink);
+  background: var(--field);
+}
+
+.consent-check:checked {
+  background: var(--terracotta);
+  box-shadow: inset 0 0 0 2px var(--field);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export async function startAssessment(page: Page) {
   await page.goto("/");
-  await page.getByRole("link", { name: "Continue in mock checkout" }).click();
+  await page.getByRole("link", { name: "Begin the diagnostic" }).click();
   await page.getByRole("button", { name: "Complete mock purchase" }).click();
   await page.getByRole("link", { name: "Open assessment" }).last().click();
   await page.locator("#product-consent").check();
