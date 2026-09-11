@@ -17,7 +17,7 @@ bun run test
 bun run dev
 ```
 
-The **MOCK MODE** badge must remain visible on customer and admin screens while adapters are mocked. Lemon Squeezy, OpenAI, and Resend are never called in mock mode.
+The **MOCK MODE** badge must remain visible on customer and admin screens while Lemon Squeezy and Resend are mocked. Checkout and outbox never call those vendors in `APP_MODE=mock`. Optional live Gemini (`LLM_MODE=live`) does not change the badge.
 
 Paid live checkout stays off (`PAYMENTS_ENABLED=false`) until the staging launch-gate checklist in [`apps/career-transition-diagnostic/README.md`](apps/career-transition-diagnostic/README.md) is green.
 
