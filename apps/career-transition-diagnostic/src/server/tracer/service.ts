@@ -35,6 +35,7 @@ export type AssessmentRecord = {
   answers: Record<string, unknown>;
   draftBody?: string;
   reportAccessTokenHash?: string;
+  reportAccessExpiresAt?: number;
   productConsentVersion?: string;
   productConsentedAt?: string;
   safetyLevel?: "none" | "high";
@@ -75,7 +76,8 @@ export type MarketingConsentRecord = {
 };
 
 export type ReportRecord = Report & {
-  status: "draft" | "approved";
+  status: "draft" | "approved" | "deleted";
+  editedSections?: Report["sections"];
 };
 
 type TracerStore = {
@@ -91,7 +93,10 @@ type TracerStore = {
 
 const DRAFT_BODY =
   "A possible hidden position is that structure is being asked to serve aliveness.";
-const ACCESS_TTL_MS = Number(process.env.ACCESS_TOKEN_TTL_MS ?? 7 * 24 * 60 * 60 * 1000);
+
+function accessTtlMs() {
+  return Number(process.env.ACCESS_TOKEN_TTL_MS ?? 7 * 24 * 60 * 60 * 1000);
+}
 
 function getStore(): TracerStore {
   const globalState = globalThis as typeof globalThis & { __mwtdTracer?: TracerStore };
@@ -165,9 +170,50 @@ export function getAssessmentByAccessToken(accessToken: string) {
 }
 
 export function getAssessmentByReportToken(reportToken: string) {
-  return getStore().assessments.find(
+  const assessment = getStore().assessments.find(
     (item) => item.reportAccessTokenHash === hashToken(reportToken),
   );
+  if (!assessment || assessment.status !== "approved") {
+    return undefined;
+  }
+  if (assessment.reportAccessExpiresAt && assessment.reportAccessExpiresAt <= Date.now()) {
+    return undefined;
+  }
+  const report = getStore().reports.find((item) => item.assessmentId === assessment.id);
+  if (report?.status === "deleted") {
+    return undefined;
+  }
+  return assessment;
+}
+
+export function analysisStatusFor(assessmentId: string) {
+  const runs = listAnalysisRuns(assessmentId);
+  const successes = new Set(runs.filter((run) => run.status === "success").map((run) => run.stage));
+  const failed = [...runs]
+    .reverse()
+    .find((run) => run.status === "failure" && !successes.has(run.stage));
+  if (failed) {
+    return { label: `failed at ${failed.stage}`, failedStage: failed.stage };
+  }
+  if (successes.has("pass10")) {
+    return { label: "completed" as const, failedStage: undefined };
+  }
+  if (successes.size === 0) {
+    return { label: "not started" as const, failedStage: undefined };
+  }
+  return { label: [...successes].at(-1) ?? "in progress", failedStage: undefined };
+}
+
+export function listReviewQueueView() {
+  return listReviewQueue().map((assessment) => {
+    const report = getStore().reports.find((item) => item.assessmentId === assessment.id);
+    return {
+      id: assessment.id,
+      status: report?.status === "deleted" ? "deleted" : assessment.status,
+      safetyLevel: assessment.safetyLevel ?? "none",
+      analysisStatus: analysisStatusFor(assessment.id).label,
+    };
+  });
 }
 
 export function listReviewQueue() {
@@ -196,7 +242,7 @@ function createAssessment(email: string) {
     id: randomUUID(),
     email,
     accessTokenHash: hashToken(accessToken),
-    accessExpiresAt: Date.now() + ACCESS_TTL_MS,
+    accessExpiresAt: Date.now() + accessTtlMs(),
     status: "in_progress",
     answers: {},
   };
@@ -270,7 +316,7 @@ export async function requestNewAccessLink(email: string) {
 
   const accessToken = createToken();
   assessment.accessTokenHash = hashToken(accessToken);
-  assessment.accessExpiresAt = Date.now() + ACCESS_TTL_MS;
+  assessment.accessExpiresAt = Date.now() + accessTtlMs();
   const accessEmail = await emailAccessLink(email, accessToken);
   return { accessToken, accessEmail };
 }
@@ -427,7 +473,12 @@ export async function approveAssessment(assessmentId: string) {
 
   const reportToken = createToken();
   assessment.reportAccessTokenHash = hashToken(reportToken);
+  assessment.reportAccessExpiresAt = Date.now() + accessTtlMs();
   assessment.status = "approved";
+  const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
+  if (report && report.status !== "deleted") {
+    report.status = "approved";
+  }
 
   const adapters = createVendorAdapters();
   await adapters.email.send({
@@ -459,7 +510,7 @@ export function listAnalysisRuns(assessmentId: string) {
 
 export function getDraftReport(assessmentId: string) {
   const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
-  if (!report) {
+  if (!report || report.status === "deleted") {
     return undefined;
   }
   return {
@@ -467,8 +518,90 @@ export function getDraftReport(assessmentId: string) {
     generated: {
       assessmentId: report.assessmentId,
       engineVersion: report.engineVersion,
-      sections: report.sections,
+      sections: report.editedSections ?? report.sections,
     },
+  };
+}
+
+export function getDeliveredReport(reportToken: string) {
+  const assessment = getAssessmentByReportToken(reportToken);
+  if (!assessment) {
+    return undefined;
+  }
+  const draft = getDraftReport(assessment.id);
+  const sections =
+    draft?.generated.sections ??
+    [
+      {
+        id: "draft",
+        title: "Overview",
+        body: assessment.draftBody ?? DRAFT_BODY,
+        evidenceRefs: [],
+      },
+    ];
+  return {
+    assessmentId: assessment.id,
+    email: assessment.email,
+    sections,
+    safetyLevel: assessment.safetyLevel ?? "none",
+  };
+}
+
+export function saveReportEdits(
+  assessmentId: string,
+  sections: { id: string; title: string; body: string; evidenceRefs: string[] }[],
+) {
+  const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
+  if (!report || report.status === "deleted") {
+    throw new Error("Draft report not found");
+  }
+  report.editedSections = sections;
+  return report;
+}
+
+export async function resendReportLink(assessmentId: string) {
+  const assessment = getStore().assessments.find((item) => item.id === assessmentId);
+  if (!assessment || assessment.status !== "approved") {
+    throw new Error("Report is not approved");
+  }
+  const reportToken = createToken();
+  assessment.reportAccessTokenHash = hashToken(reportToken);
+  assessment.reportAccessExpiresAt = Date.now() + accessTtlMs();
+  const adapters = createVendorAdapters();
+  await adapters.email.send({
+    to: assessment.email,
+    subject: "Your report is ready",
+    text: `Open your private report: /r/${reportToken}`,
+  });
+  const reportEmail = adapters.email.listOutbox().at(-1) as OutboxEmail;
+  return { reportToken, reportEmail };
+}
+
+export function deleteReportAccess(assessmentId: string) {
+  const assessment = getStore().assessments.find((item) => item.id === assessmentId);
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+  assessment.reportAccessTokenHash = undefined;
+  assessment.reportAccessExpiresAt = undefined;
+  const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
+  if (report) {
+    report.status = "deleted";
+  }
+  return assessment;
+}
+
+export function getAdminCase(assessmentId: string) {
+  const assessment = getStore().assessments.find((item) => item.id === assessmentId);
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+  return {
+    assessment,
+    safetyLevel: assessment.safetyLevel ?? "none",
+    runs: listAnalysisRuns(assessmentId),
+    analysisStatus: analysisStatusFor(assessmentId),
+    draft: getDraftReport(assessmentId),
   };
 }
 

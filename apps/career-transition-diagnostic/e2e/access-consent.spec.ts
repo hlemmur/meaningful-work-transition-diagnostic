@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import { adminLogin } from "./admin";
 
 function sign(rawBody: string) {
   return createHmac("sha256", "mock-webhook-secret").update(rawBody).digest("hex");
@@ -44,6 +45,7 @@ test("keeps marketing export empty when the opt-in stays unchecked", async ({ pa
   await expect(page.locator("#marketing-opt-in")).not.toBeChecked();
   await page.locator("#product-consent").check();
   await page.getByRole("button", { name: "Continue to assessment" }).click();
+  await adminLogin(page);
   await page.goto("/admin/export");
   await expect(page.getByText("No current marketing opt-ins.")).toBeVisible();
 });

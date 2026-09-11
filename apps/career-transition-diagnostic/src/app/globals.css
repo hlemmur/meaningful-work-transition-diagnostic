@@ -24,3 +24,30 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  [aria-label="MOCK MODE"],
+  [data-coaching-cta] {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: #2b211c;
+  }
+
+  .report-page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .report-page h1,
+  .report-page h2 {
+    break-after: avoid;
+  }
+
+  .report-page p {
+    orphans: 3;
+    widows: 3;
+  }
+}

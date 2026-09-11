@@ -7,6 +7,7 @@ async function startAssessment(page: Page) {
   await page.getByRole("link", { name: "Open assessment" }).last().click();
   await page.locator("#product-consent").check();
   await page.getByRole("button", { name: "Continue to assessment" }).click();
+  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
 }
 
 async function advanceTo(page: Page, pattern: RegExp, maxSteps = 80) {

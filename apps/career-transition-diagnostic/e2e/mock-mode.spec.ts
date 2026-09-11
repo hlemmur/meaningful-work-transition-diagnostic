@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { adminLogin } from "./admin";
 
 test("customer and admin screens show the MOCK MODE badge", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("status", { name: "MOCK MODE" })).toBeVisible();
 
-  await page.goto("/admin");
+  await adminLogin(page);
   await expect(page.getByRole("status", { name: "MOCK MODE" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Review queue" })).toBeVisible();
 });
