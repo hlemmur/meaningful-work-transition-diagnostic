@@ -15,9 +15,13 @@ export async function completePurchaseAction() {
   redirect("/mock/outbox");
 }
 
-export async function saveAnswerAction(token: string, formData: FormData) {
-  await saveAnswer(token, "Q1.1", String(formData.get("answer") ?? ""));
-  redirect(`/a/${token}?saved=1`);
+export async function autosaveAnswerAction(
+  token: string,
+  questionId: string,
+  encodedValue: string,
+) {
+  await saveAnswer(token, questionId, JSON.parse(encodedValue));
+  return { ok: true as const };
 }
 
 export async function submitAssessmentAction(token: string) {

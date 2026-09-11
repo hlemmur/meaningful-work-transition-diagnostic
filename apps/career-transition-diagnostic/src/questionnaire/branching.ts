@@ -1,3 +1,5 @@
+import { questionIds } from "./questionnaire.v2";
+
 export type SafetyLevel = "none" | "high";
 
 export type BranchingContext = {
@@ -51,4 +53,104 @@ export function shouldShowQuestion(id: string, context: BranchingContext = {}): 
     default:
       return true;
   }
+}
+
+const SURFACE_HINTS = [
+  "money",
+  "bills",
+  "visa",
+  "housing",
+  "inconvenience",
+  "wasted time",
+  "delay",
+  "schedule",
+];
+const IDENTITY_HINTS = [
+  "i am",
+  "i would be",
+  "they would see me",
+  "shame",
+  "fraud",
+  "unlovable",
+  "failure",
+];
+
+export function isSurfaceExternal(text: string) {
+  const lower = text.toLowerCase();
+  if (!lower.trim()) {
+    return false;
+  }
+  if (IDENTITY_HINTS.some((hint) => lower.includes(hint))) {
+    return false;
+  }
+  return SURFACE_HINTS.some((hint) => lower.includes(hint));
+}
+
+function asAvoidedActions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    if (typeof item === "string" && item.trim()) {
+      return [{ action: item.trim() }];
+    }
+    if (item && typeof item === "object" && "action" in item && String(item.action).trim()) {
+      return [{ action: String(item.action).trim() }];
+    }
+    return [];
+  });
+}
+
+export function listAvoidedActionLabels(answers: Record<string, unknown>) {
+  return asAvoidedActions(answers["Q2.3"]).map((item) => item.action);
+}
+
+function asText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asScale(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (value && typeof value === "object" && "intensity" in value) {
+    const intensity = Number(value.intensity);
+    return Number.isFinite(intensity) ? intensity : 0;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function buildBranchingContext(
+  answers: Record<string, unknown>,
+  safetyLevel: SafetyLevel = "none",
+): BranchingContext {
+  const watcher = asText(answers["Q3.5"]).toLowerCase();
+  const emptyWatcher = watcher === "" || watcher === "no one" || watcher === "no_one";
+  const intensity = Math.max(asScale(answers["Q3.2"]), asScale(answers["Q3.3"]));
+
+  return {
+    avoidedActionCount: asAvoidedActions(answers["Q2.3"]).length,
+    temporaryEase:
+      answers["Q2.6"] === "yes" || answers["Q2.6"] === "no" || answers["Q2.6"] === "unsure"
+        ? answers["Q2.6"]
+        : undefined,
+    chargeIntensity: intensity,
+    tooMuchTapped: answers["Q3.3S"] === true,
+    q38Present: asText(answers["Q3.8"]).length > 0,
+    q38IsSurface: isSurfaceExternal(asText(answers["Q3.8"])),
+    gazeAlreadyCaptured: !emptyWatcher,
+    q65Answered: asText(answers["Q6.5"]).length > 0,
+    q35EmptyOrNoOne: emptyWatcher,
+    safetyLevel,
+    chargeBlockSkipped: false,
+  };
+}
+
+export function listVisibleQuestionIds(
+  answers: Record<string, unknown>,
+  safetyLevel: SafetyLevel = "none",
+) {
+  const context = buildBranchingContext(answers, safetyLevel);
+  return questionIds.filter((id) => shouldShowQuestion(id, context));
 }

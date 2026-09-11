@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { shouldShowQuestion } from "./branching";
+import {
+  listAvoidedActionLabels,
+  listVisibleQuestionIds,
+  shouldShowQuestion,
+} from "./branching";
 import { questionIds } from "./questionnaire.v2";
 
 describe("questionnaire branching", () => {
@@ -67,5 +71,29 @@ describe("questionnaire branching", () => {
     expect(shouldShowQuestion("Q9.3", { safetyLevel: "high" })).toBe(false);
     expect(shouldShowQuestion("Q10.6", { safetyLevel: "high" })).toBe(false);
     expect(shouldShowQuestion("Q0.2", { safetyLevel: "high" })).toBe(true);
+  });
+
+  it("derives visible questions from stored answers", () => {
+    expect(listVisibleQuestionIds({ "Q2.3": [] })).toContain("Q2.4F");
+    expect(listVisibleQuestionIds({ "Q2.3": [] })).not.toContain("Q2.4");
+    expect(
+      listVisibleQuestionIds({ "Q2.3": [{ action: "Send the website" }] }),
+    ).toContain("Q2.4");
+    expect(listVisibleQuestionIds({ "Q2.6": "yes" })).toContain("Q2.6b");
+    expect(listVisibleQuestionIds({ "Q3.5": "my former manager" })).toContain("Q6.5s");
+    expect(listVisibleQuestionIds({ "Q3.5": "my former manager" })).not.toContain("Q6.5");
+    expect(listVisibleQuestionIds({ "Q0.1": "other" })).toContain("Q0.1b");
+    expect(listVisibleQuestionIds({ "Q0.1": "employed_considering" })).toContain("Q0.1b");
+    expect(listVisibleQuestionIds({})).not.toContain("Q2.6b");
+    expect(listVisibleQuestionIds({})).not.toContain("Q3.6");
+    expect(listVisibleQuestionIds({ "Q3.5": "no one" })).not.toContain("Q3.6");
+  });
+
+  it("turns named avoided actions into Q2.4 choices", () => {
+    expect(
+      listAvoidedActionLabels({
+        "Q2.3": [{ action: "Send the website" }, { action: "  " }, "Call the accountant"],
+      }),
+    ).toEqual(["Send the website", "Call the accountant"]);
   });
 });
