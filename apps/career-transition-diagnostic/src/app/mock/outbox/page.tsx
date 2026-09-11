@@ -2,6 +2,12 @@ import { notFound } from "next/navigation";
 import { isMockMode } from "@/config/app-mode";
 import { createVendorAdapters } from "@/server/adapters";
 
+export const dynamic = "force-dynamic";
+
+function pathLinks(text: string) {
+  return text.match(/\/(?:a|r)\/[a-f0-9]+/g) ?? [];
+}
+
 export default function MockOutboxPage() {
   if (!isMockMode()) {
     notFound();
@@ -20,12 +26,25 @@ export default function MockOutboxPage() {
         <p>Outbox is empty.</p>
       ) : (
         <ul className="space-y-3">
-          {emails.map((email) => (
-            <li key={`${email.to}-${email.subject}`} className="rounded border border-[#e6d8cc] bg-white p-4">
-              <p className="font-medium">{email.subject}</p>
-              <p className="text-sm text-[#4a3b34]">{email.to}</p>
-            </li>
-          ))}
+          {emails.map((email) => {
+            const links = pathLinks(email.text);
+            return (
+              <li key={`${email.subject}-${email.sentAt}-${links[0] ?? email.to}`} className="rounded border border-[#e6d8cc] bg-white p-4">
+                <p className="font-medium">{email.subject}</p>
+                <p className="text-sm text-[#4a3b34]">{email.to}</p>
+                <p className="mt-2 text-sm">{email.text}</p>
+                {links.map((href) => (
+                  <a
+                    key={href}
+                    className="mt-2 inline-flex text-sm font-medium underline"
+                    href={href}
+                  >
+                    {href.startsWith("/r/") ? "Open report" : "Open assessment"}
+                  </a>
+                ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </main>
