@@ -30,8 +30,8 @@ body {
   font-family: var(--font-source-sans), "Source Sans 3", ui-sans-serif, sans-serif;
 }
 
-h1,
-h2,
+[data-shell="journal"] h1,
+[data-shell="journal"] h2,
 .font-display {
   font-family: var(--font-newsreader), Newsreader, ui-serif, Georgia, serif;
 }

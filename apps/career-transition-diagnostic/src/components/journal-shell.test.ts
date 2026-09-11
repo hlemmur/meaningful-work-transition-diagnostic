@@ -41,4 +41,11 @@ describe("paper tokens", () => {
     expect(css).not.toMatch(/font-family:\s*Arial/);
     expect(css).not.toContain("prefers-color-scheme: dark");
   });
+
+  it("scopes Newsreader to the journal shell, not operator desk headings", () => {
+    expect(css).toContain('[data-shell="journal"] h1');
+    expect(css).toContain('[data-shell="journal"] h2');
+    expect(css).not.toMatch(/^h1,\s*$/m);
+    expect(css).not.toMatch(/^h1,/m);
+  });
 });
