@@ -70,10 +70,32 @@ describe("paid token access and consent", () => {
 
     expect(getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
 
-    const renewed = await requestNewAccessLink("buyer@example.com");
+    const renewed = await requestNewAccessLink(purchase.accessToken);
+    expect(renewed.sent).toBe(true);
+    if (!renewed.sent) {
+      throw new Error("expected renewal");
+    }
     expect(getAssessmentByAccessToken(purchase.accessToken)).toBeUndefined();
     expect(getAssessmentByAccessToken(renewed.accessToken)?.id).toBe(purchase.assessmentId);
     expect(renewed.accessEmail.text).toContain(`/a/${renewed.accessToken}`);
+  });
+
+  it("does not enumerate buyers or rotate a live link from an unknown token", async () => {
+    process.env.APP_MODE = "mock";
+    const purchase = await completeMockPurchase("buyer@example.com");
+
+    const missing = await requestNewAccessLink("not-a-real-token");
+    expect(missing).toEqual({ sent: false });
+    expect(getAssessmentByAccessToken(purchase.accessToken)?.id).toBe(purchase.assessmentId);
+  });
+
+  it("does not rotate a still-valid access token", async () => {
+    process.env.APP_MODE = "mock";
+    const purchase = await completeMockPurchase("buyer@example.com");
+
+    const refused = await requestNewAccessLink(purchase.accessToken);
+    expect(refused).toEqual({ sent: false });
+    expect(getAssessmentByAccessToken(purchase.accessToken)?.id).toBe(purchase.assessmentId);
   });
 
   it("keeps marketing opt-in off by default and isolated from answers", async () => {
