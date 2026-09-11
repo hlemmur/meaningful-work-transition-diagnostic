@@ -153,18 +153,28 @@ function listReviewQueueInStore() {
   );
 }
 
+function recordedOrSentEmail(adapters: ReturnType<typeof createVendorAdapters>, message: {
+  to: string;
+  subject: string;
+  text: string;
+}): OutboxEmail {
+  return (
+    adapters.email.listOutbox().at(-1) ?? {
+      ...message,
+      sentAt: new Date().toISOString(),
+    }
+  );
+}
+
 async function emailAccessLink(email: string, accessToken: string) {
   const adapters = createVendorAdapters();
-  await adapters.email.send({
+  const message = {
     to: email,
     subject: "Your assessment link",
     text: `Open your assessment: /a/${accessToken}`,
-  });
-  const accessEmail = adapters.email.listOutbox().at(-1);
-  if (!accessEmail) {
-    throw new Error("Access email was not recorded");
-  }
-  return accessEmail;
+  };
+  await adapters.email.send(message);
+  return recordedOrSentEmail(adapters, message);
 }
 
 function createAssessment(email: string) {
@@ -444,13 +454,13 @@ export async function approveAssessment(assessmentId: string) {
     }
 
     const adapters = createVendorAdapters();
-    await adapters.email.send({
+    const message = {
       to: assessment.email,
       subject: "Your report is ready",
       text: `Open your private report: /r/${reportToken}`,
-    });
-
-    const reportEmail = adapters.email.listOutbox().at(-1) as OutboxEmail;
+    };
+    await adapters.email.send(message);
+    const reportEmail = recordedOrSentEmail(adapters, message);
 
     return {
       reportToken,
@@ -563,12 +573,13 @@ export async function resendReportLink(assessmentId: string) {
     assessment.reportAccessTokenHash = hashToken(reportToken);
     assessment.reportAccessExpiresAt = Date.now() + accessTtlMs();
     const adapters = createVendorAdapters();
-    await adapters.email.send({
+    const message = {
       to: assessment.email,
       subject: "Your report is ready",
       text: `Open your private report: /r/${reportToken}`,
-    });
-    const reportEmail = adapters.email.listOutbox().at(-1) as OutboxEmail;
+    };
+    await adapters.email.send(message);
+    const reportEmail = recordedOrSentEmail(adapters, message);
     return { reportToken, reportEmail };
   });
 }

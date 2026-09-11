@@ -7,3 +7,7 @@ export function assertMockMode(feature = "This action") {
     throw new Error(`${feature} is only available in mock mode`);
   }
 }
+
+export function afterDeliveryPath() {
+  return isMockMode() ? "/mock/outbox" : "/admin?delivered=1";
+}

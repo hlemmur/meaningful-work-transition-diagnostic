@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetMockOutbox } from "../adapters/resend/mock";
 import {
   approveAssessment,
   completeMockPurchase,
+  completePaidOrder,
   getAssessmentByAccessToken,
   getAssessmentByReportToken,
   recordWelcomeConsent,
@@ -28,7 +29,10 @@ async function purchaseWithConsent(email = "buyer@example.com") {
 
 afterEach(async () => {
   process.env.APP_MODE = "mock";
+  delete process.env.RESEND_API_KEY;
+  delete process.env.RESEND_FROM;
   resetMockOutbox();
+  vi.unstubAllGlobals();
   await resetMockTracerStore();
 });
 
@@ -139,5 +143,25 @@ describe("mock purchase-to-report tracer", () => {
 
     const report = await getAssessmentByReportToken(delivery.reportToken);
     expect(report?.status).toBe("approved");
+  });
+
+  it("emails an access link after a live paid order without a mock outbox", async () => {
+    process.env.APP_MODE = "live";
+    process.env.RESEND_API_KEY = "re-test";
+    process.env.RESEND_FROM = "Lena <reports@example.com>";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ id: "email-1" }), { status: 200 })),
+    );
+
+    const paid = await completePaidOrder({
+      email: "buyer@example.com",
+      lemonOrderId: "live-order-1",
+      lemonWebhookId: "live-wh-1",
+    });
+
+    expect(paid.created).toBe(true);
+    expect(paid.accessEmail?.text).toContain(`/a/${paid.accessToken}`);
+    expect(paid.accessEmail?.text).not.toContain("report");
   });
 });

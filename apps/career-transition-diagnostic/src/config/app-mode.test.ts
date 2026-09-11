@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { assertMockMode, isMockMode } from "./app-mode";
+import { afterDeliveryPath, assertMockMode, isMockMode } from "./app-mode";
 
 const originalAppMode = process.env.APP_MODE;
 
@@ -29,5 +29,12 @@ describe("isMockMode", () => {
     );
     process.env.APP_MODE = "mock";
     expect(() => assertMockMode("Mock purchase")).not.toThrow();
+  });
+
+  it("sends operators to the mock outbox only in mock mode", () => {
+    process.env.APP_MODE = "mock";
+    expect(afterDeliveryPath()).toBe("/mock/outbox");
+    process.env.APP_MODE = "live";
+    expect(afterDeliveryPath()).toBe("/admin?delivered=1");
   });
 });

@@ -8,6 +8,8 @@ afterEach(() => {
   delete process.env.LEMON_SQUEEZY_CHECKOUT_URL;
   delete process.env.OPENAI_API_KEY;
   delete process.env.OPENAI_MODEL_CHEAP;
+  delete process.env.RESEND_API_KEY;
+  delete process.env.RESEND_FROM;
   resetMockOutbox();
   vi.unstubAllGlobals();
 });
@@ -154,5 +156,31 @@ describe("mock vendor adapters", () => {
     await expect(
       adapters.llm.completeStructured({ stage: "pass1", input: { assessmentId: "a1" } }),
     ).rejects.toThrow(/malformed|JSON/i);
+  });
+
+  it("posts Resend payloads in live mode and does not require a mock outbox", async () => {
+    process.env.APP_MODE = "live";
+    process.env.RESEND_API_KEY = "re-test";
+    process.env.RESEND_FROM = "Lena <reports@example.com>";
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ id: "email-1" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    const adapters = createVendorAdapters();
+
+    await adapters.email.send({
+      to: "buyer@example.com",
+      subject: "Your assessment link",
+      text: "Open your assessment: /a/token",
+    });
+
+    expect(adapters.email.listOutbox()).toEqual([]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.resend.com/emails");
+    expect(JSON.parse(String(init.body))).toEqual({
+      from: "Lena <reports@example.com>",
+      to: ["buyer@example.com"],
+      subject: "Your assessment link",
+      text: "Open your assessment: /a/token",
+    });
   });
 });

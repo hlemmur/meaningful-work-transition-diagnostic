@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { assertMockMode } from "@/config/app-mode";
+import { afterDeliveryPath, assertMockMode } from "@/config/app-mode";
 import { requireAdminSession } from "@/server/admin/session";
 import {
   approveAssessment,
@@ -42,7 +42,7 @@ export async function submitAssessmentAction(token: string) {
 export async function approveAssessmentAction(assessmentId: string) {
   await requireAdminSession();
   await approveAssessment(assessmentId);
-  redirect("/mock/outbox");
+  redirect(afterDeliveryPath());
 }
 
 export async function recordConsentAction(token: string, formData: FormData) {
