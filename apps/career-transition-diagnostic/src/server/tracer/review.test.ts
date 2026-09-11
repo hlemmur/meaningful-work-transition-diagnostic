@@ -110,6 +110,7 @@ describe("Lena review and private delivery", () => {
     expect(await listReviewQueueView()).toEqual([
       expect.objectContaining({
         id: assessmentId,
+        email: "buyer@example.com",
         status: "review_pending",
         safetyLevel: "none",
         analysisStatus: "not started",

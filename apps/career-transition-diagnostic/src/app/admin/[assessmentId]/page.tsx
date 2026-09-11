@@ -9,6 +9,9 @@ import { requireAdminPage } from "@/server/admin/guard";
 import { getAdminCase } from "@/server/tracer/service";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CaseAnswers } from "../case-answers";
+import { ConfirmDeleteAccess } from "../confirm-delete-access";
+import { humanAnalysisStatus, humanSafetyLevel, humanStatus } from "../operator-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +45,10 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       <Link className="text-sm underline" href="/admin">
         Back to queue
       </Link>
-      <p className="text-sm uppercase tracking-wide">{adminCase.assessment.status}</p>
+      <p className="text-sm uppercase tracking-wide">{humanStatus(adminCase.assessment.status)}</p>
       <h1 className="text-3xl font-semibold tracking-tight">Case review</h1>
-      <p>Safety: {adminCase.safetyLevel}</p>
-      <p>Analysis: {adminCase.analysisStatus.label}</p>
+      <p>Safety: {humanSafetyLevel(adminCase.safetyLevel)}</p>
+      <p>Analysis: {humanAnalysisStatus(adminCase.analysisStatus.label)}</p>
       {failedStage ? <p>Failed stage: {failedStage}</p> : null}
 
       {pending ? (
@@ -59,50 +62,59 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
         </form>
       ) : null}
 
-      {sections.length > 0 && canEdit ? (
-        <form action={save} className="flex flex-col gap-4">
-          <input type="hidden" name="count" value={String(sections.length)} />
-          {sections.map((section, index) => (
-            <article key={section.id} className="rounded border border-hairline bg-field p-4">
-              <input type="hidden" name={`id-${index}`} value={section.id} />
-              <input type="hidden" name={`title-${index}`} value={section.title} />
-              <input type="hidden" name={`refs-${index}`} value={section.evidenceRefs.join(",")} />
-              <h2 className="font-medium">{section.title}</h2>
-              <p className="text-xs text-muted">
-                Evidence: {section.evidenceRefs.join(", ") || "none"}
-              </p>
-              <label className="mt-2 block text-sm">
-                Body
-                <textarea
-                  className="mt-1 min-h-28 w-full rounded border border-hairline p-2"
-                  name={`body-${index}`}
-                  defaultValue={section.body}
-                />
-              </label>
-            </article>
-          ))}
-          <button
-            className="w-fit rounded-full border border-ink px-5 py-3 text-sm"
-            type="submit"
-          >
-            Save edits
-          </button>
-        </form>
-      ) : sections.length > 0 ? (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.8fr)]">
         <div className="flex flex-col gap-4">
-          {sections.map((section) => (
-            <article key={section.id} className="rounded border border-hairline bg-field p-4">
-              <h2 className="font-medium">{section.title}</h2>
-              <p className="text-xs text-muted">
-                Evidence: {section.evidenceRefs.join(", ") || "none"}
-              </p>
-              <p className="mt-2 leading-7">{section.body}</p>
-            </article>
-          ))}
+          {sections.length > 0 && canEdit ? (
+            <form action={save} className="flex flex-col gap-4">
+              <input type="hidden" name="count" value={String(sections.length)} />
+              {sections.map((section, index) => (
+                <article key={section.id} className="rounded border border-hairline bg-field p-4">
+                  <input type="hidden" name={`id-${index}`} value={section.id} />
+                  <input type="hidden" name={`title-${index}`} value={section.title} />
+                  <input
+                    type="hidden"
+                    name={`refs-${index}`}
+                    value={section.evidenceRefs.join(",")}
+                  />
+                  <h2 className="font-medium">{section.title}</h2>
+                  <p className="text-xs text-muted">
+                    Evidence: {section.evidenceRefs.join(", ") || "none"}
+                  </p>
+                  <label className="mt-2 block text-sm">
+                    Body
+                    <textarea
+                      className="mt-1 min-h-28 w-full rounded border border-hairline p-2"
+                      name={`body-${index}`}
+                      defaultValue={section.body}
+                    />
+                  </label>
+                </article>
+              ))}
+              <button
+                className="w-fit rounded-full border border-ink px-5 py-3 text-sm"
+                type="submit"
+              >
+                Save edits
+              </button>
+            </form>
+          ) : sections.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {sections.map((section) => (
+                <article key={section.id} className="rounded border border-hairline bg-field p-4">
+                  <h2 className="font-medium">{section.title}</h2>
+                  <p className="text-xs text-muted">
+                    Evidence: {section.evidenceRefs.join(", ") || "none"}
+                  </p>
+                  <p className="mt-2 leading-7">{section.body}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p>Run analysis to generate an evidence-linked draft.</p>
+          )}
         </div>
-      ) : (
-        <p>Run analysis to generate an evidence-linked draft.</p>
-      )}
+        <CaseAnswers answers={adminCase.assessment.answers} />
+      </div>
 
       {canApprove ? (
         <form action={approve}>
@@ -116,17 +128,13 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       ) : pending ? (
         <p className="text-sm">Run analysis before approving.</p>
       ) : (
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <form action={resend}>
             <button className="rounded-full border border-ink px-5 py-3 text-sm" type="submit">
               Resend link
             </button>
           </form>
-          <form action={remove}>
-            <button className="rounded-full border border-terracotta px-5 py-3 text-sm" type="submit">
-              Delete access
-            </button>
-          </form>
+          <ConfirmDeleteAccess action={remove} />
         </div>
       )}
     </main>

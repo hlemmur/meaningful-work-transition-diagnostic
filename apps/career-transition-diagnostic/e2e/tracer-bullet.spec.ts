@@ -22,6 +22,7 @@ test("walks the mock purchase-to-approved-report path", async ({ page }) => {
   await sendToLena(page);
 
   await adminLogin(page);
+  await expect(page.getByRole("button", { name: "Approve report" })).toHaveCount(0);
   await page.getByRole("link", { name: "Open case" }).last().click();
   await expect(page.getByRole("heading", { name: "Case review" })).toBeVisible();
   await page.getByRole("button", { name: "Run analysis" }).click();

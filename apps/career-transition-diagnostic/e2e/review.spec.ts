@@ -12,9 +12,13 @@ test("keeps unapproved reports off the customer link and delivers after review",
   expect(blocked?.status()).toBe(404);
 
   await adminLogin(page);
+  await expect(page.getByRole("button", { name: "Approve report" })).toHaveCount(0);
+  await expect(page.getByText("buyer@example.com")).toBeVisible();
+  await expect(page.getByText("Waiting for review")).toBeVisible();
   await page.getByRole("link", { name: "Open case" }).last().click();
   await expect(page.getByRole("heading", { name: "Case review" })).toBeVisible();
-  await expect(page.getByText("Analysis: not started").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Answers" })).toBeVisible();
+  await expect(page.getByText("Analysis: Not started").first()).toBeVisible();
   const caseUrl = page.url();
   await page.getByRole("button", { name: "Run analysis" }).click();
   await expect(page.getByText("The problem as you see it")).toBeVisible();
@@ -41,6 +45,10 @@ test("keeps unapproved reports off the customer link and delivers after review",
   await expect(page.getByRole("heading", { name: "Case review" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete access" })).toBeVisible();
   await page.getByRole("button", { name: "Delete access" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("heading", { name: "Case review" })).toBeVisible();
+  await page.getByRole("button", { name: "Delete access" }).click();
+  await page.getByRole("button", { name: "Confirm delete" }).click();
   await expect(page.getByRole("heading", { name: "Review queue" })).toBeVisible();
   const revoked = await page.goto(href ?? "/r/missing");
   expect(revoked?.status()).toBe(404);
