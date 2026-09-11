@@ -16,7 +16,7 @@ export type AssessmentRecord = {
   accessTokenHash: string;
   accessExpiresAt: number;
   status: AssessmentStatus;
-  answers: Record<string, string>;
+  answers: Record<string, unknown>;
   draftBody?: string;
   reportAccessTokenHash?: string;
   productConsentVersion?: string;
@@ -275,7 +275,7 @@ export function withdrawMarketingConsent(email: string) {
   }
 }
 
-export async function saveAnswer(accessToken: string, questionId: string, value: string) {
+export async function saveAnswer(accessToken: string, questionId: string, value: unknown) {
   const assessment = requireAssessmentByHash(hashToken(accessToken));
   if (assessment.status !== "in_progress") {
     throw new Error("Answers are locked after submit");

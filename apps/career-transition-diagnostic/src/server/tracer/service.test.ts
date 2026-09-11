@@ -48,6 +48,23 @@ describe("mock purchase-to-report tracer", () => {
     expect(resumed?.answers["Q1.1"]).toBe("I left a career that still pays my bills.");
   });
 
+  it("stores structured answers per question id and locks them after submit", async () => {
+    process.env.APP_MODE = "mock";
+    const { accessToken } = await purchaseWithConsent();
+
+    await saveAnswer(accessToken, "Q2.3", [{ action: "Send the website" }]);
+    await saveAnswer(accessToken, "Q0.1", "other");
+    const resumed = getAssessmentByAccessToken(accessToken);
+
+    expect(resumed?.answers["Q2.3"]).toEqual([{ action: "Send the website" }]);
+    expect(resumed?.answers["Q0.1"]).toBe("other");
+
+    await submitAssessment(accessToken);
+    await expect(saveAnswer(accessToken, "Q0.1", "employed_considering")).rejects.toThrow(
+      "Answers are locked after submit",
+    );
+  });
+
   it("approves a submitted draft and emails a report link without report body", async () => {
     process.env.APP_MODE = "mock";
     const { accessToken, assessmentId } = await purchaseWithConsent();
