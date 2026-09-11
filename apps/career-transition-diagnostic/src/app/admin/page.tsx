@@ -12,6 +12,9 @@ export default function AdminPage() {
       <p className="leading-7 text-[#4a3b34]">
         Nothing is delivered until a report is approved.
       </p>
+      <a className="text-sm underline" href="/admin/export">
+        Marketing export
+      </a>
       {queue.length === 0 ? (
         <p>No submissions yet.</p>
       ) : (

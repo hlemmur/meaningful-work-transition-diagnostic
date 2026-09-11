@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import {
   approveAssessment,
   completeMockPurchase,
+  recordWelcomeConsent,
+  requestNewAccessLink,
   saveAnswer,
   submitAssessment,
 } from "./service";
@@ -25,5 +27,20 @@ export async function submitAssessmentAction(token: string) {
 
 export async function approveAssessmentAction(assessmentId: string) {
   await approveAssessment(assessmentId);
+  redirect("/mock/outbox");
+}
+
+export async function recordConsentAction(token: string, formData: FormData) {
+  await recordWelcomeConsent({
+    accessToken: token,
+    productConsent: formData.get("productConsent") === "on",
+    marketingOptIn: formData.get("marketingOptIn") === "on",
+  });
+  redirect(`/a/${token}`);
+}
+
+export async function requestNewLinkAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "");
+  await requestNewAccessLink(email);
   redirect("/mock/outbox");
 }
