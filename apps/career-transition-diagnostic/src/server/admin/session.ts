@@ -1,20 +1,19 @@
 import { cookies } from "next/headers";
 import { isMockMode } from "@/config/app-mode";
 import { ADMIN_COOKIE, isAllowlistedAdmin } from "./allowlist";
+import { sessionFromOperatorEmail } from "./authz";
+import { readLiveUserEmail, sendOperatorMagicLink, signOutLiveOperator } from "./supabase-auth";
 
 export function mockAdminSessionsEnabled() {
   return isMockMode();
 }
 
 export async function getAdminSession() {
-  if (!mockAdminSessionsEnabled()) {
-    return null;
+  if (isMockMode()) {
+    const email = (await cookies()).get(ADMIN_COOKIE)?.value;
+    return sessionFromOperatorEmail(email);
   }
-  const email = (await cookies()).get(ADMIN_COOKIE)?.value;
-  if (!email || !isAllowlistedAdmin(email)) {
-    return null;
-  }
-  return { email };
+  return sessionFromOperatorEmail(await readLiveUserEmail());
 }
 
 export async function requireAdminSession() {
@@ -39,6 +38,33 @@ export async function startAdminSession(email: string) {
   });
 }
 
+export type OperatorLoginDeps = {
+  startMockSession?: (email: string) => Promise<void>;
+  sendMagicLink?: (email: string, redirectTo: string) => Promise<void>;
+  origin?: string;
+};
+
+export async function startOperatorLogin(email: string, deps: OperatorLoginDeps = {}) {
+  const normalized = email.trim().toLowerCase();
+  if (!isAllowlistedAdmin(normalized)) {
+    throw new Error("Email is not allowlisted");
+  }
+  if (isMockMode()) {
+    await (deps.startMockSession ?? startAdminSession)(normalized);
+    return { kind: "session" as const };
+  }
+  const origin = deps.origin ?? "";
+  await (deps.sendMagicLink ?? sendOperatorMagicLink)(normalized, `${origin}/auth/callback`);
+  return { kind: "magic-link" as const };
+}
+
 export async function clearAdminSession() {
   (await cookies()).delete(ADMIN_COOKIE);
+  if (!isMockMode()) {
+    try {
+      await signOutLiveOperator();
+    } catch {
+      // Live sign-out is best-effort when auth is not configured.
+    }
+  }
 }
