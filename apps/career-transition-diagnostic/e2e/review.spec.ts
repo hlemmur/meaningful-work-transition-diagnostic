@@ -10,6 +10,9 @@ test("keeps unapproved reports off the customer link and delivers after review",
 
   const blocked = await page.goto("/r/not-a-real-report-token");
   expect(blocked?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "This link is not available" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+  await expect(page.getByText(/request a new link/i)).toBeVisible();
 
   await adminLogin(page);
   await expect(page.getByRole("button", { name: "Approve report" })).toHaveCount(0);
