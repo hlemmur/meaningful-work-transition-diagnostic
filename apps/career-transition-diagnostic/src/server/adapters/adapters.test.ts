@@ -6,6 +6,8 @@ afterEach(() => {
   process.env.APP_MODE = "mock";
   delete process.env.PAYMENTS_ENABLED;
   delete process.env.LEMON_SQUEEZY_CHECKOUT_URL;
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_MODEL_CHEAP;
   resetMockOutbox();
   vi.unstubAllGlobals();
 });
@@ -99,5 +101,58 @@ describe("mock vendor adapters", () => {
       checkoutUrl: "https://lemon.test/checkout",
       orderId: "lemon-pending",
     });
+  });
+
+  it("posts structured OpenAI Responses payloads when a live key is present", async () => {
+    process.env.APP_MODE = "live";
+    process.env.OPENAI_API_KEY = "sk-test";
+    process.env.OPENAI_MODEL_CHEAP = "gpt-4.1-mini";
+    const fetchSpy = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          output_text: JSON.stringify({
+            consciousExplanationTags: ["stall"],
+            unresolvedQuestions: [],
+          }),
+          usage: { input_tokens: 12, output_tokens: 8 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const adapters = createVendorAdapters();
+    const result = await adapters.llm.completeStructured({
+      stage: "pass1",
+      input: { assessmentId: "a1" },
+    });
+
+    expect(result.output).toEqual({
+      consciousExplanationTags: ["stall"],
+      unresolvedQuestions: [],
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.openai.com/v1/responses");
+    const body = JSON.parse(String(init.body));
+    expect(body.model).toBe("gpt-4.1-mini");
+    expect(body.text.format.type).toBe("json_schema");
+    expect(body.text.format.name).toBe("pass1");
+    expect(init.headers).toEqual(
+      expect.objectContaining({ Authorization: "Bearer sk-test" }),
+    );
+  });
+
+  it("fails closed when live OpenAI returns malformed JSON", async () => {
+    process.env.APP_MODE = "live";
+    process.env.OPENAI_API_KEY = "sk-test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ output_text: "not-json" }), { status: 200 })),
+    );
+    const adapters = createVendorAdapters();
+    await expect(
+      adapters.llm.completeStructured({ stage: "pass1", input: { assessmentId: "a1" } }),
+    ).rejects.toThrow(/malformed|JSON/i);
   });
 });
