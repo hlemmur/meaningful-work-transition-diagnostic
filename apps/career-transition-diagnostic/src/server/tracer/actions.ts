@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { requireAdminSession } from "@/server/admin/session";
 import {
   approveAssessment,
   completeMockPurchase,
@@ -37,6 +38,7 @@ export async function submitAssessmentAction(token: string) {
 }
 
 export async function approveAssessmentAction(assessmentId: string) {
+  await requireAdminSession();
   await approveAssessment(assessmentId);
   redirect("/mock/outbox");
 }
@@ -57,5 +59,6 @@ export async function requestNewLinkAction(formData: FormData) {
 }
 
 export async function runAnalysisAction(assessmentId: string) {
+  await requireAdminSession();
   return runAnalysisPipeline(assessmentId);
 }

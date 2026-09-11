@@ -1,8 +1,10 @@
 import { exportMarketingContacts } from "@/server/consent/marketing";
+import { requireAdminPage } from "@/server/admin/guard";
 
 export const dynamic = "force-dynamic";
 
-export default function MarketingExportPage() {
+export default async function MarketingExportPage() {
+  await requireAdminPage();
   const contacts = exportMarketingContacts();
 
   return (

@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./base";
 
 async function startAssessment(page: Page) {
   await page.goto("/");
@@ -7,6 +8,7 @@ async function startAssessment(page: Page) {
   await page.getByRole("link", { name: "Open assessment" }).last().click();
   await page.locator("#product-consent").check();
   await page.getByRole("button", { name: "Continue to assessment" }).click();
+  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
 }
 
 async function advanceTo(page: Page, pattern: RegExp, maxSteps = 80) {
@@ -65,7 +67,9 @@ test("lets someone name one to three admired figures", async ({ page }) => {
 test("flushes a typed answer before submit so it is not lost", async ({ page }) => {
   await startAssessment(page);
   await page.getByLabel("other").check();
+  await expect(page.getByText("Saved.")).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText(/Anything to add/)).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText(/professional background/i)).toBeVisible();
   await page.locator("textarea").fill("Background in product design.");
