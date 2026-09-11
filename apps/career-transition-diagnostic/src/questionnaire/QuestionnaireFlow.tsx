@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { autosaveAnswerAction, runCheckpointAction, submitAssessmentAction } from "@/server/tracer/actions";
 import { listAvoidedActionLabels, listVisibleQuestionIds, type SafetyLevel } from "@/questionnaire/branching";
-import { CHAPTERS, getQuestion, optionLabel, questionIds, questions, type QuestionDefinition } from "@/questionnaire/questionnaire.v2";
+import { ChoiceCards, LabeledScale } from "@/questionnaire/inquiry-inputs";
+import { CHAPTERS, getQuestion, questionIds, questions, type QuestionDefinition } from "@/questionnaire/questionnaire.v2";
 import { chapterProgress, isLastVisibleQuestion } from "@/questionnaire/questionnaire-progress";
 import { CHECKPOINT_AFTER_SECTION } from "@/engine/checkpoints/schema";
 import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
@@ -65,14 +66,6 @@ function clampQuestionId(currentId: string, visible: string[]) {
     visible.at(-1) ??
     visible[0]
   );
-}
-
-function choiceText(option: string) {
-  try {
-    return optionLabel(option);
-  } catch {
-    return option;
-  }
 }
 
 function optionsFor(question: QuestionDefinition, answers: Record<string, unknown>) {
@@ -337,13 +330,15 @@ export function QuestionnaireFlow({
       {preparing ? (
         <p aria-live="polite">Preparing the next part of your reflection…</p>
       ) : null}
-      <QuestionField
-        question={question}
-        value={answers[question.id]}
-        options={optionsFor(question, answers)}
-        locked={locked}
-        onChange={(value, mode) => persist(question.id, value, mode)}
-      />
+      <div key={question.id} className="question-pane">
+        <QuestionField
+          question={question}
+          value={answers[question.id]}
+          options={optionsFor(question, answers)}
+          locked={locked}
+          onChange={(value, mode) => persist(question.id, value, mode)}
+        />
+      </div>
       <p aria-live="polite" className="text-sm text-muted">
         {status === "error" ? "Could not save. Try again." : null}
         {submitted ? " Submitted. Lena will review before any report is delivered." : null}
@@ -353,7 +348,7 @@ export function QuestionnaireFlow({
       ) : null}
       <div className="flex flex-wrap gap-3">
         <button
-          className="rounded-full border border-ink px-5 py-3 text-sm disabled:opacity-40"
+          className="pressable rounded-full border border-ink px-5 py-3 text-sm disabled:opacity-40"
           type="button"
           onClick={() => {
             void go(-1);
@@ -364,7 +359,7 @@ export function QuestionnaireFlow({
         </button>
         {!last ? (
           <button
-            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
+            className="pressable rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
             type="button"
             onClick={() => {
               void go(1);
@@ -375,7 +370,7 @@ export function QuestionnaireFlow({
           </button>
         ) : confirming ? (
           <button
-            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
+            className="pressable rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper disabled:opacity-40"
             type="button"
             disabled={locked || preparing}
             onClick={() => {
@@ -388,7 +383,7 @@ export function QuestionnaireFlow({
           </button>
         ) : (
           <button
-            className="rounded-full border border-terracotta px-5 py-3 text-sm text-terracotta disabled:opacity-40"
+            className="pressable rounded-full border border-terracotta px-5 py-3 text-sm text-terracotta disabled:opacity-40"
             type="button"
             disabled={locked || preparing}
             onClick={() => {
@@ -437,68 +432,35 @@ function QuestionField({
   if (question.inputType === "select" || question.inputType === "yes_no_unsure") {
     const choices = options ?? question.options ?? ["yes", "no", "unsure"];
     return (
-      <fieldset className="flex flex-col gap-3">
-        <legend className="text-lg leading-8">{question.prompt}</legend>
-        {choices.map((option) => (
-          <label key={option} className="flex items-center gap-2">
-            <input
-              type="radio"
-              name={fieldId}
-              value={option}
-              checked={value === option}
-              disabled={locked}
-              onChange={() => onChange(option)}
-            />
-            {choiceText(option)}
-          </label>
-        ))}
-      </fieldset>
+      <ChoiceCards
+        prompt={question.prompt}
+        name={fieldId}
+        multiple={false}
+        choices={choices}
+        value={value}
+        locked={locked}
+        onChange={onChange}
+      />
     );
   }
 
   if (question.inputType === "multi_select") {
     const choices = options ?? question.options ?? [];
-    const selected = Array.isArray(value) ? (value as string[]) : [];
     return (
-      <fieldset className="flex flex-col gap-3">
-        <legend className="text-lg leading-8">{question.prompt}</legend>
-        {choices.map((option) => (
-          <label key={option} className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={selected.includes(option)}
-              disabled={locked}
-              onChange={(event) => {
-                const next = event.target.checked
-                  ? [...selected, option]
-                  : selected.filter((item) => item !== option);
-                onChange(next);
-              }}
-            />
-            {choiceText(option)}
-          </label>
-        ))}
-      </fieldset>
+      <ChoiceCards
+        prompt={question.prompt}
+        name={fieldId}
+        multiple
+        choices={choices}
+        value={value}
+        locked={locked}
+        onChange={onChange}
+      />
     );
   }
 
   if (question.inputType === "scale") {
-    return (
-      <label className="flex flex-col gap-3">
-        <span className="text-lg leading-8">{question.prompt}</span>
-        <input
-          id={fieldId}
-          type="range"
-          min={0}
-          max={10}
-          disabled={locked}
-          value={Number(value ?? 0)}
-          onChange={(event) => onChange(Number(event.target.value), "later")}
-          onBlur={(event) => onChange(Number(event.target.value))}
-        />
-        <span>{Number(value ?? 0)}</span>
-      </label>
-    );
+    return <LabeledScale question={question} value={value} locked={locked} onChange={onChange} />;
   }
 
   if (question.inputType === "loop") {
