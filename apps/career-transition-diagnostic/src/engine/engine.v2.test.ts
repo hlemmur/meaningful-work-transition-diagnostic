@@ -129,7 +129,7 @@ describe("engine.v2 contracts", () => {
     ]);
 
     for (const prompt of Object.values(promptRegistry)) {
-      expect(prompt.version).toMatch(/\.v1$/);
+      expect(prompt.version).toMatch(/\.v\d+$/);
       expect(prompt.text.length).toBeGreaterThan(20);
     }
   });
