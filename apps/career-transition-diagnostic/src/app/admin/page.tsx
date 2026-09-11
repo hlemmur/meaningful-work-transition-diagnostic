@@ -22,7 +22,11 @@ export default function AdminPage() {
           {queue.map((assessment) => {
             const approve = approveAssessmentAction.bind(null, assessment.id);
             return (
-              <li key={assessment.id} className="rounded border border-[#e6d8cc] bg-white p-4">
+              <li
+                key={assessment.id}
+                data-assessment-id={assessment.id}
+                className="rounded border border-[#e6d8cc] bg-white p-4"
+              >
                 <p className="text-sm uppercase tracking-wide">{assessment.status}</p>
                 {assessment.draftBody ? (
                   <p className="mt-2 leading-7">{assessment.draftBody}</p>
