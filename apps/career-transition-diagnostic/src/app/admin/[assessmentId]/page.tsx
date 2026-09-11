@@ -38,7 +38,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
   const remove = deleteAccessAction.bind(null, assessmentId);
 
   return (
-    <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-6 px-6 py-20">
+    <main className="flex flex-col gap-6">
       <Link className="text-sm underline" href="/admin">
         Back to queue
       </Link>
@@ -51,7 +51,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       {pending ? (
         <form action={run}>
           <button
-            className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
+            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper"
             type="submit"
           >
             {failedStage ? "Resume analysis" : "Run analysis"}
@@ -63,18 +63,18 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
         <form action={save} className="flex flex-col gap-4">
           <input type="hidden" name="count" value={String(sections.length)} />
           {sections.map((section, index) => (
-            <article key={section.id} className="rounded border border-[#e6d8cc] bg-white p-4">
+            <article key={section.id} className="rounded border border-hairline bg-field p-4">
               <input type="hidden" name={`id-${index}`} value={section.id} />
               <input type="hidden" name={`title-${index}`} value={section.title} />
               <input type="hidden" name={`refs-${index}`} value={section.evidenceRefs.join(",")} />
               <h2 className="font-medium">{section.title}</h2>
-              <p className="text-xs text-[#4a3b34]">
+              <p className="text-xs text-muted">
                 Evidence: {section.evidenceRefs.join(", ") || "none"}
               </p>
               <label className="mt-2 block text-sm">
                 Body
                 <textarea
-                  className="mt-1 min-h-28 w-full rounded border border-[#e6d8cc] p-2"
+                  className="mt-1 min-h-28 w-full rounded border border-hairline p-2"
                   name={`body-${index}`}
                   defaultValue={section.body}
                 />
@@ -82,7 +82,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
             </article>
           ))}
           <button
-            className="w-fit rounded-full border border-[#2b211c] px-5 py-3 text-sm"
+            className="w-fit rounded-full border border-ink px-5 py-3 text-sm"
             type="submit"
           >
             Save edits
@@ -91,9 +91,9 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       ) : sections.length > 0 ? (
         <div className="flex flex-col gap-4">
           {sections.map((section) => (
-            <article key={section.id} className="rounded border border-[#e6d8cc] bg-white p-4">
+            <article key={section.id} className="rounded border border-hairline bg-field p-4">
               <h2 className="font-medium">{section.title}</h2>
-              <p className="text-xs text-[#4a3b34]">
+              <p className="text-xs text-muted">
                 Evidence: {section.evidenceRefs.join(", ") || "none"}
               </p>
               <p className="mt-2 leading-7">{section.body}</p>
@@ -107,7 +107,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       {canApprove ? (
         <form action={approve}>
           <button
-            className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
+            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper"
             type="submit"
           >
             Approve report
@@ -118,12 +118,12 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       ) : (
         <div className="flex gap-3">
           <form action={resend}>
-            <button className="rounded-full border border-[#2b211c] px-5 py-3 text-sm" type="submit">
+            <button className="rounded-full border border-ink px-5 py-3 text-sm" type="submit">
               Resend link
             </button>
           </form>
           <form action={remove}>
-            <button className="rounded-full border border-[#b65f3e] px-5 py-3 text-sm" type="submit">
+            <button className="rounded-full border border-terracotta px-5 py-3 text-sm" type="submit">
               Delete access
             </button>
           </form>

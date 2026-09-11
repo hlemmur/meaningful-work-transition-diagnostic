@@ -15,12 +15,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const { delivered } = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-6 py-20">
+    <main className="flex flex-col gap-4">
       <h1 className="text-3xl font-semibold tracking-tight">Review queue</h1>
       {delivered ? (
-        <p className="text-sm text-[#4a3b34]">Report link emailed to the customer.</p>
+        <p className="text-sm text-muted">Report link emailed to the customer.</p>
       ) : null}
-      <p className="leading-7 text-[#4a3b34]">
+      <p className="leading-7 text-muted">
         Nothing is delivered until a report is approved.
       </p>
       <Link className="text-sm underline" href="/admin/export">
@@ -37,7 +37,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 data-assessment-id={assessment.id}
                 data-safety-level={assessment.safetyLevel}
                 data-analysis-status={assessment.analysisStatus}
-                className="rounded border border-[#e6d8cc] bg-white p-4"
+                className="rounded border border-hairline bg-field p-4"
               >
                 <p className="text-sm uppercase tracking-wide">{assessment.status}</p>
                 <p className="mt-1 text-sm">Safety: {assessment.safetyLevel}</p>
@@ -52,7 +52,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 assessment.analysisStatus === "completed" ? (
                   <form action={approveAndDeliverAction.bind(null, assessment.id)} className="mt-3">
                     <button
-                      className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
+                      className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper"
                       type="submit"
                     >
                       Approve report

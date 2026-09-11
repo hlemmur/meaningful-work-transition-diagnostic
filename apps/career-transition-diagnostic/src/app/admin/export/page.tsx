@@ -8,9 +8,9 @@ export default async function MarketingExportPage() {
   const contacts = await exportMarketingContacts();
 
   return (
-    <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-6 py-20">
+    <main className="flex flex-col gap-4">
       <h1 className="text-3xl font-semibold tracking-tight">Marketing export</h1>
-      <p className="leading-7 text-[#4a3b34]">
+      <p className="leading-7 text-muted">
         Current opt-ins only. No answers, reports, or safety data.
       </p>
       {contacts.length === 0 ? (
@@ -18,9 +18,9 @@ export default async function MarketingExportPage() {
       ) : (
         <ul className="space-y-2">
           {contacts.map((contact) => (
-            <li key={contact.email} className="rounded border border-[#e6d8cc] bg-white p-3">
+            <li key={contact.email} className="rounded border border-hairline bg-field p-3">
               <p>{contact.email}</p>
-              <p className="text-sm text-[#4a3b34]">{contact.consentCopyVersion}</p>
+              <p className="text-sm text-muted">{contact.consentCopyVersion}</p>
             </li>
           ))}
         </ul>
