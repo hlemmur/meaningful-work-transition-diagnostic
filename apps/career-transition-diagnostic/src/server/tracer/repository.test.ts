@@ -5,6 +5,7 @@ import {
   TableTracerRepository,
   bindTracerRepository,
   getActiveStore,
+  getRepository,
   resetRepositoryBinding,
   supabasePersistenceEnabled,
   withStore,
@@ -49,6 +50,11 @@ describe("tracer repository", () => {
 
     expect((await second.begin()).assessments).toEqual([]);
     expect((await first.begin()).assessments[0]?.answers["Q1.1"]).toBe("kept");
+  });
+
+  it("reuses one repository instance on globalThis across getRepository calls", () => {
+    const created = getRepository();
+    expect(getRepository()).toBe(created);
   });
 
   it("reloads a saved answer from a fresh table repository against the same database", async () => {

@@ -70,12 +70,16 @@ export class MemoryTracerDb implements TracerDb {
 }
 
 const storeAls = new AsyncLocalStorage<TracerStore>();
-let bound: TracerRepository | undefined;
-let writeChain: Promise<void> = Promise.resolve();
+
+const globalForTracer = globalThis as typeof globalThis & {
+  __mwtdRepository?: TracerRepository;
+  __mwtdWriteChain?: Promise<void>;
+};
 
 function enqueueExclusiveWrite<T>(work: () => Promise<T>): Promise<T> {
-  const run = writeChain.then(work, work);
-  writeChain = run.then(
+  const previous = globalForTracer.__mwtdWriteChain ?? Promise.resolve();
+  const run = previous.then(work, work);
+  globalForTracer.__mwtdWriteChain = run.then(
     () => undefined,
     () => undefined,
   );
@@ -87,20 +91,20 @@ export function supabasePersistenceEnabled() {
 }
 
 export function bindTracerRepository(repository: TracerRepository) {
-  bound = repository;
+  globalForTracer.__mwtdRepository = repository;
 }
 
 export function getRepository(): TracerRepository {
-  if (!bound) {
-    bound = supabasePersistenceEnabled()
+  if (!globalForTracer.__mwtdRepository) {
+    globalForTracer.__mwtdRepository = supabasePersistenceEnabled()
       ? new TableTracerRepository(new SupabaseTracerDb(createServiceRoleClient()))
       : new MemoryTracerRepository();
   }
-  return bound;
+  return globalForTracer.__mwtdRepository;
 }
 
 export function resetRepositoryBinding() {
-  bound = undefined;
+  delete globalForTracer.__mwtdRepository;
 }
 
 export function getActiveStore(): TracerStore {

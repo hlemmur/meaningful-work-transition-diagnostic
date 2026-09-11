@@ -9,11 +9,13 @@ export type ProxyOptions = {
   liveUserEmail?: string | null;
 };
 
-export async function proxy(request: NextRequest, options: ProxyOptions = {}) {
+export async function proxy(request: NextRequest, eventOrOptions?: ProxyOptions) {
+  const options: ProxyOptions =
+    eventOrOptions && "liveUserEmail" in eventOrOptions ? eventOrOptions : {};
   const { pathname } = request.nextUrl;
   const mockCookieEmail = request.cookies.get(ADMIN_COOKIE)?.value;
   let liveUserEmail = options.liveUserEmail ?? null;
-  let response = NextResponse.next();
+  let response = NextResponse.next({ request });
 
   if (!isMockMode() && options.liveUserEmail === undefined) {
     const live = await readLiveUserEmailFromRequest(request);

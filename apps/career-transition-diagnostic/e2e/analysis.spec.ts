@@ -30,7 +30,9 @@ test("admin can run the analysis pipeline without delivering a report", async ({
   const response = await page.request.post("/api/analysis", {
     data: { assessmentId },
   });
-  expect(response.ok()).toBeTruthy();
+  if (!response.ok()) {
+    throw new Error(`analysis ${response.status()}: ${await response.text()}`);
+  }
   const body = (await response.json()) as { status: string; sectionCount: number };
   expect(body.status).toBe("completed");
   expect(body.sectionCount).toBeGreaterThan(0);
