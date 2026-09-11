@@ -143,7 +143,7 @@ export function QuestionnaireFlow({
   const answersRef = useRef(answers);
   const saveTimer = useRef<number | null>(null);
   const pendingSave = useRef<{ id: string; value: unknown } | null>(null);
-  const inFlight = useRef(Promise.resolve());
+  const inFlight = useRef<Promise<boolean>>(Promise.resolve(true));
   const moving = useRef(false);
   const visible = useMemo(
     () => mergeAdaptiveQuestions(listVisibleQuestionIds(answers, safetyLevel), adaptive),
@@ -192,8 +192,7 @@ export function QuestionnaireFlow({
     }
     const next = pendingSave.current;
     if (!next) {
-      await inFlight.current;
-      return true;
+      return inFlight.current;
     }
     if (locked) {
       return false;
@@ -209,7 +208,7 @@ export function QuestionnaireFlow({
         setStatus("error");
         return false;
       });
-    inFlight.current = task.then(() => undefined);
+    inFlight.current = task;
     return task;
   }
 
@@ -230,7 +229,10 @@ export function QuestionnaireFlow({
       if (value !== undefined) {
         persist(question.id, value, "now");
       }
-      await flushPending();
+      const saved = await flushPending();
+      if (!saved) {
+        return;
+      }
 
       if (delta === 1) {
         const checkpoint = CHECKPOINT_AFTER_SECTION[question.section];

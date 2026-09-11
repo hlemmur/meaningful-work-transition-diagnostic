@@ -107,6 +107,7 @@ export async function runCheckpoint(input: {
 
   const candidate = llmOutput.adaptiveQuestion;
   const existing = input.existingAdaptive ?? [];
+  const bank = candidate ? ADAPTIVE_QUESTION_BANK[candidate.forkId] : undefined;
   const planSoFar: AdaptiveItem[] = existing.map((item) => ({
     checkpoint: item.checkpoint,
     forkId: item.forkId,
@@ -114,9 +115,9 @@ export async function runCheckpoint(input: {
 
   if (
     !candidate ||
+    !bank ||
     existing.length >= ADAPTIVE_PREFERRED_MAX ||
     existing.some((item) => item.checkpoint === input.checkpoint) ||
-    existing.some((item) => item.forkId === candidate.forkId) ||
     (chargeHigh && SHAME_IDENTITY_FORKS.has(candidate.forkId)) ||
     JUNG_SPEAK_PATTERN.test(candidate.questionText) ||
     LEADING_PATTERN.test(candidate.questionText) ||
@@ -138,7 +139,7 @@ export async function runCheckpoint(input: {
       id: adaptiveQuestionId(input.checkpoint),
       checkpoint: input.checkpoint,
       forkId: candidate.forkId,
-      questionText: candidate.questionText,
+      questionText: bank.questionText,
       rationale: candidate.rationale,
     },
     safetyLevel: "none",

@@ -39,6 +39,14 @@ function evidence(
   ];
 }
 
+function upsertEvidence(existing: EvidenceItem[], added: EvidenceItem[]) {
+  if (!added.length) {
+    return existing;
+  }
+  const replacing = new Set(added.map((item) => item.questionId));
+  return [...existing.filter((item) => !replacing.has(item.questionId)), ...added];
+}
+
 export function extractPass1Lite(
   assessmentId: string,
   checkpoint: AdaptiveCheckpoint,
@@ -56,22 +64,22 @@ export function extractPass1Lite(
     asText(answers["Q0.3"]) || next.practicalContext.transitionDuration;
   next.practicalContext.practicalPressure =
     asScale(answers["Q0.4"]) ?? next.practicalContext.practicalPressure;
-  next.practicalContext.constraints = [
-    ...next.practicalContext.constraints,
-    ...evidence(assessmentId, "Q0.5", answers["Q0.5"], "practical_constraint"),
-  ];
-  next.consciousNarrative.statedProblem = [
-    ...next.consciousNarrative.statedProblem,
-    ...evidence(assessmentId, "Q1.1", answers["Q1.1"], "self_interpretation"),
-  ];
-  next.consciousNarrative.statedCausesFreeText = [
-    ...next.consciousNarrative.statedCausesFreeText,
-    ...evidence(assessmentId, "Q1.3", answers["Q1.3"], "self_interpretation"),
-  ];
-  next.behavior.actionsTaken = [
-    ...next.behavior.actionsTaken,
-    ...evidence(assessmentId, "Q2.2", answers["Q2.2"], "behavior"),
-  ];
+  next.practicalContext.constraints = upsertEvidence(
+    next.practicalContext.constraints,
+    evidence(assessmentId, "Q0.5", answers["Q0.5"], "practical_constraint"),
+  );
+  next.consciousNarrative.statedProblem = upsertEvidence(
+    next.consciousNarrative.statedProblem,
+    evidence(assessmentId, "Q1.1", answers["Q1.1"], "self_interpretation"),
+  );
+  next.consciousNarrative.statedCausesFreeText = upsertEvidence(
+    next.consciousNarrative.statedCausesFreeText,
+    evidence(assessmentId, "Q1.3", answers["Q1.3"], "self_interpretation"),
+  );
+  next.behavior.actionsTaken = upsertEvidence(
+    next.behavior.actionsTaken,
+    evidence(assessmentId, "Q2.2", answers["Q2.2"], "behavior"),
+  );
   next.affect.chargeIntensity =
     asScale(answers["Q3.2"]) ?? next.affect.chargeIntensity;
   next.openForks = preferredOpenForks(checkpoint, answers);
@@ -83,8 +91,8 @@ function preferredOpenForks(
   answers: Record<string, unknown>,
 ): ForkId[] {
   const preferred = CHECKPOINT_PREFERRED_FORKS[checkpoint] ?? [];
-  if (asText(answers["Q1.3"]) && asText(answers["Q2.2"])) {
-    return preferred;
+  if (checkpoint === "A" && !(asText(answers["Q1.3"]) && asText(answers["Q2.2"]))) {
+    return preferred.filter((fork) => fork !== "history_vs_stated_cause");
   }
   return preferred;
 }

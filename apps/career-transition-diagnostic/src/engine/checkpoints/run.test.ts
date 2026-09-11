@@ -136,6 +136,65 @@ describe("adaptive checkpoints A–D", () => {
     expect(result.adaptiveQuestion).toBeNull();
   });
 
+  it("allows a second question on the same fork within the per-fork cap", async () => {
+    const result = await runCheckpoint({
+      assessmentId: "assess-1",
+      checkpoint: "B",
+      answers: {},
+      existingAdaptive: [
+        {
+          id: "QA.1",
+          checkpoint: "A",
+          forkId: "history_vs_stated_cause",
+          questionText: "already asked",
+        },
+      ],
+      llm: {
+        async completeStructured(request) {
+          return mockLlmAdapter.completeStructured({
+            ...request,
+            input: { ...request.input, fixture: "history_vs_stated_cause" },
+          });
+        },
+      },
+    });
+
+    expect(result.adaptiveQuestion?.forkId).toBe("history_vs_stated_cause");
+    expect(result.adaptiveQuestion?.id).toBe("QB.1");
+  });
+
+  it("uses canonical bank copy even if the LLM paraphrases", async () => {
+    const result = await runCheckpoint({
+      assessmentId: "assess-1",
+      checkpoint: "A",
+      answers: {
+        "Q1.3": "I lack confidence.",
+        "Q2.2": "I rewrote the website twice.",
+      },
+      llm: {
+        async completeStructured() {
+          return {
+            stage: "checkpoint-A",
+            fixture: "paraphrase",
+            output: {
+              openForks: ["history_vs_stated_cause"],
+              safety: { level: "none", flags: [] },
+              adaptiveQuestion: {
+                forkId: "history_vs_stated_cause",
+                rationale: "internal",
+                questionText: "Can you say more about why that happened?",
+              },
+            },
+          };
+        },
+      },
+    });
+
+    expect(result.adaptiveQuestion?.questionText).toBe(
+      ADAPTIVE_QUESTION_BANK.history_vs_stated_cause.questionText,
+    );
+  });
+
   it("drops Jung-speak or leading adaptive copy", async () => {
     const result = await runCheckpoint({
       assessmentId: "assess-1",
