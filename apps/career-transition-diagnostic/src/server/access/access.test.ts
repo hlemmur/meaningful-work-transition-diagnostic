@@ -14,6 +14,7 @@ import {
   recordWelcomeConsent,
   withdrawMarketingConsent,
 } from "../consent/marketing";
+import { MARKETING_CONSENT_COPY } from "../consent/copy";
 import { processLemonWebhook } from "./webhook";
 
 function sign(rawBody: string) {
@@ -96,7 +97,7 @@ describe("paid token access and consent", () => {
     expect(exportMarketingContacts()).toEqual([
       expect.objectContaining({
         email: "buyer@example.com",
-        consentCopyVersion: "marketing-consent.v1",
+        consentCopyVersion: MARKETING_CONSENT_COPY.version,
       }),
     ]);
     expect(JSON.stringify(exportMarketingContacts())).not.toContain("secret career material");
