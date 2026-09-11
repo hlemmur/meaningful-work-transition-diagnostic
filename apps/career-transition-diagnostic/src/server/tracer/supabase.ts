@@ -46,6 +46,8 @@ export class SupabaseTracerDb implements TracerDb {
   }
 
   async replaceAll(tables: TracerTables) {
+    // Beta-scale snapshot replace. Callers must serialize via withStore so two
+    // overlapping requests cannot load the same snapshot and drop each other's writes.
     for (const table of DELETE_ORDER) {
       const { error } = await this.client.from(table).delete().not("id", "is", null);
       throwIfError(error, `delete ${table}`);

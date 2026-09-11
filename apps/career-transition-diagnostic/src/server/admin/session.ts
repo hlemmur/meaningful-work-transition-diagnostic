@@ -54,8 +54,25 @@ export async function startOperatorLogin(email: string, deps: OperatorLoginDeps 
     return { kind: "session" as const };
   }
   const origin = deps.origin ?? "";
-  await (deps.sendMagicLink ?? sendOperatorMagicLink)(normalized, `${origin}/auth/callback`);
+  await (deps.sendMagicLink ?? sendOperatorMagicLink)(
+    normalized,
+    magicLinkRedirectTo(origin),
+  );
   return { kind: "magic-link" as const };
+}
+
+export function magicLinkRedirectTo(origin?: string) {
+  const base = (process.env.APP_URL || origin || "").trim().replace(/\/$/, "");
+  let url: URL;
+  try {
+    url = new URL("/auth/callback", `${base}/`);
+  } catch {
+    throw new Error("APP_URL is required for live operator magic links");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("APP_URL is required for live operator magic links");
+  }
+  return url.toString();
 }
 
 export async function clearAdminSession() {

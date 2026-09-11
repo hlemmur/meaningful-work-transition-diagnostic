@@ -14,7 +14,7 @@ bun run dev
 
 `APP_MODE=mock` mocks **vendors only** (Lemon Squeezy, OpenAI, Resend). The MOCK MODE badge is required on customer and admin screens in that mode.
 
-Persistence is real whenever `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set. Vitest and CI stay on the in-memory store when those are unset.
+Persistence is real whenever `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set. Vitest and CI stay on the in-memory store when those are unset. Table-backed commits still replace the full snapshot; `withStore` serializes those writes in-process so overlapping requests on one instance cannot drop each other's rows. Multi-instance writers are out of scope for this beta.
 
 `APP_MODE=live` uses live OpenAI, Resend, and operator magic-link auth. Paid checkout stays off until the launch gate below is green (`PAYMENTS_ENABLED` remains `false` in `.env.example`).
 
@@ -33,13 +33,14 @@ Copy `.env.example` to `.env.local`. Never prefix service credentials with `NEXT
 | `RESEND_API_KEY` / `RESEND_FROM` | Transactional email. Bodies contain `/a/` or `/r/` links only |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Persistence + Auth magic links |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side assessment store. Never expose to the browser |
+| `APP_URL` | Absolute site origin for live magic-link redirects (`https://staging.example`) |
 | `ADMIN_EMAIL_ALLOWLIST` | Comma-separated operator emails |
 | `CRON_SECRET` | Bearer token for `GET /api/cron/retention` |
 | `RETENTION_DAYS` | Default 90 |
 
 Webhook endpoint: `POST /api/webhooks/lemon-squeezy` with header `x-signature`.
 
-Operator sign-in: mock mode sets a local unsigned cookie. Live mode emails a Supabase magic link and completes at `/auth/callback`. Add that callback URL to the Supabase Auth redirect allowlist.
+Operator sign-in: mock mode sets a local unsigned cookie. Live mode emails a Supabase magic link and completes at `/auth/callback`. Set `APP_URL` to the absolute origin and add `{APP_URL}/auth/callback` to the Supabase Auth redirect allowlist.
 
 ## Launch gate
 

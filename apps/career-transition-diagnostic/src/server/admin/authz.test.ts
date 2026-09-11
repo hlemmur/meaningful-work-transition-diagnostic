@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { ADMIN_COOKIE } from "./allowlist";
 import { operatorEmailForMode, sessionFromOperatorEmail } from "./authz";
-import { startOperatorLogin } from "./session";
+import { startOperatorLogin, magicLinkRedirectTo } from "./session";
 import { proxy } from "@/proxy";
 
 const originalAppMode = process.env.APP_MODE;
@@ -14,6 +14,7 @@ afterEach(() => {
     process.env.APP_MODE = originalAppMode;
   }
   delete process.env.ADMIN_EMAIL_ALLOWLIST;
+  delete process.env.APP_URL;
 });
 
 function adminRequest(cookieEmail?: string) {
@@ -89,6 +90,27 @@ describe("startOperatorLogin", () => {
       startOperatorLogin("stranger@example.com", { sendMagicLink, origin: "https://x.test" }),
     ).rejects.toThrow("Email is not allowlisted");
     expect(sendMagicLink).not.toHaveBeenCalled();
+  });
+
+  it("prefers APP_URL over Origin and refuses a relative callback", async () => {
+    process.env.APP_MODE = "live";
+    process.env.APP_URL = "https://app.example";
+    const sendMagicLink = vi.fn();
+    await startOperatorLogin("lena@example.com", {
+      sendMagicLink,
+      origin: "https://spoofed.example",
+    });
+    expect(sendMagicLink).toHaveBeenCalledWith(
+      "lena@example.com",
+      "https://app.example/auth/callback",
+    );
+
+    delete process.env.APP_URL;
+    expect(() => magicLinkRedirectTo("")).toThrow(/APP_URL is required/);
+    expect(() => magicLinkRedirectTo("/admin")).toThrow(/APP_URL is required/);
+    await expect(
+      startOperatorLogin("lena@example.com", { sendMagicLink: vi.fn(), origin: "" }),
+    ).rejects.toThrow(/APP_URL is required/);
   });
 });
 

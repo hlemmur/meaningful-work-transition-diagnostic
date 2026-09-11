@@ -4,8 +4,10 @@ import {
   MemoryTracerRepository,
   TableTracerRepository,
   bindTracerRepository,
+  getActiveStore,
   resetRepositoryBinding,
   supabasePersistenceEnabled,
+  withStore,
 } from "./repository";
 import { createEmptyTracerStore } from "./records";
 import {
@@ -97,5 +99,49 @@ describe("tracer repository", () => {
     const reloaded = await getAssessmentByAccessToken(paid.accessToken as string);
     expect(reloaded?.answers["Q1.1"]).toBe("I already know the work");
     expect(reloaded?.email).toBe("buyer@example.com");
+  });
+
+  it("serializes overlapping table-backed writes so later commits keep earlier rows", async () => {
+    const db = new MemoryTracerDb();
+    bindTracerRepository(new TableTracerRepository(db));
+
+    let releaseFirst!: () => void;
+    const holdFirst = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let firstHasStore!: () => void;
+    const firstReady = new Promise<void>((resolve) => {
+      firstHasStore = resolve;
+    });
+
+    const first = withStore(async () => {
+      getActiveStore().assessments.push({
+        id: "a1",
+        email: "one@example.com",
+        accessTokenHash: "hash-a1",
+        accessExpiresAt: Date.now() + 60_000,
+        status: "in_progress",
+        answers: {},
+      });
+      firstHasStore();
+      await holdFirst;
+    });
+
+    await firstReady;
+    const second = withStore(async () => {
+      getActiveStore().assessments.push({
+        id: "a2",
+        email: "two@example.com",
+        accessTokenHash: "hash-a2",
+        accessExpiresAt: Date.now() + 60_000,
+        status: "in_progress",
+        answers: {},
+      });
+    });
+    releaseFirst();
+    await Promise.all([first, second]);
+
+    const reloaded = await new TableTracerRepository(db).begin();
+    expect(reloaded.assessments.map((item) => item.id).sort()).toEqual(["a1", "a2"]);
   });
 });

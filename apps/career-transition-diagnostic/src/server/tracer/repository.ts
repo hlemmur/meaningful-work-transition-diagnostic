@@ -25,7 +25,7 @@ export class MemoryTracerRepository implements TracerRepository {
     return this.store;
   }
 
-  async commit() {
+  async commit(_store: TracerStore) {
     return;
   }
 
@@ -71,6 +71,16 @@ export class MemoryTracerDb implements TracerDb {
 
 const storeAls = new AsyncLocalStorage<TracerStore>();
 let bound: TracerRepository | undefined;
+let writeChain: Promise<void> = Promise.resolve();
+
+function enqueueExclusiveWrite<T>(work: () => Promise<T>): Promise<T> {
+  const run = writeChain.then(work, work);
+  writeChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
 
 export function supabasePersistenceEnabled() {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -106,11 +116,13 @@ export async function withStore<T>(fn: () => T | Promise<T>): Promise<T> {
   if (existing) {
     return fn();
   }
-  const repository = getRepository();
-  const store = await repository.begin();
-  return storeAls.run(store, async () => {
-    const result = await fn();
-    await repository.commit(store);
-    return result;
+  return enqueueExclusiveWrite(async () => {
+    const repository = getRepository();
+    const store = await repository.begin();
+    return storeAls.run(store, async () => {
+      const result = await fn();
+      await repository.commit(store);
+      return result;
+    });
   });
 }

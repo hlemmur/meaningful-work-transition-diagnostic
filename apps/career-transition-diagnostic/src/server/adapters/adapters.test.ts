@@ -134,7 +134,7 @@ describe("mock vendor adapters", () => {
       unresolvedQuestions: [],
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.openai.com/v1/responses");
     const body = JSON.parse(String(init.body));
     expect(body.model).toBe("gpt-4.1-mini");
@@ -174,7 +174,7 @@ describe("mock vendor adapters", () => {
 
     expect(adapters.email.listOutbox()).toEqual([]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.resend.com/emails");
     expect(JSON.parse(String(init.body))).toEqual({
       from: "Lena <reports@example.com>",
