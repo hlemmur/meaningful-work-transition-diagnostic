@@ -22,6 +22,10 @@ export const promptRegistry = {
     version: "checkpoint-d.v1",
     text: "Pass 1-lite after Section 9. Discriminate rational caution vs hidden bargain, and background income as relief vs replacement. Select 0 or 1 adaptive question. Stay within the total adaptive cap.",
   },
+  checkpointSafety: {
+    version: "checkpoint-safety.v1",
+    text: "Classify crisis or acute distress. Do not send free-text or safety content to analytics. If high, skip remaining depth probes and reduce later report depth.",
+  },
   pass1: {
     version: "pass-1.v1",
     text: "Extract CaseState facts, client interpretations, identity claims, and practical constraints. Do not treat Q11.3 as a conclusion.",

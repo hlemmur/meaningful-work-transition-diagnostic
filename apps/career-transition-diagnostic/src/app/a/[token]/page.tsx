@@ -3,7 +3,9 @@ import { recordConsentAction } from "@/server/tracer/actions";
 import {
   getAssessmentByAccessToken,
   inspectAccessToken,
+  listAdaptiveQuestions,
 } from "@/server/tracer/service";
+import { SUPPORT_COPY } from "@/engine/checkpoints/bank";
 import { RequestNewLinkForm } from "@/components/request-new-link-form";
 import { QuestionnaireFlow } from "@/questionnaire/QuestionnaireFlow";
 
@@ -80,6 +82,14 @@ export default async function AssessmentPage({
         initialAnswers={assessment.answers}
         locked={locked}
         submitted={query.submitted === "1"}
+        initialAdaptive={listAdaptiveQuestions(assessment.id).map((item) => ({
+          id: item.id,
+          checkpoint: item.checkpoint,
+          forkId: item.forkId,
+          questionText: item.questionText,
+        }))}
+        initialSafetyLevel={assessment.safetyLevel ?? "none"}
+        initialSupportCopy={assessment.safetyLevel === "high" ? SUPPORT_COPY : null}
       />
     </main>
   );

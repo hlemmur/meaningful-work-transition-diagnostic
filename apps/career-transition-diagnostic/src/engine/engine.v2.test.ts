@@ -115,6 +115,7 @@ describe("engine.v2 contracts", () => {
       "checkpointB",
       "checkpointC",
       "checkpointD",
+      "checkpointSafety",
       "pass1",
       "pass2",
       "pass3",
