@@ -159,7 +159,8 @@ export const liveLlmAdapter: LlmAdapter = {
     });
 
     if (!response.ok) {
-      throw new Error("Gemini live adapter is not configured. Set GEMINI_API_KEY or leave LLM_MODE unset for fixtures.");
+      const body = (await response.text()).slice(0, 300);
+      throw new Error(`Gemini HTTP ${response.status}${body ? `: ${body}` : ""}`);
     }
 
     const payload = (await response.json()) as {

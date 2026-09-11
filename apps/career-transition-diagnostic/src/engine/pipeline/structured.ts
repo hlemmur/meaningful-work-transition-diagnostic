@@ -5,8 +5,9 @@ export class StructuredStageError extends Error {
   readonly stage: string;
   readonly attempts: number;
 
-  constructor(stage: string, attempts: number, cause?: unknown) {
-    super(`Schema validation failed for ${stage}`);
+  constructor(stage: string, attempts: number, cause?: unknown, issues: string[] = []) {
+    const detail = issues.length ? `: ${issues.join("; ")}` : "";
+    super(`Schema validation failed for ${stage}${detail}`.slice(0, 800));
     this.name = "StructuredStageError";
     this.stage = stage;
     this.attempts = attempts;
@@ -14,6 +15,13 @@ export class StructuredStageError extends Error {
       this.cause = cause;
     }
   }
+}
+
+function schemaIssueLines(error: { issues: Array<{ path: PropertyKey[]; message: string }> }) {
+  return error.issues.slice(0, 12).map((issue) => {
+    const path = issue.path.length ? issue.path.map(String).join(".") : "(root)";
+    return `${path}: ${issue.message}`.slice(0, 160);
+  });
 }
 
 export async function runStructuredStage(input: {
@@ -24,11 +32,16 @@ export async function runStructuredStage(input: {
   llm: LlmAdapter;
 }) {
   let lastError: unknown;
+  let previousIssues: string[] | undefined;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const raw = await input.llm.completeStructured({
       stage: input.stage,
       model: input.model,
-      input: { ...input.input, attempt },
+      input: {
+        ...input.input,
+        attempt,
+        ...(previousIssues?.length ? { schemaIssues: previousIssues } : {}),
+      },
     });
     const parsed = input.schema.safeParse(raw.output);
     if (parsed.success) {
@@ -41,6 +54,7 @@ export async function runStructuredStage(input: {
       };
     }
     lastError = parsed.error;
+    previousIssues = schemaIssueLines(parsed.error);
   }
-  throw new StructuredStageError(input.stage, 2, lastError);
+  throw new StructuredStageError(input.stage, 2, lastError, previousIssues);
 }

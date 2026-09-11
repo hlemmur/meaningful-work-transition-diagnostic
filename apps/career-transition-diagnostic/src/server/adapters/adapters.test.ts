@@ -224,6 +224,25 @@ describe("mock vendor adapters", () => {
     );
   });
 
+  it("reports Gemini HTTP status when a key is set and generateContent fails", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.LLM_MODE = "live";
+    process.env.GEMINI_API_KEY = "gemini-test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: { message: "INVALID_ARGUMENT: response schema" } }), {
+            status: 400,
+          }),
+      ),
+    );
+    const adapters = createVendorAdapters();
+    await expect(
+      adapters.llm.completeStructured({ stage: "pass1", input: { assessmentId: "a1" } }),
+    ).rejects.toThrow(/Gemini HTTP 400[\s\S]*INVALID_ARGUMENT/i);
+  });
+
   it("fails closed when live Gemini returns malformed JSON", async () => {
     process.env.APP_MODE = "mock";
     process.env.LLM_MODE = "live";
