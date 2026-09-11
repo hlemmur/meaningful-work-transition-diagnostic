@@ -35,7 +35,10 @@ test("keeps unapproved reports off the customer link and delivers after review",
   await expect(page.getByRole("heading", { level: 1, name: "Private report" })).toBeVisible();
   await expect(page.getByText("Edited hypothesis language only.")).toBeVisible();
   await expect(page.locator("[data-coaching-cta]")).toBeVisible();
-  await expect(page.getByText(/save a PDF/i)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "ask Lena about coaching" }),
+  ).toHaveAttribute("href", "mailto:contact@radicalcreationcoaching.com");
+  await expect(page.getByText(/PDF/i)).toBeVisible();
 
   await page.emulateMedia({ media: "print" });
   await expect(page.locator("[data-coaching-cta]")).toBeHidden();
