@@ -9,7 +9,7 @@ type ReportPageProps = {
 
 export default async function ReportPage({ params }: ReportPageProps) {
   const { token } = await params;
-  const report = getDeliveredReport(token);
+  const report = await getDeliveredReport(token);
 
   if (!report) {
     notFound();

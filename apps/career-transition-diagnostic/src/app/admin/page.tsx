@@ -5,13 +5,21 @@ import { listReviewQueueView } from "@/server/tracer/service";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
+type AdminPageProps = {
+  searchParams: Promise<{ delivered?: string }>;
+};
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
   await requireAdminPage();
-  const queue = listReviewQueueView();
+  const queue = await listReviewQueueView();
+  const { delivered } = await searchParams;
 
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-6 py-20">
       <h1 className="text-3xl font-semibold tracking-tight">Review queue</h1>
+      {delivered ? (
+        <p className="text-sm text-[#4a3b34]">Report link emailed to the customer.</p>
+      ) : null}
       <p className="leading-7 text-[#4a3b34]">
         Nothing is delivered until a report is approved.
       </p>

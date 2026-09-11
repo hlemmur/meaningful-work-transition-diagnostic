@@ -10,9 +10,9 @@ import {
   PRODUCT_CONSENT_COPY,
 } from "./copy";
 
-afterEach(() => {
+afterEach(async () => {
   process.env.APP_MODE = "mock";
-  resetMockTracerStore();
+  await resetMockTracerStore();
 });
 
 function joined(copy: { title?: string } & Record<string, unknown>) {
@@ -55,10 +55,10 @@ describe("versioned consent copy", () => {
     });
 
     expect(assessment.productConsentVersion).toBe(PRODUCT_CONSENT_COPY.version);
-    expect(getAssessmentByAccessToken(accessToken)?.productConsentVersion).toBe(
+    expect((await getAssessmentByAccessToken(accessToken))?.productConsentVersion).toBe(
       PRODUCT_CONSENT_COPY.version,
     );
-    expect(exportMarketingContacts()).toEqual([
+    expect(await exportMarketingContacts()).toEqual([
       expect.objectContaining({
         email: "buyer@example.com",
         consentCopyVersion: MARKETING_CONSENT_COPY.version,

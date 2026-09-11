@@ -32,21 +32,21 @@ async function submittedAssessment(
   return purchase;
 }
 
-afterEach(() => {
+afterEach(async () => {
   process.env.APP_MODE = "mock";
   resetMockOutbox();
-  resetMockTracerStore();
+  await resetMockTracerStore();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   process.env.APP_MODE = "mock";
 });
 
 describe("persisted Pass 1–10 analysis pipeline", () => {
   it("does not run on submit and leaves the assessment in review_pending", async () => {
     const { assessmentId } = await submittedAssessment();
-    expect(listAnalysisRuns(assessmentId)).toEqual([]);
-    expect(getDraftReport(assessmentId)).toBeUndefined();
+    expect(await listAnalysisRuns(assessmentId)).toEqual([]);
+    expect(await getDraftReport(assessmentId)).toBeUndefined();
   });
 
   it("runs passes 1–10, records usage, and stores a draft without delivering", async () => {
@@ -54,7 +54,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     const result = await runAnalysisPipeline(assessmentId);
 
     expect(result.status).toBe("completed");
-    expect(listAnalysisRuns(assessmentId).map((run) => run.stage)).toEqual([
+    expect((await listAnalysisRuns(assessmentId)).map((run) => run.stage)).toEqual([
       "pass1",
       "pass2",
       "pass3",
@@ -66,23 +66,23 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
       "pass9",
       "pass10",
     ]);
-    expect(listAnalysisRuns(assessmentId).every((run) => run.status === "success")).toBe(true);
-    expect(listAnalysisRuns(assessmentId).find((run) => run.stage === "pass1")?.model).toBe(
+    expect((await listAnalysisRuns(assessmentId)).every((run) => run.status === "success")).toBe(true);
+    expect((await listAnalysisRuns(assessmentId)).find((run) => run.stage === "pass1")?.model).toBe(
       "mock-cheap",
     );
-    expect(listAnalysisRuns(assessmentId).find((run) => run.stage === "pass3")?.model).toBe(
+    expect((await listAnalysisRuns(assessmentId)).find((run) => run.stage === "pass3")?.model).toBe(
       "mock-strong",
     );
-    expect(listAnalysisRuns(assessmentId)[0]?.costUsd).toBeGreaterThan(0);
-    expect(getDraftReport(assessmentId)?.status).toBe("draft");
+    expect((await listAnalysisRuns(assessmentId))[0]?.costUsd).toBeGreaterThan(0);
+    expect((await getDraftReport(assessmentId))?.status).toBe("draft");
   });
 
   it("resumes from the first incomplete stage without redoing successes", async () => {
     const { assessmentId } = await submittedAssessment();
     await runAnalysisPipeline(assessmentId);
-    const first = listAnalysisRuns(assessmentId);
+    const first = await listAnalysisRuns(assessmentId);
     await runAnalysisPipeline(assessmentId);
-    expect(listAnalysisRuns(assessmentId)).toEqual(first);
+    expect(await listAnalysisRuns(assessmentId)).toEqual(first);
   });
 
   it("retries a forced schema failure once then records error", async () => {
@@ -93,12 +93,12 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
 
     expect(result.status).toBe("failed");
     expect(result.failedStage).toBe("pass3");
-    const pass3 = listAnalysisRuns(assessmentId).filter((run) => run.stage === "pass3");
+    const pass3 = (await listAnalysisRuns(assessmentId)).filter((run) => run.stage === "pass3");
     expect(pass3).toHaveLength(1);
     expect(pass3[0]?.status).toBe("failure");
     expect(pass3[0]?.attempt).toBe(2);
     expect(pass3[0]?.error).toMatch(/schema/i);
-    expect(listAnalysisRuns(assessmentId).some((run) => run.stage === "pass4")).toBe(false);
+    expect((await listAnalysisRuns(assessmentId)).some((run) => run.stage === "pass4")).toBe(false);
   });
 
   it("includes a practical rival when constraints warrant it", async () => {
@@ -157,7 +157,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
       fixture: "critic-constraints-win",
     });
     expect(result.caseState.hiddenPosition).toBeUndefined();
-    expect(getDraftReport(assessmentId)?.generated.sections.some((section) =>
+    expect((await getDraftReport(assessmentId))?.generated.sections.some((section) =>
       /hidden position/i.test(section.title),
     )).toBe(false);
     expect(result.caseState.hiddenPosition?.possibleHiddenPosition).not.toBe(
@@ -171,7 +171,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     });
     const result = await runAnalysisPipeline(assessmentId, { fixture: "empty-jungian" });
     expect(result.caseState.jungianLenses).toEqual([]);
-    expect(getDraftReport(assessmentId)?.generated.sections.some((section) =>
+    expect((await getDraftReport(assessmentId))?.generated.sections.some((section) =>
       /jungian/i.test(section.title),
     )).toBe(false);
   });
@@ -179,7 +179,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
   it("requires valid evidenceRefs on every major report claim", async () => {
     const { assessmentId } = await submittedAssessment();
     const result = await runAnalysisPipeline(assessmentId);
-    const report = getDraftReport(assessmentId);
+    const report = await getDraftReport(assessmentId);
     const evidenceIds = new Set(
       result.caseState.consciousNarrative.statedProblem.map((item) => item.id),
     );

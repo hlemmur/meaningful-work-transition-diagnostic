@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MarketingExportPage() {
   await requireAdminPage();
-  const contacts = exportMarketingContacts();
+  const contacts = await exportMarketingContacts();
 
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-6 py-20">

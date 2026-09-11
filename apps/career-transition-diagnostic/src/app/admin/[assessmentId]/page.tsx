@@ -21,7 +21,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
   const { assessmentId } = await params;
   let adminCase;
   try {
-    adminCase = getAdminCase(assessmentId);
+    adminCase = await getAdminCase(assessmentId);
   } catch {
     notFound();
   }

@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetMockOutbox } from "../adapters/resend/mock";
 import {
   approveAssessment,
   completeMockPurchase,
+  completePaidOrder,
   getAssessmentByAccessToken,
   getAssessmentByReportToken,
   recordWelcomeConsent,
@@ -26,17 +27,20 @@ async function purchaseWithConsent(email = "buyer@example.com") {
   return purchase;
 }
 
-afterEach(() => {
+afterEach(async () => {
   process.env.APP_MODE = "mock";
+  delete process.env.RESEND_API_KEY;
+  delete process.env.RESEND_FROM;
   resetMockOutbox();
-  resetMockTracerStore();
+  vi.unstubAllGlobals();
+  await resetMockTracerStore();
 });
 
 describe("mock purchase-to-report tracer", () => {
   it("creates a token-protected assessment and emails only the access link", async () => {
     process.env.APP_MODE = "mock";
     const purchase = await completeMockPurchase("buyer@example.com");
-    const assessment = getAssessmentByAccessToken(purchase.accessToken);
+    const assessment = await getAssessmentByAccessToken(purchase.accessToken);
 
     expect(assessment?.status).toBe("in_progress");
     expect(purchase.accessEmail.text).toContain(`/a/${purchase.accessToken}`);
@@ -48,7 +52,7 @@ describe("mock purchase-to-report tracer", () => {
     const { accessToken } = await purchaseWithConsent();
 
     await saveAnswer(accessToken, "Q1.1", "I left a career that still pays my bills.");
-    const resumed = getAssessmentByAccessToken(accessToken);
+    const resumed = await getAssessmentByAccessToken(accessToken);
 
     expect(resumed?.answers["Q1.1"]).toBe("I left a career that still pays my bills.");
   });
@@ -59,7 +63,7 @@ describe("mock purchase-to-report tracer", () => {
 
     await saveAnswer(accessToken, "Q2.3", [{ action: "Send the website" }]);
     await saveAnswer(accessToken, "Q0.1", "other");
-    const resumed = getAssessmentByAccessToken(accessToken);
+    const resumed = await getAssessmentByAccessToken(accessToken);
 
     expect(resumed?.answers["Q2.3"]).toEqual([{ action: "Send the website" }]);
     expect(resumed?.answers["Q0.1"]).toBe("other");
@@ -87,8 +91,8 @@ describe("mock purchase-to-report tracer", () => {
     const result = await runAssessmentCheckpoint(accessToken, "A");
 
     expect(result.adaptiveQuestion?.forkId).toBe("history_vs_stated_cause");
-    expect(listAdaptiveQuestions(assessmentId)).toHaveLength(1);
-    expect(listCaseStateVersions(assessmentId)[0]?.stage).toBe("checkpoint-A");
+    expect(await listAdaptiveQuestions(assessmentId)).toHaveLength(1);
+    expect((await listCaseStateVersions(assessmentId))[0]?.stage).toBe("checkpoint-A");
     await saveAnswer(accessToken, result.adaptiveQuestion!.id, "The website still did not ship.");
   });
 
@@ -109,8 +113,8 @@ describe("mock purchase-to-report tracer", () => {
     });
     expect(result.safetyLevel).toBe("high");
     expect(result.adaptiveQuestion).toBeNull();
-    expect(exportMarketingContacts()[0]?.email).toBe("buyer@example.com");
-    expect(JSON.stringify(exportMarketingContacts())).not.toMatch(/suicid|cannot function/i);
+    expect((await exportMarketingContacts())[0]?.email).toBe("buyer@example.com");
+    expect(JSON.stringify(await exportMarketingContacts())).not.toMatch(/suicid|cannot function/i);
   });
 
   it("approves a submitted draft and emails a report link without report body", async () => {
@@ -137,7 +141,27 @@ describe("mock purchase-to-report tracer", () => {
 
     await expect(submitAssessment(accessToken)).rejects.toThrow("Assessment already submitted");
 
-    const report = getAssessmentByReportToken(delivery.reportToken);
+    const report = await getAssessmentByReportToken(delivery.reportToken);
     expect(report?.status).toBe("approved");
+  });
+
+  it("emails an access link after a live paid order without a mock outbox", async () => {
+    process.env.APP_MODE = "live";
+    process.env.RESEND_API_KEY = "re-test";
+    process.env.RESEND_FROM = "Lena <reports@example.com>";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ id: "email-1" }), { status: 200 })),
+    );
+
+    const paid = await completePaidOrder({
+      email: "buyer@example.com",
+      lemonOrderId: "live-order-1",
+      lemonWebhookId: "live-wh-1",
+    });
+
+    expect(paid.created).toBe(true);
+    expect(paid.accessEmail?.text).toContain(`/a/${paid.accessToken}`);
+    expect(paid.accessEmail?.text).not.toContain("report");
   });
 });

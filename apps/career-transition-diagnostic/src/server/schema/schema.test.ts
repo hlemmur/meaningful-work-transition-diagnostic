@@ -1,15 +1,20 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const MIGRATION = resolve(
-  process.cwd(),
-  "supabase/migrations/20260911000000_beta_tables.sql",
-);
+const MIGRATIONS_DIR = resolve(process.cwd(), "supabase/migrations");
+
+function allMigrationsSql() {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((file) => file.endsWith(".sql"))
+    .sort()
+    .map((file) => readFileSync(resolve(MIGRATIONS_DIR, file), "utf8"))
+    .join("\n");
+}
 
 describe("beta schema migration", () => {
   it("creates the required tables", () => {
-    const sql = readFileSync(MIGRATION, "utf8");
+    const sql = allMigrationsSql();
     const tables = [
       "purchases",
       "marketing_consents",
@@ -25,5 +30,15 @@ describe("beta schema migration", () => {
     for (const table of tables) {
       expect(sql).toMatch(new RegExp(`create table if not exists public\\.${table}`, "i"));
     }
+  });
+
+  it("aligns runtime assessment fields and unique marketing email", () => {
+    const sql = allMigrationsSql();
+    expect(sql).toMatch(/alter table public\.assessments[\s\S]*add column if not exists email text/i);
+    expect(sql).toMatch(/product_consented_at/i);
+    expect(sql).toMatch(/report_depth/i);
+    expect(sql).toMatch(/alter table public\.analysis_runs[\s\S]*add column if not exists output jsonb/i);
+    expect(sql).toMatch(/question_id/i);
+    expect(sql).toMatch(/unique \(email\)/i);
   });
 });

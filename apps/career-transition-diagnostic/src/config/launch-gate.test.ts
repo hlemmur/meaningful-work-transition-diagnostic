@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { paymentsEnabled } from "./launch-gate";
 
 const original = {
@@ -24,5 +26,10 @@ describe("paid launch gate", () => {
     expect(paymentsEnabled()).toBe(false);
     process.env.PAYMENTS_ENABLED = "true";
     expect(paymentsEnabled()).toBe(true);
+  });
+
+  it("keeps paid live checkout off in the checked-in example env", () => {
+    const example = readFileSync(resolve(process.cwd(), ".env.example"), "utf8");
+    expect(example).toMatch(/^PAYMENTS_ENABLED=false$/m);
   });
 });

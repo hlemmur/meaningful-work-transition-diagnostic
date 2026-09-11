@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { afterDeliveryPath } from "@/config/app-mode";
 import { requireAdminSession } from "@/server/admin/session";
 import {
   approveAssessment,
@@ -28,24 +29,24 @@ export async function saveEditsAction(assessmentId: string, formData: FormData) 
       .map((item) => item.trim())
       .filter(Boolean),
   }));
-  saveReportEdits(assessmentId, sections);
+  await saveReportEdits(assessmentId, sections);
   redirect(`/admin/${assessmentId}?saved=1`);
 }
 
 export async function approveAndDeliverAction(assessmentId: string) {
   await requireAdminSession();
   await approveAssessment(assessmentId);
-  redirect("/mock/outbox");
+  redirect(afterDeliveryPath());
 }
 
 export async function resendLinkAction(assessmentId: string) {
   await requireAdminSession();
   await resendReportLink(assessmentId);
-  redirect("/mock/outbox");
+  redirect(afterDeliveryPath());
 }
 
 export async function deleteAccessAction(assessmentId: string) {
   await requireAdminSession();
-  deleteAssessmentData(assessmentId);
+  await deleteAssessmentData(assessmentId);
   redirect("/admin");
 }

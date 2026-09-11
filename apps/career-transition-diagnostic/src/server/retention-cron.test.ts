@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { GET as retentionCron } from "@/app/api/cron/retention/route";
 import { resetMockTracerStore } from "@/server/tracer/service";
 
-afterEach(() => {
+afterEach(async () => {
   delete process.env.CRON_SECRET;
-  resetMockTracerStore();
+  await resetMockTracerStore();
 });
 
 describe("retention cron", () => {

@@ -14,14 +14,14 @@ import {
   approveAssessment,
 } from "./service";
 
-afterEach(() => {
+afterEach(async () => {
   process.env.APP_MODE = "mock";
   delete process.env.RETENTION_MS;
   resetMockOutbox();
-  resetMockTracerStore();
+  await resetMockTracerStore();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   process.env.APP_MODE = "mock";
 });
 
@@ -42,18 +42,18 @@ describe("retention and manual delete", () => {
     process.env.RETENTION_MS = "1";
     const { assessmentId, accessToken } = await submittedWithAnswer();
     await runAnalysisPipeline(assessmentId);
-    expect(getAdminCase(assessmentId).assessment.answers["Q1.1"]).toBe("secret career material");
-    expect(getAdminCase(assessmentId).assessment.retentionDeadline).toBeGreaterThan(0);
+    expect((await getAdminCase(assessmentId)).assessment.answers["Q1.1"]).toBe("secret career material");
+    expect((await getAdminCase(assessmentId)).assessment.retentionDeadline).toBeGreaterThan(0);
 
     await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(purgeExpiredAssessments()).toBe(1);
+    expect(await purgeExpiredAssessments()).toBe(1);
 
-    const purged = getAdminCase(assessmentId);
+    const purged = await getAdminCase(assessmentId);
     expect(purged.assessment.answers).toEqual({});
     expect(purged.draft).toBeUndefined();
-    expect(getAdminCase(assessmentId).assessment.retentionDeadline).toBeDefined();
+    expect((await getAdminCase(assessmentId)).assessment.retentionDeadline).toBeDefined();
     expect(JSON.stringify(purged)).not.toContain("secret career material");
-    expect(getAdminCase(assessmentId).assessment.email).toBe("buyer@example.com");
+    expect((await getAdminCase(assessmentId)).assessment.email).toBe("buyer@example.com");
     expect(accessToken).toBeTruthy();
   });
 
@@ -61,19 +61,19 @@ describe("retention and manual delete", () => {
     const { assessmentId } = await submittedWithAnswer();
     await runAnalysisPipeline(assessmentId);
     const delivery = await approveAssessment(assessmentId);
-    expect(getDeliveredReport(delivery.reportToken)?.sections.length).toBeGreaterThan(0);
+    expect((await getDeliveredReport(delivery.reportToken))?.sections.length).toBeGreaterThan(0);
 
-    deleteAssessmentData(assessmentId);
+    await deleteAssessmentData(assessmentId);
 
-    expect(getDeliveredReport(delivery.reportToken)).toBeUndefined();
-    expect(getAdminCase(assessmentId).assessment.answers).toEqual({});
-    expect(getAdminCase(assessmentId).draft).toBeUndefined();
-    expect(JSON.stringify(getAdminCase(assessmentId))).not.toContain("secret career material");
+    expect(await getDeliveredReport(delivery.reportToken)).toBeUndefined();
+    expect((await getAdminCase(assessmentId)).assessment.answers).toEqual({});
+    expect((await getAdminCase(assessmentId)).draft).toBeUndefined();
+    expect(JSON.stringify(await getAdminCase(assessmentId))).not.toContain("secret career material");
   });
 
   it("does not purge assessments that are still inside the retention window", async () => {
     const { assessmentId } = await submittedWithAnswer();
-    expect(purgeExpiredAssessments()).toBe(0);
-    expect(getAdminCase(assessmentId).assessment.answers["Q1.1"]).toBe("secret career material");
+    expect(await purgeExpiredAssessments()).toBe(0);
+    expect((await getAdminCase(assessmentId)).assessment.answers["Q1.1"]).toBe("secret career material");
   });
 });
