@@ -1,5 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { isMockMode } from "@/config/app-mode";
 import { isAllowlistedAdmin } from "./allowlist";
+
+const originalAppMode = process.env.APP_MODE;
+
+afterEach(() => {
+  if (originalAppMode === undefined) {
+    delete process.env.APP_MODE;
+  } else {
+    process.env.APP_MODE = originalAppMode;
+  }
+  delete process.env.ADMIN_EMAIL_ALLOWLIST;
+});
 
 describe("admin allowlist", () => {
   it("accepts the default operator email", () => {
@@ -11,6 +23,14 @@ describe("admin allowlist", () => {
   it("accepts a configured allowlist", () => {
     process.env.ADMIN_EMAIL_ALLOWLIST = "lena@example.com, ops@example.com";
     expect(isAllowlistedAdmin("ops@example.com")).toBe(true);
-    delete process.env.ADMIN_EMAIL_ALLOWLIST;
+  });
+});
+
+describe("mock operator sessions", () => {
+  it("are enabled only in mock mode", () => {
+    process.env.APP_MODE = "mock";
+    expect(isMockMode()).toBe(true);
+    process.env.APP_MODE = "live";
+    expect(isMockMode()).toBe(false);
   });
 });
