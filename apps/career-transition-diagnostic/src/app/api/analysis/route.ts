@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { isMockMode } from "@/config/app-mode";
 import { runAnalysisPipeline } from "@/server/tracer/service";
 import type { AnalysisFixture } from "@/engine/pipeline/fixtures";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (!isMockMode()) {
+    return NextResponse.json({ error: "Operator auth required" }, { status: 401 });
+  }
+
   const body = (await request.json()) as {
     assessmentId?: string;
     fixture?: AnalysisFixture;
