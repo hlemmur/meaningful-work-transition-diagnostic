@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./base";
 import { adminLogin } from "./admin";
 
 test("customer and admin screens show the MOCK MODE badge", async ({ page }) => {

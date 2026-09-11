@@ -470,6 +470,13 @@ export async function approveAssessment(assessmentId: string) {
   if (!assessment || assessment.status !== "review_pending") {
     throw new Error("Assessment is not waiting for review");
   }
+  if (analysisStatusFor(assessmentId).label !== "completed") {
+    throw new Error("Analysis must complete before approval");
+  }
+  const existingReport = getStore().reports.find((item) => item.assessmentId === assessmentId);
+  if (!existingReport || existingReport.status === "deleted") {
+    throw new Error("Draft report not found");
+  }
 
   const reportToken = createToken();
   assessment.reportAccessTokenHash = hashToken(reportToken);
@@ -551,9 +558,16 @@ export function saveReportEdits(
   assessmentId: string,
   sections: { id: string; title: string; body: string; evidenceRefs: string[] }[],
 ) {
+  const assessment = getStore().assessments.find((item) => item.id === assessmentId);
   const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
-  if (!report || report.status === "deleted") {
-    throw new Error("Draft report not found");
+  if (
+    !assessment ||
+    assessment.status === "approved" ||
+    !report ||
+    report.status === "deleted" ||
+    report.status === "approved"
+  ) {
+    throw new Error("Approved reports cannot be edited");
   }
   report.editedSections = sections;
   return report;

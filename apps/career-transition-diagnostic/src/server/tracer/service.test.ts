@@ -9,6 +9,7 @@ import {
   resetMockTracerStore,
   saveAnswer,
   submitAssessment,
+  runAnalysisPipeline,
   runAssessmentCheckpoint,
   listCaseStateVersions,
   listAdaptiveQuestions,
@@ -117,6 +118,7 @@ describe("mock purchase-to-report tracer", () => {
     const { accessToken, assessmentId } = await purchaseWithConsent();
     await saveAnswer(accessToken, "Q1.1", "The stall survived every plan I wrote.");
     await submitAssessment(accessToken);
+    await runAnalysisPipeline(assessmentId);
 
     const delivery = await approveAssessment(assessmentId);
 
@@ -130,6 +132,7 @@ describe("mock purchase-to-report tracer", () => {
     const { accessToken, assessmentId } = await purchaseWithConsent();
     await saveAnswer(accessToken, "Q1.1", "The stall survived every plan I wrote.");
     await submitAssessment(accessToken);
+    await runAnalysisPipeline(assessmentId);
     const delivery = await approveAssessment(assessmentId);
 
     await expect(submitAssessment(accessToken)).rejects.toThrow("Assessment already submitted");

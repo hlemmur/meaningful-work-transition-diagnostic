@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./base";
 import { adminLogin } from "./admin";
 
 test("walks the mock purchase-to-approved-report path", async ({ page }) => {
@@ -30,9 +30,11 @@ test("walks the mock purchase-to-approved-report path", async ({ page }) => {
   await expect(page.getByText(/Lena will review/)).toBeVisible();
 
   await adminLogin(page);
-  await page.goto("/admin");
-  await expect(page.getByRole("status", { name: "MOCK MODE" })).toBeVisible();
-  await page.getByRole("button", { name: "Approve report" }).last().click();
+  await page.getByRole("link", { name: "Open case" }).last().click();
+  await expect(page.getByRole("heading", { name: "Case review" })).toBeVisible();
+  await page.getByRole("button", { name: "Run analysis" }).click();
+  await expect(page.getByText("The problem as you see it")).toBeVisible();
+  await page.getByRole("button", { name: "Approve report" }).click();
 
   await expect(page.getByText("Your report is ready").last()).toBeVisible();
   await expect(page.locator("main")).not.toContainText(

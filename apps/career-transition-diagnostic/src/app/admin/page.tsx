@@ -40,7 +40,8 @@ export default async function AdminPage() {
                 >
                   Open case
                 </Link>
-                {assessment.status === "review_pending" ? (
+                {assessment.status === "review_pending" &&
+                assessment.analysisStatus === "completed" ? (
                   <form action={approveAndDeliverAction.bind(null, assessment.id)} className="mt-3">
                     <button
                       className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
@@ -49,6 +50,8 @@ export default async function AdminPage() {
                       Approve report
                     </button>
                   </form>
+                ) : assessment.status === "review_pending" ? (
+                  <p className="mt-2 text-sm">Open the case to run analysis before approving.</p>
                 ) : assessment.status === "deleted" ? (
                   <p className="mt-2 text-sm">Customer access removed.</p>
                 ) : (

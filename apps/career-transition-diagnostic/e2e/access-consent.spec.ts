@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./base";
 import { adminLogin } from "./admin";
 
 function sign(rawBody: string) {

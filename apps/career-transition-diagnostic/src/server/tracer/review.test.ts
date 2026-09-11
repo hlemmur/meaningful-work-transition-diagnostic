@@ -71,6 +71,7 @@ describe("Lena review and private delivery", () => {
   it("resends a link without report text and delete removes customer access", async () => {
     process.env.APP_MODE = "mock";
     const { assessmentId } = await submitted();
+    await runAnalysisPipeline(assessmentId);
     const first = await approveAssessment(assessmentId);
     const resent = await resendReportLink(assessmentId);
     expect(resent.reportEmail.text).toContain(`/r/${resent.reportToken}`);
@@ -88,6 +89,7 @@ describe("Lena review and private delivery", () => {
 
   it("does not treat the assessment token as a report token after approve", async () => {
     const purchase = await submitted();
+    await runAnalysisPipeline(purchase.assessmentId);
     const delivery = await approveAssessment(purchase.assessmentId);
     expect(getDeliveredReport(purchase.accessToken)).toBeUndefined();
     expect(getDeliveredReport(delivery.reportToken)?.sections.length).toBeGreaterThan(0);
@@ -95,6 +97,7 @@ describe("Lena review and private delivery", () => {
 
   it("expires the private report link", async () => {
     const { assessmentId } = await submitted();
+    await runAnalysisPipeline(assessmentId);
     process.env.ACCESS_TOKEN_TTL_MS = "1";
     const delivery = await approveAssessment(assessmentId);
     await new Promise((resolve) => setTimeout(resolve, 5));
@@ -114,5 +117,25 @@ describe("Lena review and private delivery", () => {
     ]);
     await runAnalysisPipeline(assessmentId);
     expect(listReviewQueueView()[0]?.analysisStatus).toBe("completed");
+  });
+
+  it("rejects approve before analysis completes and edits after delivery", async () => {
+    const { assessmentId } = await submitted();
+    await expect(approveAssessment(assessmentId)).rejects.toThrow("Analysis must complete");
+    await runAnalysisPipeline(assessmentId);
+    const delivery = await approveAssessment(assessmentId);
+    expect(() =>
+      saveReportEdits(assessmentId, [
+        {
+          id: "problem",
+          title: "The problem as you see it",
+          body: "Silent rewrite after delivery.",
+          evidenceRefs: [`${assessmentId}:Q1.1`],
+        },
+      ]),
+    ).toThrow("Approved reports cannot be edited");
+    expect(getDeliveredReport(delivery.reportToken)?.sections[0]?.body).not.toBe(
+      "Silent rewrite after delivery.",
+    );
   });
 });

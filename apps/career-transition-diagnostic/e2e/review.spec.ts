@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./base";
 import { adminLogin } from "./admin";
 
 test("keeps unapproved reports off the customer link and delivers after review", async ({

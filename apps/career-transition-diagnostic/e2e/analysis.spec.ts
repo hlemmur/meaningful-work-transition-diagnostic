@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./base";
 import { adminLogin } from "./admin";
 
 test("rejects unauthenticated analysis runs", async ({ request }) => {

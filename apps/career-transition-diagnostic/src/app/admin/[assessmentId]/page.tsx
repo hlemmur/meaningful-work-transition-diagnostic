@@ -28,6 +28,9 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
 
   const sections = adminCase.draft?.generated.sections ?? [];
   const failedStage = adminCase.analysisStatus.failedStage;
+  const pending = adminCase.assessment.status === "review_pending";
+  const canEdit = pending && adminCase.draft?.status === "draft";
+  const canApprove = pending && adminCase.analysisStatus.label === "completed";
   const save = saveEditsAction.bind(null, assessmentId);
   const run = runAnalysisFromAdminAction.bind(null, assessmentId);
   const approve = approveAndDeliverAction.bind(null, assessmentId);
@@ -45,16 +48,18 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
       <p>Analysis: {adminCase.analysisStatus.label}</p>
       {failedStage ? <p>Failed stage: {failedStage}</p> : null}
 
-      <form action={run}>
-        <button
-          className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
-          type="submit"
-        >
-          {failedStage ? "Resume analysis" : "Run analysis"}
-        </button>
-      </form>
+      {pending ? (
+        <form action={run}>
+          <button
+            className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
+            type="submit"
+          >
+            {failedStage ? "Resume analysis" : "Run analysis"}
+          </button>
+        </form>
+      ) : null}
 
-      {sections.length ? (
+      {sections.length > 0 && canEdit ? (
         <form action={save} className="flex flex-col gap-4">
           <input type="hidden" name="count" value={String(sections.length)} />
           {sections.map((section, index) => (
@@ -83,11 +88,23 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
             Save edits
           </button>
         </form>
+      ) : sections.length > 0 ? (
+        <div className="flex flex-col gap-4">
+          {sections.map((section) => (
+            <article key={section.id} className="rounded border border-[#e6d8cc] bg-white p-4">
+              <h2 className="font-medium">{section.title}</h2>
+              <p className="text-xs text-[#4a3b34]">
+                Evidence: {section.evidenceRefs.join(", ") || "none"}
+              </p>
+              <p className="mt-2 leading-7">{section.body}</p>
+            </article>
+          ))}
+        </div>
       ) : (
         <p>Run analysis to generate an evidence-linked draft.</p>
       )}
 
-      {adminCase.assessment.status === "review_pending" ? (
+      {canApprove ? (
         <form action={approve}>
           <button
             className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea]"
@@ -96,6 +113,8 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
             Approve report
           </button>
         </form>
+      ) : pending ? (
+        <p className="text-sm">Run analysis before approving.</p>
       ) : (
         <div className="flex gap-3">
           <form action={resend}>
