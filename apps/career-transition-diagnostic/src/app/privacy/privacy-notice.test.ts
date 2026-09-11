@@ -20,5 +20,7 @@ describe("privacy notice", () => {
     expect(html).not.toContain("Copy version");
     expect(html).not.toContain("product-consent.v1");
     expect(html).not.toContain("marketing-consent.v1");
+    expect(html).toContain("href=\"/\"");
+    expect(html).toMatch(/Back/);
   });
 });

@@ -13,6 +13,7 @@ test("walks the mock purchase-to-approved-report path", async ({ page }) => {
     await page.getByLabel("Employed, considering a change").click();
     await expect(page.getByLabel("Employed, considering a change")).toBeChecked({ timeout: 5_000 });
   }).toPass();
+  await expect(page.locator(".choice-card").first()).toBeVisible();
   await expect(page.getByText("Saved.")).toHaveCount(0);
   await expect(async () => {
     await page.reload();

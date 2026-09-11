@@ -64,6 +64,7 @@ test("privacy notice uses the same versioned product copy", async ({ page }) => 
   await expect(page.getByText("processed with artificial intelligence")).toBeVisible();
   await expect(page.getByText("Raw answers are kept for 90 days")).toBeVisible();
   await expect(page.getByText("This is optional and not required to take the assessment.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back" })).toHaveAttribute("href", "/");
 });
 
 test("retention cron rejects missing authorization", async ({ request }) => {

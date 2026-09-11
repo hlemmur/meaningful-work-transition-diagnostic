@@ -38,6 +38,10 @@ describe("paper tokens", () => {
     expect(css).toContain("--color-hairline");
     expect(css).toContain("--color-field");
     expect(css).toContain("prefers-reduced-motion: reduce");
+    expect(css).toContain("fade-rise");
+    expect(css).toContain("400ms ease-out");
+    expect(css).toContain("150ms ease-out");
+    expect(css).toContain(".report-page");
     expect(css).not.toMatch(/font-family:\s*Arial/);
     expect(css).not.toContain("prefers-color-scheme: dark");
   });
