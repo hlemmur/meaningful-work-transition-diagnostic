@@ -182,6 +182,48 @@ describe("mock vendor adapters", () => {
     expect(body.contents[0].parts[0].text).toContain("a1");
   });
 
+  it("ignores leftover OpenAI model ids and still posts to Gemini", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.LLM_MODE = "live";
+    process.env.GEMINI_API_KEY = "gemini-test";
+    process.env.OPENAI_MODEL_CHEAP = "gpt-4.1-mini";
+    delete process.env.GEMINI_MODEL_CHEAP;
+    const fetchSpy = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      consciousExplanationTags: ["stall"],
+                      unresolvedQuestions: [],
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const adapters = createVendorAdapters();
+    await adapters.llm.completeStructured({
+      stage: "pass1",
+      input: { assessmentId: "a1" },
+      model: "gpt-4.1-mini",
+    });
+
+    const [url] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    );
+  });
+
   it("fails closed when live Gemini returns malformed JSON", async () => {
     process.env.APP_MODE = "mock";
     process.env.LLM_MODE = "live";

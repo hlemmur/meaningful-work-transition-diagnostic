@@ -113,7 +113,7 @@ function promptForStage(stage: string, input: Record<string, unknown>) {
 }
 
 function liveModel(request: StructuredLlmRequest) {
-  if (request.model && !request.model.startsWith("mock-")) {
+  if (request.model?.startsWith("gemini-")) {
     return request.model;
   }
   return STRONG_STAGES.has(request.stage)
