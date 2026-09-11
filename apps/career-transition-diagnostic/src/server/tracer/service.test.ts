@@ -4,6 +4,7 @@ import {
   approveAssessment,
   completeMockPurchase,
   getAssessmentByAccessToken,
+  getAssessmentByReportToken,
   resetMockTracerStore,
   saveAnswer,
   submitAssessment,
@@ -47,5 +48,18 @@ describe("mock purchase-to-report tracer", () => {
     expect(delivery.reportEmail.subject).toMatch(/report is ready/i);
     expect(delivery.reportEmail.text).toContain(`/r/${delivery.reportToken}`);
     expect(delivery.reportEmail.text).not.toContain(delivery.draftBody);
+  });
+
+  it("rejects re-submit after approval and keeps the report token valid", async () => {
+    process.env.APP_MODE = "mock";
+    const { accessToken, assessmentId } = await completeMockPurchase("buyer@example.com");
+    await saveAnswer(accessToken, "Q1.1", "The stall survived every plan I wrote.");
+    await submitAssessment(accessToken);
+    const delivery = await approveAssessment(assessmentId);
+
+    await expect(submitAssessment(accessToken)).rejects.toThrow("Assessment already submitted");
+
+    const report = getAssessmentByReportToken(delivery.reportToken);
+    expect(report?.status).toBe("approved");
   });
 });

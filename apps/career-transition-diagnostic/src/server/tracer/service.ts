@@ -108,6 +108,9 @@ export async function saveAnswer(accessToken: string, questionId: string, value:
 
 export async function submitAssessment(accessToken: string) {
   const assessment = requireAssessmentByHash(hashToken(accessToken));
+  if (assessment.status !== "in_progress") {
+    throw new Error("Assessment already submitted");
+  }
   assessment.status = "review_pending";
   assessment.draftBody = DRAFT_BODY;
   return assessment;
