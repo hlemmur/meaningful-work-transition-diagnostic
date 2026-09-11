@@ -134,3 +134,13 @@ export const reportSchema = z.object({
   engineVersion: z.literal("engine.v2"),
   sections: z.array(reportSectionSchema),
 });
+
+export type Contradiction = z.infer<typeof contradictionSchema>;
+export type Hypothesis = z.infer<typeof hypothesisSchema>;
+export type ImageVote = z.infer<typeof imageVoteSchema>;
+export type HiddenPosition = z.infer<typeof hiddenPositionSchema>;
+export type JungianLens = z.infer<typeof jungianLensSchema>;
+export type RealityCheck = z.infer<typeof realityCheckSchema>;
+export type Experiment = z.infer<typeof experimentSchema>;
+export type ReportSection = z.infer<typeof reportSectionSchema>;
+export type Report = z.infer<typeof reportSchema>;

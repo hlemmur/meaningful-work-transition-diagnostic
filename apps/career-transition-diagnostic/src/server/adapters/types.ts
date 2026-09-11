@@ -10,12 +10,21 @@ export type CheckoutResult = {
 export type StructuredLlmRequest = {
   stage: string;
   input: Record<string, unknown>;
+  model?: string;
+};
+
+export type StructuredLlmUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
 };
 
 export type StructuredLlmResult = {
   stage: string;
   fixture: string;
   output: Record<string, unknown>;
+  model?: string;
+  usage?: StructuredLlmUsage;
 };
 
 export type EmailMessage = {

@@ -9,6 +9,7 @@ import {
   runAssessmentCheckpoint,
   saveAnswer,
   submitAssessment,
+  runAnalysisPipeline,
 } from "./service";
 import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
 
@@ -53,4 +54,8 @@ export async function requestNewLinkAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   await requestNewAccessLink(email);
   redirect("/mock/outbox");
+}
+
+export async function runAnalysisAction(assessmentId: string) {
+  return runAnalysisPipeline(assessmentId);
 }

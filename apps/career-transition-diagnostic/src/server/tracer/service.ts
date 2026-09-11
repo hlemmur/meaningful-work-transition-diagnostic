@@ -6,8 +6,16 @@ import type { OutboxEmail } from "../adapters/types";
 import { runCheckpoint } from "@/engine/checkpoints/run";
 import { isAdaptiveQuestionId, type ExistingAdaptiveQuestion } from "@/engine/checkpoints/schema";
 import { SUPPORT_COPY } from "@/engine/checkpoints/bank";
+import {
+  executeAnalysis,
+  type AnalysisRunRecord,
+  type AnalysisPipelineResult,
+} from "@/engine/pipeline/run";
+import type { AnalysisFixture } from "@/engine/pipeline/fixtures";
+import type { AnalysisStage } from "@/engine/pipeline/models";
 import type { CaseState } from "@/engine/schemas/case-state";
 import type { ForkId } from "@/engine/schemas/analysis";
+import type { Report } from "@/engine/schemas/analysis";
 import type { SafetyFlag } from "@/engine/schemas/evidence";
 import {
   MARKETING_CONSENT_COPY_VERSION,
@@ -66,6 +74,10 @@ export type MarketingConsentRecord = {
   withdrawnAt?: string;
 };
 
+export type ReportRecord = Report & {
+  status: "draft" | "approved";
+};
+
 type TracerStore = {
   assessments: AssessmentRecord[];
   purchases: PurchaseRecord[];
@@ -73,6 +85,8 @@ type TracerStore = {
   adaptiveQuestions: AdaptiveQuestionRecord[];
   caseStateVersions: CaseStateVersionRecord[];
   safetyFlags: SafetyFlagRecord[];
+  analysisRuns: AnalysisRunRecord[];
+  reports: ReportRecord[];
 };
 
 const DRAFT_BODY =
@@ -89,12 +103,16 @@ function getStore(): TracerStore {
       adaptiveQuestions: [],
       caseStateVersions: [],
       safetyFlags: [],
+      analysisRuns: [],
+      reports: [],
     };
   }
   const store = globalState.__mwtdTracer;
   store.adaptiveQuestions ??= [];
   store.caseStateVersions ??= [];
   store.safetyFlags ??= [];
+  store.analysisRuns ??= [];
+  store.reports ??= [];
   return store;
 }
 
@@ -106,6 +124,8 @@ export function resetMockTracerStore() {
   store.adaptiveQuestions.length = 0;
   store.caseStateVersions.length = 0;
   store.safetyFlags.length = 0;
+  store.analysisRuns.length = 0;
+  store.reports.length = 0;
 }
 
 export function hashToken(token: string) {
@@ -431,6 +451,85 @@ export function listAdaptiveQuestions(assessmentId: string) {
 
 export function listCaseStateVersions(assessmentId: string) {
   return getStore().caseStateVersions.filter((item) => item.assessmentId === assessmentId);
+}
+
+export function listAnalysisRuns(assessmentId: string) {
+  return getStore().analysisRuns.filter((item) => item.assessmentId === assessmentId);
+}
+
+export function getDraftReport(assessmentId: string) {
+  const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
+  if (!report) {
+    return undefined;
+  }
+  return {
+    status: report.status,
+    generated: {
+      assessmentId: report.assessmentId,
+      engineVersion: report.engineVersion,
+      sections: report.sections,
+    },
+  };
+}
+
+export async function runAnalysisPipeline(
+  assessmentId: string,
+  options: { fixture?: AnalysisFixture; failStage?: AnalysisStage } = {},
+): Promise<AnalysisPipelineResult> {
+  const assessment = getStore().assessments.find((item) => item.id === assessmentId);
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+  if (assessment.status !== "review_pending") {
+    throw new Error("Analysis runs only after submit");
+  }
+
+  const adapters = createVendorAdapters();
+  const priorRuns = getStore().analysisRuns.filter((item) => item.assessmentId === assessmentId);
+  const completed = priorRuns.filter((item) => item.status === "success").map((item) => item.stage);
+  const previous = getStore()
+    .caseStateVersions.filter((item) => item.assessmentId === assessmentId)
+    .at(-1)?.snapshot;
+  const existingReport = getDraftReport(assessmentId)?.generated;
+
+  return executeAnalysis({
+    assessmentId,
+    answers: assessment.answers,
+    previousCaseState: previous,
+    completedStages: completed,
+    priorRuns,
+    existingReport,
+    llm: adapters.llm,
+    fixture: options.fixture,
+    failStage: options.failStage,
+    persistRun(run) {
+      getStore().analysisRuns.push({
+        ...run,
+        createdAt: new Date().toISOString(),
+      });
+    },
+    persistCaseState(stage, snapshot) {
+      getStore().caseStateVersions.push({
+        assessmentId,
+        stage,
+        snapshot,
+        createdAt: new Date().toISOString(),
+      });
+    },
+  }).then((result) => {
+    if (result.report) {
+      const store = getStore();
+      const existing = store.reports.find((item) => item.assessmentId === assessmentId);
+      if (existing) {
+        existing.sections = result.report.sections;
+        existing.engineVersion = result.report.engineVersion;
+        existing.status = "draft";
+      } else {
+        store.reports.push({ ...result.report, status: "draft" });
+      }
+    }
+    return result;
+  });
 }
 
 export async function runAssessmentCheckpoint(
