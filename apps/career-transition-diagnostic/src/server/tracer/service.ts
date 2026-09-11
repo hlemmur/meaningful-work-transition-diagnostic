@@ -135,6 +135,7 @@ export async function listReviewQueueView() {
       const report = getStore().reports.find((item) => item.assessmentId === assessment.id);
       return {
         id: assessment.id,
+        email: assessment.email,
         status: report?.status === "deleted" ? "deleted" : assessment.status,
         safetyLevel: assessment.safetyLevel ?? "none",
         analysisStatus: analysisStatusInStore(assessment.id).label,
