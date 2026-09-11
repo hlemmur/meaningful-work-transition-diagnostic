@@ -1,3 +1,5 @@
+import { isLiveLlmMode } from "@/config/app-mode";
+
 export const ANALYSIS_STAGES = [
   "pass1",
   "pass2",
@@ -14,13 +16,25 @@ export const ANALYSIS_STAGES = [
 export type AnalysisStage = (typeof ANALYSIS_STAGES)[number];
 
 const STRONG_STAGES = new Set<AnalysisStage>(["pass3", "pass6", "pass9"]);
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 
 export function modelForStage(stage: AnalysisStage) {
+  if (!isLiveLlmMode()) {
+    return STRONG_STAGES.has(stage) ? "mock-strong" : "mock-cheap";
+  }
   return STRONG_STAGES.has(stage)
-    ? (process.env.OPENAI_MODEL_STRONG ?? "mock-strong")
-    : (process.env.OPENAI_MODEL_CHEAP ?? "mock-cheap");
+    ? (process.env.GEMINI_MODEL_STRONG ?? DEFAULT_GEMINI_MODEL)
+    : (process.env.GEMINI_MODEL_CHEAP ?? DEFAULT_GEMINI_MODEL);
 }
 
-export function costForModel(model: string) {
-  return model.includes("strong") ? 0.02 : 0.002;
+export function costForModel(model = "") {
+  if (model === "mock-strong") {
+    return 0.02;
+  }
+  const strongId = process.env.GEMINI_MODEL_STRONG;
+  const cheapId = process.env.GEMINI_MODEL_CHEAP ?? DEFAULT_GEMINI_MODEL;
+  if (strongId && model === strongId && strongId !== cheapId) {
+    return 0.02;
+  }
+  return 0.002;
 }

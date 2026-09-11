@@ -5,7 +5,7 @@ import {
   passOutputFor,
   type AnalysisFixture,
 } from "@/engine/pipeline/fixtures";
-import type { AnalysisStage } from "@/engine/pipeline/models";
+import { costForModel, type AnalysisStage } from "@/engine/pipeline/models";
 import { forkIdSchema, type ForkId } from "@/engine/schemas/analysis";
 
 function checkpointOutput(fixture: unknown) {
@@ -106,7 +106,7 @@ export const mockLlmAdapter: LlmAdapter = {
         usage: {
           inputTokens: 40,
           outputTokens: 80,
-          costUsd: String(model).includes("strong") ? 0.02 : 0.002,
+          costUsd: costForModel(String(model ?? "")),
         },
       };
     }
