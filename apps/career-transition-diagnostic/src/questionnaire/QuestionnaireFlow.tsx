@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { autosaveAnswerAction, submitAssessmentAction } from "@/server/tracer/actions";
-import { listAvoidedActionLabels, listVisibleQuestionIds } from "@/questionnaire/branching";
+import { autosaveAnswerAction, runCheckpointAction, submitAssessmentAction } from "@/server/tracer/actions";
+import { listAvoidedActionLabels, listVisibleQuestionIds, type SafetyLevel } from "@/questionnaire/branching";
 import { getQuestion, questionIds, questions, type QuestionDefinition } from "@/questionnaire/questionnaire.v2";
+import { CHECKPOINT_AFTER_SECTION } from "@/engine/checkpoints/schema";
+import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
 
 const SUPPORT_CONTEXT_OPTIONS = [
   "clear_expectations",
@@ -27,11 +29,21 @@ const SUPPORT_CONTEXT_OPTIONS = [
   "other",
 ];
 
+type AdaptiveQuestionView = {
+  id: string;
+  checkpoint: AdaptiveCheckpoint;
+  forkId: string;
+  questionText: string;
+};
+
 type QuestionnaireFlowProps = {
   token: string;
   initialAnswers: Record<string, unknown>;
   locked: boolean;
   submitted?: boolean;
+  initialAdaptive?: AdaptiveQuestionView[];
+  initialSafetyLevel?: SafetyLevel;
+  initialSupportCopy?: string | null;
 };
 
 function labelFor(option: string) {
@@ -68,24 +80,86 @@ function optionsFor(question: QuestionDefinition, answers: Record<string, unknow
   return question.options;
 }
 
+function mergeAdaptiveQuestions(
+  catalog: string[],
+  adaptive: AdaptiveQuestionView[],
+) {
+  const next = [...catalog];
+  const sectionFor = { A: 2, B: 4, C: 7, D: 9 } as const;
+  for (const item of adaptive) {
+    if (next.includes(item.id)) {
+      continue;
+    }
+    const section = sectionFor[item.checkpoint];
+    let insertAt = next.length;
+    for (let index = next.length - 1; index >= 0; index -= 1) {
+      if (getQuestion(next[index])?.section === section) {
+        insertAt = index + 1;
+        break;
+      }
+    }
+    next.splice(insertAt, 0, item.id);
+  }
+  return next;
+}
+
+function resolveQuestion(
+  id: string,
+  adaptive: AdaptiveQuestionView[],
+): QuestionDefinition {
+  const catalog = getQuestion(id);
+  if (catalog) {
+    return catalog;
+  }
+  const injected = adaptive.find((item) => item.id === id);
+  if (injected) {
+    return {
+      id: injected.id,
+      section: { A: 2, B: 4, C: 7, D: 9 }[injected.checkpoint],
+      prompt: injected.questionText,
+      optionality: "branch",
+      inputType: "long_text",
+    };
+  }
+  return questions[0];
+}
+
 export function QuestionnaireFlow({
   token,
   initialAnswers,
   locked,
   submitted,
+  initialAdaptive = [],
+  initialSafetyLevel = "none",
+  initialSupportCopy = null,
 }: QuestionnaireFlowProps) {
   const [answers, setAnswers] = useState<Record<string, unknown>>(initialAnswers);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [pending, startTransition] = useTransition();
+  const [safetyLevel, setSafetyLevel] = useState<SafetyLevel>(initialSafetyLevel);
+  const [supportCopy, setSupportCopy] = useState<string | null>(initialSupportCopy);
+  const [adaptive, setAdaptive] = useState<AdaptiveQuestionView[]>(initialAdaptive);
+  const [preparing, setPreparing] = useState(false);
   const answersRef = useRef(answers);
   const saveTimer = useRef<number | null>(null);
   const pendingSave = useRef<{ id: string; value: unknown } | null>(null);
-  const inFlight = useRef(Promise.resolve());
-  const visible = useMemo(() => listVisibleQuestionIds(answers), [answers]);
-  const [currentId, setCurrentId] = useState(
-    () => resumeQuestionId(listVisibleQuestionIds(initialAnswers), initialAnswers),
+  const inFlight = useRef<Promise<boolean>>(Promise.resolve(true));
+  const moving = useRef(false);
+  const visible = useMemo(
+    () => mergeAdaptiveQuestions(listVisibleQuestionIds(answers, safetyLevel), adaptive),
+    [adaptive, answers, safetyLevel],
   );
-  const question = getQuestion(clampQuestionId(currentId, visible)) ?? questions[0];
+  const [currentId, setCurrentId] = useState(
+    () =>
+      resumeQuestionId(
+        mergeAdaptiveQuestions(
+          listVisibleQuestionIds(initialAnswers, initialSafetyLevel),
+          initialAdaptive,
+        ),
+        initialAnswers,
+      ),
+  );
+  const question = resolveQuestion(clampQuestionId(currentId, visible), adaptive);
   const index = Math.max(0, visible.indexOf(question.id));
 
   function persist(id: string, value: unknown, mode: "now" | "later" = "now") {
@@ -118,8 +192,7 @@ export function QuestionnaireFlow({
     }
     const next = pendingSave.current;
     if (!next) {
-      await inFlight.current;
-      return true;
+      return inFlight.current;
     }
     if (locked) {
       return false;
@@ -135,7 +208,7 @@ export function QuestionnaireFlow({
         setStatus("error");
         return false;
       });
-    inFlight.current = task.then(() => undefined);
+    inFlight.current = task;
     return task;
   }
 
@@ -146,19 +219,86 @@ export function QuestionnaireFlow({
     );
   }
 
-  function go(delta: number) {
-    const value = currentValue();
-    if (value !== undefined) {
-      persist(question.id, value, "now");
+  async function go(delta: number) {
+    if (moving.current) {
+      return;
     }
-    const nextVisible = listVisibleQuestionIds({
-      ...answersRef.current,
-      [question.id]: value,
-    });
-    const currentIndex = Math.max(0, nextVisible.indexOf(question.id));
-    const next = nextVisible[currentIndex + delta];
-    if (next) {
-      setCurrentId(next);
+    moving.current = true;
+    try {
+      const value = currentValue();
+      if (value !== undefined) {
+        persist(question.id, value, "now");
+      }
+      const saved = await flushPending();
+      if (!saved) {
+        return;
+      }
+
+      if (delta === 1) {
+        const checkpoint = CHECKPOINT_AFTER_SECTION[question.section];
+        const catalogInSection = visible.filter(
+          (id) => getQuestion(id)?.section === question.section,
+        );
+        const leavingSection = catalogInSection.at(-1) === question.id;
+        if (checkpoint && leavingSection) {
+          setPreparing(true);
+          try {
+            const result = await runCheckpointAction(token, checkpoint);
+            const nextSafety = result.safetyLevel;
+            const nextAdaptive = result.adaptiveQuestion
+              ? adaptive.some((item) => item.id === result.adaptiveQuestion?.id)
+                ? adaptive
+                : [...adaptive, result.adaptiveQuestion]
+              : adaptive;
+            setSafetyLevel(nextSafety);
+            if (result.supportCopy) {
+              setSupportCopy(result.supportCopy);
+            }
+            if (result.adaptiveQuestion) {
+              setAdaptive(nextAdaptive);
+              setCurrentId(result.adaptiveQuestion.id);
+              return;
+            }
+            setAdaptive(nextAdaptive);
+            const nextVisible = mergeAdaptiveQuestions(
+              listVisibleQuestionIds(
+                {
+                  ...answersRef.current,
+                  [question.id]: value,
+                },
+                nextSafety,
+              ),
+              nextAdaptive,
+            );
+            const currentIndex = Math.max(0, nextVisible.indexOf(question.id));
+            const next = nextVisible[currentIndex + delta];
+            if (next) {
+              setCurrentId(next);
+            }
+            return;
+          } finally {
+            setPreparing(false);
+          }
+        }
+      }
+
+      const nextVisible = mergeAdaptiveQuestions(
+        listVisibleQuestionIds(
+          {
+            ...answersRef.current,
+            [question.id]: value,
+          },
+          safetyLevel,
+        ),
+        adaptive,
+      );
+      const currentIndex = Math.max(0, nextVisible.indexOf(question.id));
+      const next = nextVisible[currentIndex + delta];
+      if (next) {
+        setCurrentId(next);
+      }
+    } finally {
+      moving.current = false;
     }
   }
 
@@ -179,6 +319,14 @@ export function QuestionnaireFlow({
       <p className="text-sm uppercase tracking-[0.2em] text-[#b65f3e]">
         Section {question.section} · {index + 1} of {visible.length}
       </p>
+      {supportCopy ? (
+        <p role="note" className="rounded border border-[#b65f3e] bg-[#f7f1ea] p-4 text-sm leading-6">
+          {supportCopy}
+        </p>
+      ) : null}
+      {preparing ? (
+        <p aria-live="polite">Preparing the next part of your reflection…</p>
+      ) : null}
       <QuestionField
         question={question}
         value={answers[question.id]}
@@ -200,16 +348,20 @@ export function QuestionnaireFlow({
         <button
           className="rounded-full border border-[#2b211c] px-5 py-3 text-sm disabled:opacity-40"
           type="button"
-          onClick={() => go(-1)}
-          disabled={index === 0}
+          onClick={() => {
+            void go(-1);
+          }}
+          disabled={index === 0 || preparing}
         >
           Back
         </button>
         <button
           className="rounded-full bg-[#2b211c] px-5 py-3 text-sm font-medium text-[#f7f1ea] disabled:opacity-40"
           type="button"
-          onClick={() => go(1)}
-          disabled={index >= visible.length - 1}
+          onClick={() => {
+            void go(1);
+          }}
+          disabled={index >= visible.length - 1 || preparing}
         >
           Next
         </button>

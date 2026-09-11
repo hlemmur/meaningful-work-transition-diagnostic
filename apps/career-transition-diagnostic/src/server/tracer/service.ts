@@ -1,7 +1,14 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { getQuestion } from "@/questionnaire/questionnaire.v2";
+import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
 import { createVendorAdapters } from "../adapters";
 import type { OutboxEmail } from "../adapters/types";
+import { runCheckpoint } from "@/engine/checkpoints/run";
+import { isAdaptiveQuestionId, type ExistingAdaptiveQuestion } from "@/engine/checkpoints/schema";
+import { SUPPORT_COPY } from "@/engine/checkpoints/bank";
+import type { CaseState } from "@/engine/schemas/case-state";
+import type { ForkId } from "@/engine/schemas/analysis";
+import type { SafetyFlag } from "@/engine/schemas/evidence";
 import {
   MARKETING_CONSENT_COPY_VERSION,
   PRODUCT_CONSENT_COPY_VERSION,
@@ -22,6 +29,24 @@ export type AssessmentRecord = {
   reportAccessTokenHash?: string;
   productConsentVersion?: string;
   productConsentedAt?: string;
+  safetyLevel?: "none" | "high";
+  reportDepth?: "full" | "reduced";
+};
+
+export type AdaptiveQuestionRecord = ExistingAdaptiveQuestion & {
+  assessmentId: string;
+  rationale: string;
+};
+
+export type CaseStateVersionRecord = {
+  assessmentId: string;
+  stage: string;
+  snapshot: CaseState;
+  createdAt: string;
+};
+
+export type SafetyFlagRecord = SafetyFlag & {
+  assessmentId: string;
 };
 
 export type PurchaseRecord = {
@@ -45,6 +70,9 @@ type TracerStore = {
   assessments: AssessmentRecord[];
   purchases: PurchaseRecord[];
   marketingConsents: MarketingConsentRecord[];
+  adaptiveQuestions: AdaptiveQuestionRecord[];
+  caseStateVersions: CaseStateVersionRecord[];
+  safetyFlags: SafetyFlagRecord[];
 };
 
 const DRAFT_BODY =
@@ -58,9 +86,16 @@ function getStore(): TracerStore {
       assessments: [],
       purchases: [],
       marketingConsents: [],
+      adaptiveQuestions: [],
+      caseStateVersions: [],
+      safetyFlags: [],
     };
   }
-  return globalState.__mwtdTracer;
+  const store = globalState.__mwtdTracer;
+  store.adaptiveQuestions ??= [];
+  store.caseStateVersions ??= [];
+  store.safetyFlags ??= [];
+  return store;
 }
 
 export function resetMockTracerStore() {
@@ -68,6 +103,9 @@ export function resetMockTracerStore() {
   store.assessments.length = 0;
   store.purchases.length = 0;
   store.marketingConsents.length = 0;
+  store.adaptiveQuestions.length = 0;
+  store.caseStateVersions.length = 0;
+  store.safetyFlags.length = 0;
 }
 
 export function hashToken(token: string) {
@@ -276,7 +314,17 @@ export function withdrawMarketingConsent(email: string) {
   }
 }
 
-function assertKnownAnswer(questionId: string, value: unknown) {
+function assertKnownAnswer(assessment: AssessmentRecord, questionId: string, value: unknown) {
+  if (isAdaptiveQuestionId(questionId)) {
+    const known = getStore().adaptiveQuestions.some(
+      (item) => item.assessmentId === assessment.id && item.id === questionId,
+    );
+    if (!known || typeof value !== "string") {
+      throw new Error(known ? "Invalid answer" : "Unknown question");
+    }
+    return;
+  }
+
   const question = getQuestion(questionId);
   if (!question) {
     throw new Error("Unknown question");
@@ -327,8 +375,14 @@ export async function saveAnswer(accessToken: string, questionId: string, value:
   if (!assessment.productConsentVersion) {
     throw new Error("Consent required");
   }
-  assertKnownAnswer(questionId, value);
+  assertKnownAnswer(assessment, questionId, value);
   assessment.answers[questionId] = value;
+  const adaptive = getStore().adaptiveQuestions.find(
+    (item) => item.assessmentId === assessment.id && item.id === questionId,
+  );
+  if (adaptive) {
+    adaptive.answer = value;
+  }
   return assessment;
 }
 
@@ -368,5 +422,102 @@ export async function approveAssessment(assessmentId: string) {
     reportToken,
     reportEmail,
     draftBody: assessment.draftBody ?? DRAFT_BODY,
+  };
+}
+
+export function listAdaptiveQuestions(assessmentId: string) {
+  return getStore().adaptiveQuestions.filter((item) => item.assessmentId === assessmentId);
+}
+
+export function listCaseStateVersions(assessmentId: string) {
+  return getStore().caseStateVersions.filter((item) => item.assessmentId === assessmentId);
+}
+
+export async function runAssessmentCheckpoint(
+  accessToken: string,
+  checkpoint: AdaptiveCheckpoint,
+) {
+  const assessment = requireAssessmentByHash(hashToken(accessToken));
+  if (assessment.status !== "in_progress") {
+    throw new Error("Assessment already submitted");
+  }
+  if (!assessment.productConsentVersion) {
+    throw new Error("Consent required");
+  }
+
+  const store = getStore();
+  const existing = store.adaptiveQuestions.filter((item) => item.assessmentId === assessment.id);
+  const alreadyRan = store.caseStateVersions.some(
+    (item) => item.assessmentId === assessment.id && item.stage === `checkpoint-${checkpoint}`,
+  );
+  if (alreadyRan) {
+    const stored = existing.find((item) => item.checkpoint === checkpoint);
+    return {
+      adaptiveQuestion: stored
+        ? {
+            id: stored.id,
+            checkpoint: stored.checkpoint,
+            forkId: stored.forkId,
+            questionText: stored.questionText,
+          }
+        : null,
+      safetyLevel: assessment.safetyLevel ?? "none",
+      supportCopy: assessment.safetyLevel === "high" ? SUPPORT_COPY : null,
+      reportDepth: assessment.reportDepth ?? "full",
+    };
+  }
+
+  const previous = store.caseStateVersions
+    .filter((item) => item.assessmentId === assessment.id)
+    .at(-1)?.snapshot;
+
+  const adapters = createVendorAdapters();
+  const result = await runCheckpoint({
+    assessmentId: assessment.id,
+    checkpoint,
+    answers: assessment.answers,
+    existingAdaptive: existing,
+    previousCaseState: previous,
+    llm: adapters.llm,
+  });
+
+  store.caseStateVersions.push({
+    assessmentId: assessment.id,
+    stage: `checkpoint-${checkpoint}`,
+    snapshot: result.caseState,
+    createdAt: new Date().toISOString(),
+  });
+
+  assessment.safetyLevel = result.safetyLevel;
+  assessment.reportDepth = result.reportDepth;
+  if (result.safetyLevel === "high") {
+    for (const flag of result.caseState.safetyFlags) {
+      store.safetyFlags.push({ ...flag, assessmentId: assessment.id });
+    }
+  }
+
+  if (result.adaptiveQuestion) {
+    store.adaptiveQuestions.push({
+      assessmentId: assessment.id,
+      id: result.adaptiveQuestion.id,
+      checkpoint: result.adaptiveQuestion.checkpoint,
+      forkId: result.adaptiveQuestion.forkId as ForkId,
+      questionText: result.adaptiveQuestion.questionText,
+      rationale: result.adaptiveQuestion.rationale,
+    });
+  }
+
+  return {
+    adaptiveQuestion: result.adaptiveQuestion
+      ? {
+          id: result.adaptiveQuestion.id,
+          checkpoint: result.adaptiveQuestion.checkpoint,
+          forkId: result.adaptiveQuestion.forkId,
+          questionText: result.adaptiveQuestion.questionText,
+        }
+      : null,
+    safetyLevel: result.safetyLevel,
+    supportCopy: result.supportCopy,
+    reportDepth: result.reportDepth,
   };
 }

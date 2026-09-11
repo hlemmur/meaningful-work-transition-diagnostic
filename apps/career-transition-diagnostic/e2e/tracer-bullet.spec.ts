@@ -17,6 +17,7 @@ test("walks the mock purchase-to-approved-report path", async ({ page }) => {
 
   await expect(page.getByText(/current situation/i)).toBeVisible();
   await page.getByLabel("employed considering").check();
+  await expect(page.getByText("Saved.")).toBeVisible();
   await expect(async () => {
     await page.reload();
     await expect(page.getByLabel("employed considering")).toBeChecked();

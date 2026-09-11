@@ -11,6 +11,8 @@ export const forkIdSchema = z.enum([
   "rational_caution_vs_hidden_bargain",
 ]);
 
+export type ForkId = z.infer<typeof forkIdSchema>;
+
 export const contradictionSchema = z.object({
   id: z.string(),
   statementA: z.string(),

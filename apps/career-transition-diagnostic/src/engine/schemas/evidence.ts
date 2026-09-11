@@ -50,3 +50,7 @@ export const safetyFlagSchema = z.object({
   evidenceRefs: z.array(z.string()).default([]),
   handlingInstruction: z.string().optional(),
 });
+
+export type EvidenceItem = z.infer<typeof evidenceItemSchema>;
+export type ProjectionItem = z.infer<typeof projectionItemSchema>;
+export type SafetyFlag = z.infer<typeof safetyFlagSchema>;

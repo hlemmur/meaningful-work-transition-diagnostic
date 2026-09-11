@@ -9,6 +9,10 @@ import {
   resetMockTracerStore,
   saveAnswer,
   submitAssessment,
+  runAssessmentCheckpoint,
+  listCaseStateVersions,
+  listAdaptiveQuestions,
+  exportMarketingContacts,
 } from "./service";
 
 async function purchaseWithConsent(email = "buyer@example.com") {
@@ -70,6 +74,42 @@ describe("mock purchase-to-report tracer", () => {
     await expect(saveAnswer(accessToken, "Q0.1", "employed_considering")).rejects.toThrow(
       "Answers are locked after submit",
     );
+  });
+
+  it("stores a checkpoint snapshot and a history follow-up", async () => {
+    process.env.APP_MODE = "mock";
+    const { accessToken, assessmentId } = await purchaseWithConsent();
+    await saveAnswer(accessToken, "Q1.1", "I left a career that still pays my bills.");
+    await saveAnswer(accessToken, "Q1.3", "I lack confidence.");
+    await saveAnswer(accessToken, "Q2.2", "I rewrote the website twice.");
+
+    const result = await runAssessmentCheckpoint(accessToken, "A");
+
+    expect(result.adaptiveQuestion?.forkId).toBe("history_vs_stated_cause");
+    expect(listAdaptiveQuestions(assessmentId)).toHaveLength(1);
+    expect(listCaseStateVersions(assessmentId)[0]?.stage).toBe("checkpoint-A");
+    await saveAnswer(accessToken, result.adaptiveQuestion!.id, "The website still did not ship.");
+  });
+
+  it("keeps safety flags out of marketing export", async () => {
+    process.env.APP_MODE = "mock";
+    const { accessToken } = await purchaseWithConsent();
+    await saveAnswer(
+      accessToken,
+      "Q0.5",
+      "I have suicidal thoughts and cannot function.",
+    );
+
+    const result = await runAssessmentCheckpoint(accessToken, "A");
+    await recordWelcomeConsent({
+      accessToken,
+      productConsent: true,
+      marketingOptIn: true,
+    });
+    expect(result.safetyLevel).toBe("high");
+    expect(result.adaptiveQuestion).toBeNull();
+    expect(exportMarketingContacts()[0]?.email).toBe("buyer@example.com");
+    expect(JSON.stringify(exportMarketingContacts())).not.toMatch(/suicid|cannot function/i);
   });
 
   it("approves a submitted draft and emails a report link without report body", async () => {

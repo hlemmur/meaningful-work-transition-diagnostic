@@ -15,10 +15,9 @@ async function advanceTo(page: Page, pattern: RegExp, maxSteps = 80) {
       return;
     }
     const next = page.getByRole("button", { name: "Next", exact: true });
-    if (await next.isDisabled()) {
-      throw new Error(`Stopped before matching ${pattern}`);
-    }
+    await expect(next).toBeEnabled({ timeout: 20000 });
     await next.click();
+    await expect(page.getByText(/Preparing the next part of your reflection/)).toHaveCount(0);
   }
   throw new Error(`Did not reach ${pattern}`);
 }

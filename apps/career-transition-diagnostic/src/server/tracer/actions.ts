@@ -6,13 +6,19 @@ import {
   completeMockPurchase,
   recordWelcomeConsent,
   requestNewAccessLink,
+  runAssessmentCheckpoint,
   saveAnswer,
   submitAssessment,
 } from "./service";
+import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
 
 export async function completePurchaseAction() {
   await completeMockPurchase("buyer@example.com");
   redirect("/mock/outbox");
+}
+
+export async function runCheckpointAction(token: string, checkpoint: AdaptiveCheckpoint) {
+  return runAssessmentCheckpoint(token, checkpoint);
 }
 
 export async function autosaveAnswerAction(
