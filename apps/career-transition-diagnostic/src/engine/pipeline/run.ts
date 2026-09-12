@@ -16,6 +16,7 @@ import {
 } from "./invariants";
 import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from "./models";
 import { passOutputSchemas } from "./stage-schemas";
+import { buildStageLlmInput } from "./stage-input";
 import { runStructuredStage, StructuredStageError } from "./structured";
 import type { z } from "zod";
 
@@ -96,14 +97,16 @@ export async function executeAnalysis(input: {
         schema: passOutputSchemas[stage],
         model,
         llm: input.llm,
-        input: {
+        input: buildStageLlmInput({
+          stage,
           fixture,
           assessmentId: input.assessmentId,
           evidenceRef,
-          requestedInsight: caseState.userFinalReflection.requestedInsight,
+          caseState,
+          answers: input.answers,
           failSchema: fixture === "schema-fail" && stage === "pass3",
           failStage: input.failStage,
-        },
+        }),
       });
 
       caseState = applyStage(stage, caseState, result.output, critiques);
