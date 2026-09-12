@@ -1,5 +1,5 @@
 import { loginAdminAction } from "./actions";
-import { isMockMode } from "@/config/app-mode";
+import { mockAdminSessionsEnabled } from "@/server/admin/authz";
 import { LoginEmailField } from "./login-email-field";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ type AdminLoginPageProps = {
 
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
   const { error, sent } = await searchParams;
-  const mock = isMockMode();
+  const mock = mockAdminSessionsEnabled();
   return (
     <main className="flex flex-col gap-4">
       <h1 className="text-3xl font-semibold tracking-tight">Operator sign in</h1>

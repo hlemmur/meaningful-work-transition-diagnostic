@@ -1,15 +1,12 @@
 import { cookies } from "next/headers";
-import { isMockMode } from "@/config/app-mode";
 import { ADMIN_COOKIE, isAllowlistedAdmin } from "./allowlist";
-import { sessionFromOperatorEmail } from "./authz";
+import { mockAdminSessionsEnabled, sessionFromOperatorEmail } from "./authz";
 import { readLiveUserEmail, sendOperatorMagicLink, signOutLiveOperator } from "./supabase-auth";
 
-export function mockAdminSessionsEnabled() {
-  return isMockMode();
-}
+export { mockAdminSessionsEnabled };
 
 export async function getAdminSession() {
-  if (isMockMode()) {
+  if (mockAdminSessionsEnabled()) {
     const email = (await cookies()).get(ADMIN_COOKIE)?.value;
     return sessionFromOperatorEmail(email);
   }
@@ -49,7 +46,7 @@ export async function startOperatorLogin(email: string, deps: OperatorLoginDeps 
   if (!isAllowlistedAdmin(normalized)) {
     throw new Error("Email is not allowlisted");
   }
-  if (isMockMode()) {
+  if (mockAdminSessionsEnabled()) {
     await (deps.startMockSession ?? startAdminSession)(normalized);
     return { kind: "session" as const };
   }
@@ -77,7 +74,7 @@ export function magicLinkRedirectTo(origin?: string) {
 
 export async function clearAdminSession() {
   (await cookies()).delete(ADMIN_COOKIE);
-  if (!isMockMode()) {
+  if (!mockAdminSessionsEnabled()) {
     try {
       await signOutLiveOperator();
     } catch {

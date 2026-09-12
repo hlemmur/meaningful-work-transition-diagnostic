@@ -72,6 +72,45 @@ describe("tracer repository", () => {
     expect(replaces).toBe(0);
   });
 
+  it("does not rewrite populated tables for a read-only withStore", async () => {
+    const db = new MemoryTracerDb();
+    const writer = new TableTracerRepository(db);
+    const seeded = createEmptyTracerStore();
+    seeded.purchases.push({
+      id: "p1",
+      lemonOrderId: "order-1",
+      lemonWebhookId: "wh-1",
+      email: "buyer@example.com",
+      assessmentId: "a1",
+    });
+    seeded.assessments.push({
+      id: "a1",
+      email: "buyer@example.com",
+      accessTokenHash: "hash",
+      accessExpiresAt: Date.now() + 60_000,
+      status: "in_progress",
+      answers: { "Q1.1": "customer secret" },
+      productConsentVersion: "product-consent.v1",
+    });
+    await writer.commit(seeded);
+
+    let replaces = 0;
+    const counting = {
+      loadAll: () => db.loadAll(),
+      async replaceAll(tables: Awaited<ReturnType<MemoryTracerDb["loadAll"]>>) {
+        replaces += 1;
+        await db.replaceAll(tables);
+      },
+    };
+    bindTracerRepository(new TableTracerRepository(counting));
+    const answer = await withStore(() => getActiveStore().assessments[0]?.answers["Q1.1"]);
+    expect(answer).toBe("customer secret");
+    expect(replaces).toBe(0);
+
+    const reloaded = await new TableTracerRepository(db).begin();
+    expect(reloaded.assessments[0]?.answers["Q1.1"]).toBe("customer secret");
+  });
+
   it("reloads a saved answer from a fresh table repository against the same database", async () => {
     const db = new MemoryTracerDb();
     const writer = new TableTracerRepository(db);

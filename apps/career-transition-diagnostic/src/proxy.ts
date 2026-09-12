@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isMockMode } from "@/config/app-mode";
 import { ADMIN_COOKIE } from "@/server/admin/allowlist";
-import { isOperatorAuthed } from "@/server/admin/authz";
+import { isOperatorAuthed, mockAdminSessionsEnabled } from "@/server/admin/authz";
 import { readLiveUserEmailFromRequest } from "@/server/admin/supabase-auth";
 
 export type ProxyOptions = {
@@ -17,7 +16,7 @@ export async function proxy(request: NextRequest, eventOrOptions?: ProxyOptions)
   let liveUserEmail = options.liveUserEmail ?? null;
   let response = NextResponse.next({ request });
 
-  if (!isMockMode() && options.liveUserEmail === undefined) {
+  if (!mockAdminSessionsEnabled() && options.liveUserEmail === undefined) {
     const live = await readLiveUserEmailFromRequest(request);
     liveUserEmail = live.email;
     response = live.response;

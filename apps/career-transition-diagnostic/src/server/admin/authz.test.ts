@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { ADMIN_COOKIE } from "./allowlist";
-import { operatorEmailForMode, sessionFromOperatorEmail } from "./authz";
+import { mockAdminSessionsEnabled, operatorEmailForMode, sessionFromOperatorEmail } from "./authz";
 import { startOperatorLogin, magicLinkRedirectTo } from "./session";
 import { proxy } from "@/proxy";
 
@@ -15,6 +15,8 @@ afterEach(() => {
   }
   delete process.env.ADMIN_EMAIL_ALLOWLIST;
   delete process.env.APP_URL;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 });
 
 function adminRequest(cookieEmail?: string) {
@@ -49,6 +51,19 @@ describe("operator session resolution", () => {
       }),
     ).toBe("ops@example.com");
   });
+
+  it("ignores the unsigned cookie when mock mode has live service-role credentials", () => {
+    process.env.APP_MODE = "mock";
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    expect(mockAdminSessionsEnabled()).toBe(false);
+    expect(
+      operatorEmailForMode({
+        mockCookieEmail: "lena@example.com",
+        liveUserEmail: null,
+      }),
+    ).toBeNull();
+  });
 });
 
 describe("startOperatorLogin", () => {
@@ -66,6 +81,27 @@ describe("startOperatorLogin", () => {
 
   it("sends a magic link in live mode and never sets the mock cookie", async () => {
     process.env.APP_MODE = "live";
+    const startMockSession = vi.fn();
+    const sendMagicLink = vi.fn();
+
+    await expect(
+      startOperatorLogin("lena@example.com", {
+        startMockSession,
+        sendMagicLink,
+        origin: "https://staging.example",
+      }),
+    ).resolves.toEqual({ kind: "magic-link" });
+    expect(startMockSession).not.toHaveBeenCalled();
+    expect(sendMagicLink).toHaveBeenCalledWith(
+      "lena@example.com",
+      "https://staging.example/auth/callback",
+    );
+  });
+
+  it("sends a magic link in mock mode when supabase persistence is enabled", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
     const startMockSession = vi.fn();
     const sendMagicLink = vi.fn();
 
@@ -121,6 +157,14 @@ describe("admin proxy", () => {
     expect(allowed.headers.get("location")).toBeNull();
 
     process.env.APP_MODE = "live";
+    const blocked = await proxy(adminRequest("lena@example.com"), { liveUserEmail: null });
+    expect(blocked.headers.get("location")).toContain("/admin/login");
+  });
+
+  it("rejects the mock cookie when mock mode has live service-role credentials", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
     const blocked = await proxy(adminRequest("lena@example.com"), { liveUserEmail: null });
     expect(blocked.headers.get("location")).toContain("/admin/login");
   });

@@ -1,5 +1,9 @@
-import { isMockMode } from "@/config/app-mode";
+import { isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
 import { isAllowlistedAdmin } from "./allowlist";
+
+export function mockAdminSessionsEnabled() {
+  return isMockMode() && !supabasePersistenceEnabled();
+}
 
 export function sessionFromOperatorEmail(email: string | undefined | null) {
   if (!email || !isAllowlistedAdmin(email)) {
@@ -12,7 +16,7 @@ export function operatorEmailForMode(input: {
   mockCookieEmail?: string;
   liveUserEmail?: string | null;
 }) {
-  return isMockMode() ? input.mockCookieEmail : input.liveUserEmail;
+  return mockAdminSessionsEnabled() ? input.mockCookieEmail : input.liveUserEmail;
 }
 
 export function isOperatorAuthed(input: {

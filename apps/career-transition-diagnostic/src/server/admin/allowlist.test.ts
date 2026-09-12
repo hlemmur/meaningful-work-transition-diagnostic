@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { isMockMode } from "@/config/app-mode";
 import { isAllowlistedAdmin } from "./allowlist";
+import { mockAdminSessionsEnabled } from "./authz";
 
 const originalAppMode = process.env.APP_MODE;
 
@@ -11,6 +12,8 @@ afterEach(() => {
     process.env.APP_MODE = originalAppMode;
   }
   delete process.env.ADMIN_EMAIL_ALLOWLIST;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 });
 
 describe("admin allowlist", () => {
@@ -27,10 +30,12 @@ describe("admin allowlist", () => {
 });
 
 describe("mock operator sessions", () => {
-  it("are enabled only in mock mode", () => {
+  it("are enabled only in mock mode without live persistence", () => {
     process.env.APP_MODE = "mock";
     expect(isMockMode()).toBe(true);
+    expect(mockAdminSessionsEnabled()).toBe(true);
     process.env.APP_MODE = "live";
     expect(isMockMode()).toBe(false);
+    expect(mockAdminSessionsEnabled()).toBe(false);
   });
 });
