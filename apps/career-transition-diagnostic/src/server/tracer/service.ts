@@ -19,7 +19,8 @@ import {
 import { isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
 import { retentionMs } from "@/config/launch-gate";
 import { getActiveStore, getRepository, withStore } from "./repository";
-import type { AssessmentRecord, MarketingConsentRecord } from "./records";
+import type { AssessmentRecord, MarketingConsentRecord, TracerStore } from "./records";
+import { createEmptyTracerStore } from "./records";
 
 export type {
   AdaptiveQuestionRecord,
@@ -84,6 +85,41 @@ export async function restoreMockSubmittedCase(input: {
       assessment.productConsentedAt ??= new Date().toISOString();
     }
     return { assessmentId: assessment.id };
+  });
+}
+
+function assertMockMemoryStore() {
+  if (!isMockMode() || supabasePersistenceEnabled()) {
+    throw new Error("Not found");
+  }
+}
+
+export async function exportMockTracerStore() {
+  assertMockMemoryStore();
+  return withStore(() => structuredClone(getStore()));
+}
+
+export async function importMockTracerStore(store: TracerStore) {
+  assertMockMemoryStore();
+  return withStore(() => {
+    const current = getStore();
+    const next = {
+      ...createEmptyTracerStore(),
+      ...store,
+    };
+    current.assessments.splice(0, current.assessments.length, ...next.assessments);
+    current.purchases.splice(0, current.purchases.length, ...next.purchases);
+    current.marketingConsents.splice(0, current.marketingConsents.length, ...next.marketingConsents);
+    current.adaptiveQuestions.splice(0, current.adaptiveQuestions.length, ...next.adaptiveQuestions);
+    current.caseStateVersions.splice(0, current.caseStateVersions.length, ...next.caseStateVersions);
+    current.safetyFlags.splice(0, current.safetyFlags.length, ...next.safetyFlags);
+    current.analysisRuns.splice(0, current.analysisRuns.length, ...next.analysisRuns);
+    current.reports.splice(0, current.reports.length, ...next.reports);
+    return {
+      assessmentCount: current.assessments.length,
+      runCount: current.analysisRuns.length,
+      caseStateCount: current.caseStateVersions.length,
+    };
   });
 }
 

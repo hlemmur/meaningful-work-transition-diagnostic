@@ -9,6 +9,8 @@ import {
   recordWelcomeConsent,
   resetMockTracerStore,
   restoreMockSubmittedCase,
+  exportMockTracerStore,
+  importMockTracerStore,
   saveAnswer,
   submitAssessment,
   runAnalysisPipeline,
@@ -184,6 +186,35 @@ describe("restoreMockSubmittedCase", () => {
     expect(assessment?.status).toBe("review_pending");
     expect(assessment?.answers["Q1.1"]).toBe("kept after restart");
     expect(assessment?.productConsentVersion).toBeTruthy();
+  });
+
+  it("exports and reimports analysis runs so resume can skip completed passes", async () => {
+    process.env.APP_MODE = "mock";
+    const { assessmentId, accessToken } = await purchaseWithConsent();
+    await saveAnswer(accessToken, "Q1.1", "kept after restart");
+    const snapshot = await exportMockTracerStore();
+    snapshot.analysisRuns = [
+      {
+        assessmentId,
+        stage: "pass1",
+        attempt: 1,
+        promptVersion: "test",
+        model: "mock-cheap",
+        status: "success",
+        idempotencyKey: "pass1",
+      },
+    ];
+    await resetMockTracerStore();
+    expect(await getAssessmentByAccessToken(accessToken)).toBeUndefined();
+
+    const summary = await importMockTracerStore(snapshot);
+    expect(summary).toEqual(
+      expect.objectContaining({ assessmentCount: 1, runCount: 1 }),
+    );
+    const restored = await getAssessmentByAccessToken(accessToken);
+    expect(restored?.answers["Q1.1"]).toBe("kept after restart");
+    const exported = await exportMockTracerStore();
+    expect(exported.analysisRuns.map((run) => run.stage)).toEqual(["pass1"]);
   });
 
   it("refuses to write when a durable store is configured", async () => {
