@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { afterDeliveryPath } from "@/config/app-mode";
+import { reportSectionIdSchema } from "@/engine/schemas/analysis";
 import { requireAdminSession } from "@/server/admin/session";
 import {
   approveAssessment,
@@ -21,7 +22,7 @@ export async function saveEditsAction(assessmentId: string, formData: FormData) 
   await requireAdminSession();
   const count = Number(formData.get("count") ?? 0);
   const sections = Array.from({ length: count }, (_, index) => ({
-    id: String(formData.get(`id-${index}`) ?? ""),
+    id: reportSectionIdSchema.parse(String(formData.get(`id-${index}`) ?? "")),
     title: String(formData.get(`title-${index}`) ?? ""),
     body: String(formData.get(`body-${index}`) ?? ""),
     evidenceRefs: String(formData.get(`refs-${index}`) ?? "")

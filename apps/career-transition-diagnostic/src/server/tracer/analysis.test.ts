@@ -11,6 +11,7 @@ import {
   saveAnswer,
   submitAssessment,
 } from "./service";
+import { REQUIRED_PEEL_SECTION_IDS } from "@/engine/schemas/analysis";
 
 async function submittedAssessment(
   answers: Record<string, unknown> = {
@@ -189,7 +190,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     );
     expect(report?.generated.sections.length).toBeGreaterThanOrEqual(5);
     const ids = new Set(report?.generated.sections.map((section) => section.id));
-    for (const id of ["problem", "reality", "contradiction", "alternative", "experiment"]) {
+    for (const id of REQUIRED_PEEL_SECTION_IDS) {
       expect(ids.has(id)).toBe(true);
     }
     for (const section of report?.generated.sections ?? []) {

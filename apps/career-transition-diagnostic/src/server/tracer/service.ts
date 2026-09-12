@@ -21,6 +21,7 @@ import { retentionMs } from "@/config/launch-gate";
 import { getActiveStore, getRepository, withStore } from "./repository";
 import type { AssessmentRecord, MarketingConsentRecord, TracerStore } from "./records";
 import { createEmptyTracerStore } from "./records";
+import type { ReportSection } from "@/engine/schemas/analysis";
 
 export type {
   AdaptiveQuestionRecord,
@@ -620,10 +621,7 @@ export async function getDeliveredReport(reportToken: string) {
   });
 }
 
-export async function saveReportEdits(
-  assessmentId: string,
-  sections: { id: string; title: string; body: string; evidenceRefs: string[] }[],
-) {
+export async function saveReportEdits(assessmentId: string, sections: ReportSection[]) {
   return withStore(() => {
     const assessment = getStore().assessments.find((item) => item.id === assessmentId);
     const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
