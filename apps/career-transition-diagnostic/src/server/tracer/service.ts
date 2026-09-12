@@ -8,7 +8,7 @@ import { isAdaptiveQuestionId } from "@/engine/checkpoints/schema";
 import { SUPPORT_COPY } from "@/engine/checkpoints/bank";
 import { executeAnalysis, type AnalysisPipelineResult } from "@/engine/pipeline/run";
 import type { AnalysisFixture } from "@/engine/pipeline/fixtures";
-import type { AnalysisStage } from "@/engine/pipeline/models";
+import { ANALYSIS_STAGES, type AnalysisStage } from "@/engine/pipeline/models";
 import type { ForkId } from "@/engine/schemas/analysis";
 import {
   MARKETING_CONSENT_COPY_VERSION,
@@ -16,9 +16,12 @@ import {
   type MarketingContact,
   type WelcomeConsentInput,
 } from "../consent/copy";
+import { assertMockMode, isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
 import { retentionMs } from "@/config/launch-gate";
 import { getActiveStore, getRepository, withStore } from "./repository";
-import type { AssessmentRecord, MarketingConsentRecord } from "./records";
+import type { AssessmentRecord, MarketingConsentRecord, TracerStore } from "./records";
+import { createEmptyTracerStore } from "./records";
+import type { ReportSection } from "@/engine/schemas/analysis";
 
 export type {
   AdaptiveQuestionRecord,
@@ -44,6 +47,81 @@ function getStore() {
 
 export async function resetMockTracerStore() {
   await getRepository().reset();
+}
+
+export async function restoreMockSubmittedCase(input: {
+  accessToken: string;
+  email: string;
+  answers: Record<string, unknown>;
+  assessmentId?: string;
+}) {
+  if (!isMockMode() || supabasePersistenceEnabled()) {
+    throw new Error("Not found");
+  }
+  return withStore(() => {
+    const hash = hashToken(input.accessToken);
+    let assessment = getStore().assessments.find((item) => item.accessTokenHash === hash);
+    if (!assessment && input.assessmentId) {
+      assessment = getStore().assessments.find((item) => item.id === input.assessmentId);
+    }
+    if (!assessment) {
+      assessment = {
+        id: input.assessmentId ?? randomUUID(),
+        email: input.email,
+        accessTokenHash: hash,
+        accessExpiresAt: Date.now() + accessTtlMs(),
+        status: "review_pending",
+        answers: input.answers,
+        productConsentVersion: PRODUCT_CONSENT_COPY_VERSION,
+        productConsentedAt: new Date().toISOString(),
+      };
+      getStore().assessments.push(assessment);
+    } else {
+      assessment.email = input.email;
+      assessment.accessTokenHash = hash;
+      assessment.accessExpiresAt = Date.now() + accessTtlMs();
+      assessment.status = "review_pending";
+      assessment.answers = input.answers;
+      assessment.productConsentVersion ??= PRODUCT_CONSENT_COPY_VERSION;
+      assessment.productConsentedAt ??= new Date().toISOString();
+    }
+    return { assessmentId: assessment.id };
+  });
+}
+
+function assertMockMemoryStore() {
+  if (!isMockMode() || supabasePersistenceEnabled()) {
+    throw new Error("Not found");
+  }
+}
+
+export async function exportMockTracerStore() {
+  assertMockMemoryStore();
+  return withStore(() => structuredClone(getStore()));
+}
+
+export async function importMockTracerStore(store: TracerStore) {
+  assertMockMemoryStore();
+  return withStore(() => {
+    const current = getStore();
+    const next = {
+      ...createEmptyTracerStore(),
+      ...store,
+    };
+    current.assessments.splice(0, current.assessments.length, ...next.assessments);
+    current.purchases.splice(0, current.purchases.length, ...next.purchases);
+    current.marketingConsents.splice(0, current.marketingConsents.length, ...next.marketingConsents);
+    current.adaptiveQuestions.splice(0, current.adaptiveQuestions.length, ...next.adaptiveQuestions);
+    current.caseStateVersions.splice(0, current.caseStateVersions.length, ...next.caseStateVersions);
+    current.safetyFlags.splice(0, current.safetyFlags.length, ...next.safetyFlags);
+    current.analysisRuns.splice(0, current.analysisRuns.length, ...next.analysisRuns);
+    current.reports.splice(0, current.reports.length, ...next.reports);
+    return {
+      assessmentCount: current.assessments.length,
+      runCount: current.analysisRuns.length,
+      caseStateCount: current.caseStateVersions.length,
+    };
+  });
 }
 
 export function hashToken(token: string) {
@@ -543,10 +621,7 @@ export async function getDeliveredReport(reportToken: string) {
   });
 }
 
-export async function saveReportEdits(
-  assessmentId: string,
-  sections: { id: string; title: string; body: string; evidenceRefs: string[] }[],
-) {
+export async function saveReportEdits(assessmentId: string, sections: ReportSection[]) {
   return withStore(() => {
     const assessment = getStore().assessments.find((item) => item.id === assessmentId);
     const report = getStore().reports.find((item) => item.assessmentId === assessmentId);
@@ -651,6 +726,39 @@ export async function getAdminCase(assessmentId: string) {
       runs: getStore().analysisRuns.filter((item) => item.assessmentId === assessmentId),
       analysisStatus: analysisStatusInStore(assessmentId),
       draft: getDraftReportInStore(assessmentId),
+    };
+  });
+}
+
+export async function invalidateAnalysisFromStage(
+  assessmentId: string,
+  fromStage: AnalysisStage,
+) {
+  assertMockMode("invalidateAnalysisFromStage");
+  if (supabasePersistenceEnabled()) {
+    throw new Error("Not found");
+  }
+  const fromIndex = ANALYSIS_STAGES.indexOf(fromStage);
+  if (fromIndex < 0) {
+    throw new Error(`Unknown stage: ${fromStage}`);
+  }
+  const drop = new Set(ANALYSIS_STAGES.slice(fromIndex));
+  return withStore(() => {
+    const store = getStore();
+    const assessment = store.assessments.find((item) => item.id === assessmentId);
+    if (!assessment) {
+      throw new Error("Assessment not found");
+    }
+    store.analysisRuns = store.analysisRuns.filter(
+      (run) => run.assessmentId !== assessmentId || !drop.has(run.stage),
+    );
+    store.caseStateVersions = store.caseStateVersions.filter(
+      (version) => version.assessmentId !== assessmentId || !drop.has(version.stage as AnalysisStage),
+    );
+    store.reports = store.reports.filter((report) => report.assessmentId !== assessmentId);
+    return {
+      remainingRuns: store.analysisRuns.filter((run) => run.assessmentId === assessmentId).length,
+      clearedStages: [...drop],
     };
   });
 }

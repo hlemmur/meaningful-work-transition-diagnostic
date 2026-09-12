@@ -1,4 +1,5 @@
 import type { Report, ReportSection } from "@/engine/schemas/analysis";
+import { REQUIRED_PEEL_SECTION_IDS } from "@/engine/schemas/analysis";
 import type { CaseState } from "@/engine/schemas/case-state";
 
 export type RubricFinding = {
@@ -55,6 +56,17 @@ export function evaluateReport(input: {
   );
   findings.push(
     finding("has-sections", sections.length > 0, "Report must contain sections."),
+  );
+  const present = new Set(sections.map((section) => section.id));
+  const missingPeel = REQUIRED_PEEL_SECTION_IDS.filter((id) => !present.has(id));
+  findings.push(
+    finding(
+      "peel-sections",
+      missingPeel.length === 0,
+      missingPeel.length
+        ? `Missing peel sections: ${missingPeel.join(", ")}`
+        : "Core peel-order sections are present.",
+    ),
   );
 
   const missingEvidence = sections.filter((section) => section.evidenceRefs.length === 0);

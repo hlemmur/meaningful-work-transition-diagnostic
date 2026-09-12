@@ -112,7 +112,14 @@ function stripUnsupported(node: unknown): unknown {
   const obj = node as JsonSchema;
   const out: JsonSchema = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (key === "$schema" || key === "$defs" || key === "definitions" || key === "additionalProperties") {
+    if (
+      key === "$schema" ||
+      key === "$defs" ||
+      key === "definitions" ||
+      key === "additionalProperties" ||
+      key === "minItems" ||
+      key === "maxItems"
+    ) {
       continue;
     }
     out[key] = stripUnsupported(value);
@@ -135,16 +142,34 @@ function collapseNullUnionObject(obj: JsonSchema): JsonSchema {
   return { ...merged, ...obj, nullable: true };
 }
 
+const NULLABLE_OBJECT_KEYS = new Set(["adaptiveQuestion", "hiddenPosition"]);
+
 function withPropertyOrdering(obj: JsonSchema): JsonSchema {
   const properties = obj.properties;
   if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
     return obj;
   }
-  const keys = Object.keys(properties);
-  if (!keys.length || Array.isArray(obj.propertyOrdering)) {
+  const allKeys = Object.keys(properties);
+  if (!allKeys.length) {
     return obj;
   }
-  return { ...obj, propertyOrdering: keys };
+  // Gemini 3 rejects schemas that list optional properties (and vague 400s on
+  // overly complex ones). Keep only required keys; Zod still accepts extras.
+  const required = (
+    Array.isArray(obj.required) && (obj.required as string[]).length
+      ? (obj.required as string[])
+      : allKeys
+  ).filter((key) => key in (properties as JsonSchema));
+  const nextProperties: JsonSchema = {};
+  for (const key of required) {
+    nextProperties[key] = (properties as JsonSchema)[key];
+  }
+  return {
+    ...obj,
+    properties: nextProperties,
+    required,
+    propertyOrdering: required,
+  };
 }
 
 export function coerceLiveStructuredOutput(output: Record<string, unknown>): Record<string, unknown> {
@@ -152,6 +177,9 @@ export function coerceLiveStructuredOutput(output: Record<string, unknown>): Rec
 }
 
 function coerceValue(value: unknown, key?: string): unknown {
+  if (value === null) {
+    return key && NULLABLE_OBJECT_KEYS.has(key) ? null : undefined;
+  }
   if (Array.isArray(value)) {
     if (key === "originForks" || key === "openForks") {
       return value.filter((item): item is string => typeof item === "string" && FORK_IDS.has(item));
@@ -168,7 +196,10 @@ function coerceValue(value: unknown, key?: string): unknown {
   const source = value as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [childKey, child] of Object.entries(source)) {
-    out[childKey] = coerceValue(child, childKey);
+    const coerced = coerceValue(child, childKey);
+    if (coerced !== undefined) {
+      out[childKey] = coerced;
+    }
   }
   for (const arrayKey of ARRAY_KEYS) {
     if (!(arrayKey in out) || out[arrayKey] == null) {

@@ -67,10 +67,10 @@ export const promptRegistry = {
   },
   pass9: {
     version: "pass-9.v2",
-    text: `Compose the report in peel order. Hypothesis language, evidence-backed claims, no clinical diagnosis. Return JSON { sections: at least 1 of { id, title, body, evidenceRefs } }. Keep claims tied to evidence. ${EMPTY_ARRAYS}`,
+    text: `Compose the full client report in peel order. Hypothesis language, evidence-backed claims, no clinical diagnosis. Return JSON { sections: array of { id, title, body, evidenceRefs } }. Required section ids in order: problem, reality, contradiction, hidden (omit only if no hiddenPosition survived), alternative, experiment, jungian (omit only if no jungian lenses). Every body must be at least 2-3 substantive paragraphs tied to evidenceRefs. Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
     version: "pass-10.v2",
-    text: `Report critic. Fail unsupported claims, Jungian overreach, ignored constraints, thin alternatives, or Q11.3 used as hidden position. Regenerate only failing sections. Return JSON { failingSectionIds: string[], regeneratedSections: [{ id, title, body, evidenceRefs }] }. ${EMPTY_ARRAYS}`,
+    text: `Report critic. Fail unsupported claims, Jungian overreach, ignored constraints, thin alternatives, Q11.3 used as hidden position, missing peel sections (problem/reality/contradiction/alternative/experiment), or any one-sentence section body. Regenerate only failing sections with full multi-paragraph bodies. Return JSON { failingSectionIds: string[], regeneratedSections: [{ id, title, body, evidenceRefs }] }. ${EMPTY_ARRAYS}`,
   },
 } satisfies Record<string, PromptStub>;

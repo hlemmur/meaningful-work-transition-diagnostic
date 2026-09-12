@@ -8,6 +8,10 @@ import {
   getAssessmentByReportToken,
   recordWelcomeConsent,
   resetMockTracerStore,
+  restoreMockSubmittedCase,
+  exportMockTracerStore,
+  importMockTracerStore,
+  invalidateAnalysisFromStage,
   saveAnswer,
   submitAssessment,
   runAnalysisPipeline,
@@ -31,6 +35,8 @@ afterEach(async () => {
   process.env.APP_MODE = "mock";
   delete process.env.RESEND_API_KEY;
   delete process.env.RESEND_FROM;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   resetMockOutbox();
   vi.unstubAllGlobals();
   await resetMockTracerStore();
@@ -163,5 +169,116 @@ describe("mock purchase-to-report tracer", () => {
     expect(paid.created).toBe(true);
     expect(paid.accessEmail?.text).toContain(`/a/${paid.accessToken}`);
     expect(paid.accessEmail?.text).not.toContain("report");
+  });
+});
+
+describe("restoreMockSubmittedCase", () => {
+  it("reloads a submitted case so the same access token can resume analysis", async () => {
+    process.env.APP_MODE = "mock";
+    const restored = await restoreMockSubmittedCase({
+      assessmentId: "restore-case-1",
+      accessToken: "restore-token-1",
+      email: "buyer@example.com",
+      answers: { "Q1.1": "kept after restart" },
+    });
+
+    expect(restored).toEqual({ assessmentId: "restore-case-1" });
+    const assessment = await getAssessmentByAccessToken("restore-token-1");
+    expect(assessment?.status).toBe("review_pending");
+    expect(assessment?.answers["Q1.1"]).toBe("kept after restart");
+    expect(assessment?.productConsentVersion).toBeTruthy();
+  });
+
+  it("exports and reimports analysis runs so resume can skip completed passes", async () => {
+    process.env.APP_MODE = "mock";
+    const { assessmentId, accessToken } = await purchaseWithConsent();
+    await saveAnswer(accessToken, "Q1.1", "kept after restart");
+    const snapshot = await exportMockTracerStore();
+    snapshot.analysisRuns = [
+      {
+        assessmentId,
+        stage: "pass1",
+        attempt: 1,
+        promptVersion: "test",
+        model: "mock-cheap",
+        status: "success",
+        idempotencyKey: "pass1",
+      },
+    ];
+    await resetMockTracerStore();
+    expect(await getAssessmentByAccessToken(accessToken)).toBeUndefined();
+
+    const summary = await importMockTracerStore(snapshot);
+    expect(summary).toEqual(
+      expect.objectContaining({ assessmentCount: 1, runCount: 1 }),
+    );
+    const restored = await getAssessmentByAccessToken(accessToken);
+    expect(restored?.answers["Q1.1"]).toBe("kept after restart");
+    const exported = await exportMockTracerStore();
+    expect(exported.analysisRuns.map((run) => run.stage)).toEqual(["pass1"]);
+  });
+
+  it("clears completed passes from a stage so resume can regenerate the draft", async () => {
+    process.env.APP_MODE = "mock";
+    const { assessmentId, accessToken } = await purchaseWithConsent();
+    await saveAnswer(accessToken, "Q1.1", "structure is the issue");
+    await importMockTracerStore({
+      ...(await exportMockTracerStore()),
+      analysisRuns: [
+        {
+          assessmentId,
+          stage: "pass8",
+          attempt: 1,
+          promptVersion: "test",
+          model: "mock-cheap",
+          status: "success",
+          idempotencyKey: "pass8",
+        },
+        {
+          assessmentId,
+          stage: "pass9",
+          attempt: 1,
+          promptVersion: "test",
+          model: "mock-strong",
+          status: "success",
+          idempotencyKey: "pass9",
+        },
+      ],
+      reports: [
+        {
+          assessmentId,
+          engineVersion: "engine.v2",
+          status: "draft",
+          sections: [
+            {
+              id: "problem",
+              title: "The problem",
+              body: "thin",
+              evidenceRefs: [`${assessmentId}:Q1.1`],
+            },
+          ],
+        },
+      ],
+    });
+
+    const cleared = await invalidateAnalysisFromStage(assessmentId, "pass9");
+    expect(cleared.clearedStages).toEqual(["pass9", "pass10"]);
+    const exported = await exportMockTracerStore();
+    expect(exported.analysisRuns.map((run) => run.stage)).toEqual(["pass8"]);
+    expect(exported.reports).toEqual([]);
+    expect(await getAssessmentByAccessToken(accessToken)).toBeTruthy();
+  });
+
+  it("refuses to write when a durable store is configured", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    await expect(
+      restoreMockSubmittedCase({
+        accessToken: "restore-token-2",
+        email: "buyer@example.com",
+        answers: { "Q1.1": "no" },
+      }),
+    ).rejects.toThrow("Not found");
   });
 });

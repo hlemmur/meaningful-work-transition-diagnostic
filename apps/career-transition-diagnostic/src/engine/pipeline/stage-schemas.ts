@@ -8,7 +8,10 @@ import {
   jungianLensSchema,
   realityCheckSchema,
   reportSectionSchema,
+  REQUIRED_PEEL_SECTION_IDS,
 } from "../schemas/analysis";
+
+export { REQUIRED_PEEL_SECTION_IDS } from "../schemas/analysis";
 
 export const pass1OutputSchema = z.object({
   consciousExplanationTags: z.array(z.string()).default([]),
@@ -53,7 +56,20 @@ export const pass8OutputSchema = z.object({
 });
 
 export const pass9OutputSchema = z.object({
-  sections: z.array(reportSectionSchema).min(1),
+  sections: z
+    .array(reportSectionSchema)
+    .min(REQUIRED_PEEL_SECTION_IDS.length)
+    .superRefine((sections, ctx) => {
+      const ids = new Set(sections.map((section) => section.id));
+      for (const id of REQUIRED_PEEL_SECTION_IDS) {
+        if (!ids.has(id)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Missing required peel section id: ${id}`,
+          });
+        }
+      }
+    }),
 });
 
 export const pass10OutputSchema = z.object({

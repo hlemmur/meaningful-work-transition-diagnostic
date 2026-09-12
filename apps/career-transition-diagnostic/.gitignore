@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local case dumps (personal answers; do not commit)
+.local/
+
 # env files
 .env
 .env.local
