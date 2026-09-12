@@ -1,6 +1,11 @@
 import type { Report, ReportSection } from "@/engine/schemas/analysis";
 import { REQUIRED_PEEL_SECTION_IDS } from "@/engine/schemas/analysis";
 import type { CaseState } from "@/engine/schemas/case-state";
+import {
+  hasDiverseEvidenceRefs,
+  isRequestedInsightSpine,
+  MIN_DISTINCT_EVIDENCE_QUESTION_IDS,
+} from "@/engine/pipeline/report-grounding";
 
 export type RubricFinding = {
   id: string;
@@ -42,6 +47,7 @@ function joinedText(sections: ReportSection[]) {
 export function evaluateReport(input: {
   report: Pick<Report, "engineVersion" | "sections">;
   caseState?: Pick<CaseState, "practicalContext" | "hypotheses" | "jungianLenses">;
+  requestedInsight?: string;
 }): RubricResult {
   const findings: RubricFinding[] = [];
   const sections = input.report.sections ?? [];
@@ -68,6 +74,30 @@ export function evaluateReport(input: {
         : "Core peel-order sections are present.",
     ),
   );
+
+  findings.push(
+    finding(
+      "diverse-evidence-refs",
+      hasDiverseEvidenceRefs(sections),
+      hasDiverseEvidenceRefs(sections)
+        ? `Evidence refs span at least ${MIN_DISTINCT_EVIDENCE_QUESTION_IDS} question ids.`
+        : `Evidence refs must cite at least ${MIN_DISTINCT_EVIDENCE_QUESTION_IDS} distinct question ids across the report.`,
+    ),
+  );
+
+  const insight = input.requestedInsight?.trim();
+  if (insight) {
+    const spine = isRequestedInsightSpine(sections, insight);
+    findings.push(
+      finding(
+        "requested-insight-spine",
+        !spine,
+        spine
+          ? "Report bodies collapse onto Q11.3 requestedInsight instead of case evidence."
+          : "Report is not a Q11.3-only paraphrase spine.",
+      ),
+    );
+  }
 
   const missingEvidence = sections.filter((section) => section.evidenceRefs.length === 0);
   findings.push(
