@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { supabasePersistenceEnabled } from "@/config/app-mode";
 import { createEmptyTracerStore, type TracerStore } from "./records";
 import { createEmptyTables, storeToTables, tablesToStore, type TracerTables } from "./mapper";
 import { SupabaseTracerDb, createServiceRoleClient } from "./supabase";
@@ -48,17 +49,17 @@ export class TableTracerRepository implements TracerRepository {
 
   async begin() {
     const tables = await this.db.loadAll();
-    this.snapshot = JSON.stringify(tables);
-    return tablesToStore(tables);
+    const store = tablesToStore(tables);
+    this.snapshot = JSON.stringify(store);
+    return store;
   }
 
   async commit(store: TracerStore) {
-    const tables = storeToTables(store);
-    const serialized = JSON.stringify(tables);
+    const serialized = JSON.stringify(store);
     if (serialized === this.snapshot) {
       return;
     }
-    await this.db.replaceAll(tables);
+    await this.db.replaceAll(storeToTables(store));
     this.snapshot = serialized;
   }
 
@@ -96,9 +97,7 @@ function enqueueExclusiveWrite<T>(work: () => Promise<T>): Promise<T> {
   return run;
 }
 
-export function supabasePersistenceEnabled() {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+export { supabasePersistenceEnabled };
 
 export function bindTracerRepository(repository: TracerRepository) {
   globalForTracer.__mwtdRepository = repository;
