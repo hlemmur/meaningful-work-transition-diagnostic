@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { createAnswerSaveQueue } from "@/questionnaire/answer-save-queue";
 import { autosaveAnswerAction, runCheckpointAction, submitAssessmentAction } from "@/server/tracer/actions";
 import { listAvoidedActionLabels, listVisibleQuestionIds, type SafetyLevel } from "@/questionnaire/branching";
 import { ChoiceCards, LabeledScale } from "@/questionnaire/inquiry-inputs";
@@ -141,8 +142,11 @@ export function QuestionnaireFlow({
   const [preparing, setPreparing] = useState(false);
   const answersRef = useRef(answers);
   const saveTimer = useRef<number | null>(null);
-  const pendingSave = useRef<{ id: string; value: unknown } | null>(null);
-  const inFlight = useRef<Promise<boolean>>(Promise.resolve(true));
+  const saveQueue = useRef(
+    createAnswerSaveQueue(async (id, value) => {
+      await autosaveAnswerAction(token, id, JSON.stringify(value));
+    }),
+  );
   const moving = useRef(false);
   const visible = useMemo(
     () => mergeAdaptiveQuestions(listVisibleQuestionIds(answers, safetyLevel), adaptive),
@@ -167,7 +171,7 @@ export function QuestionnaireFlow({
     const nextAnswers = { ...answersRef.current, [id]: value };
     answersRef.current = nextAnswers;
     setAnswers(nextAnswers);
-    pendingSave.current = { id, value };
+    saveQueue.current.queue(id, value);
     if (locked) {
       return;
     }
@@ -191,26 +195,16 @@ export function QuestionnaireFlow({
       window.clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
-    const next = pendingSave.current;
-    if (!next) {
-      return inFlight.current;
-    }
     if (locked) {
       return false;
     }
-    pendingSave.current = null;
+    if (!saveQueue.current.hasPending()) {
+      return saveQueue.current.flush();
+    }
     setStatus("saving");
-    const task = autosaveAnswerAction(token, next.id, JSON.stringify(next.value))
-      .then(() => {
-        setStatus("saved");
-        return true;
-      })
-      .catch(() => {
-        setStatus("error");
-        return false;
-      });
-    inFlight.current = task;
-    return task;
+    const saved = await saveQueue.current.flush();
+    setStatus(saved ? "saved" : "error");
+    return saved;
   }
 
   function currentValue() {
@@ -307,7 +301,7 @@ export function QuestionnaireFlow({
   async function submitNow() {
     const value = currentValue();
     if (value !== undefined) {
-      pendingSave.current = { id: question.id, value };
+      saveQueue.current.queue(question.id, value);
     }
     const saved = await flushPending();
     if (saved === false) {
