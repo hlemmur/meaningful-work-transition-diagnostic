@@ -39,6 +39,22 @@ describe("Gemini schema sanitizer", () => {
     }
   });
 
+  it("marks optional pass3 fields nullable and lists every property as required", () => {
+    const pass3 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass3")).properties);
+    const item = asObject(asObject(pass3.hypotheses).items);
+    expect(item.required).toEqual(Object.keys(asObject(item.properties)));
+    expect(item.propertyOrdering).toEqual(item.required);
+    expect(item.properties).toEqual(
+      expect.objectContaining({
+        consciousPosition: expect.objectContaining({ type: "string", nullable: true }),
+        proposedHiddenPosition: expect.objectContaining({ type: "string", nullable: true }),
+        possibleProtectiveFunction: expect.objectContaining({ type: "string", nullable: true }),
+        possibleCompensatoryAim: expect.objectContaining({ type: "string", nullable: true }),
+        developmentalTension: expect.objectContaining({ type: "string", nullable: true }),
+      }),
+    );
+  });
+
   it("keeps min/max item counts for pass2, pass3, pass5, and pass8", () => {
     const pass2 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass2")).properties);
     expect(asObject(pass2.contradictions).minItems).toBe(1);
@@ -56,6 +72,25 @@ describe("Gemini schema sanitizer", () => {
 });
 
 describe("coerceLiveStructuredOutput", () => {
+  it("omits null optional strings but keeps a null hiddenPosition", () => {
+    const coerced = coerceLiveStructuredOutput({
+      hypotheses: [{ id: "h1", consciousPosition: null, observedPattern: "pattern" }],
+      hiddenPosition: null,
+      alternative: "rest",
+    });
+
+    expect(coerced.hypotheses).toEqual([
+      expect.objectContaining({
+        id: "h1",
+        observedPattern: "pattern",
+      }),
+    ]);
+    expect((coerced.hypotheses as Array<Record<string, unknown>>)[0]).not.toHaveProperty(
+      "consciousPosition",
+    );
+    expect(coerced.hiddenPosition).toBeNull();
+  });
+
   it("coerces score strings to numbers, fills missing arrays, and drops unknown forks", () => {
     const coerced = coerceLiveStructuredOutput({
       hypotheses: [

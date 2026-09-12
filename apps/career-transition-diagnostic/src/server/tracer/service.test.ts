@@ -8,6 +8,7 @@ import {
   getAssessmentByReportToken,
   recordWelcomeConsent,
   resetMockTracerStore,
+  restoreMockSubmittedCase,
   saveAnswer,
   submitAssessment,
   runAnalysisPipeline,
@@ -31,6 +32,8 @@ afterEach(async () => {
   process.env.APP_MODE = "mock";
   delete process.env.RESEND_API_KEY;
   delete process.env.RESEND_FROM;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   resetMockOutbox();
   vi.unstubAllGlobals();
   await resetMockTracerStore();
@@ -163,5 +166,36 @@ describe("mock purchase-to-report tracer", () => {
     expect(paid.created).toBe(true);
     expect(paid.accessEmail?.text).toContain(`/a/${paid.accessToken}`);
     expect(paid.accessEmail?.text).not.toContain("report");
+  });
+});
+
+describe("restoreMockSubmittedCase", () => {
+  it("reloads a submitted case so the same access token can resume analysis", async () => {
+    process.env.APP_MODE = "mock";
+    const restored = await restoreMockSubmittedCase({
+      assessmentId: "restore-case-1",
+      accessToken: "restore-token-1",
+      email: "buyer@example.com",
+      answers: { "Q1.1": "kept after restart" },
+    });
+
+    expect(restored).toEqual({ assessmentId: "restore-case-1" });
+    const assessment = await getAssessmentByAccessToken("restore-token-1");
+    expect(assessment?.status).toBe("review_pending");
+    expect(assessment?.answers["Q1.1"]).toBe("kept after restart");
+    expect(assessment?.productConsentVersion).toBeTruthy();
+  });
+
+  it("refuses to write when a durable store is configured", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+    await expect(
+      restoreMockSubmittedCase({
+        accessToken: "restore-token-2",
+        email: "buyer@example.com",
+        answers: { "Q1.1": "no" },
+      }),
+    ).rejects.toThrow("Not found");
   });
 });

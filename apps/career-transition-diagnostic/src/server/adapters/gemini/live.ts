@@ -74,7 +74,7 @@ export const liveLlmAdapter: LlmAdapter = {
     });
 
     if (!response.ok) {
-      const body = (await response.text()).slice(0, 300);
+      const body = (await response.text()).slice(0, 2000);
       throw new Error(`Gemini HTTP ${response.status}${body ? `: ${body}` : ""}`);
     }
 

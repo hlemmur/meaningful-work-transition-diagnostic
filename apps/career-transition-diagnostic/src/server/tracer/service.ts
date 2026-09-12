@@ -16,6 +16,7 @@ import {
   type MarketingContact,
   type WelcomeConsentInput,
 } from "../consent/copy";
+import { isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
 import { retentionMs } from "@/config/launch-gate";
 import { getActiveStore, getRepository, withStore } from "./repository";
 import type { AssessmentRecord, MarketingConsentRecord } from "./records";
@@ -44,6 +45,46 @@ function getStore() {
 
 export async function resetMockTracerStore() {
   await getRepository().reset();
+}
+
+export async function restoreMockSubmittedCase(input: {
+  accessToken: string;
+  email: string;
+  answers: Record<string, unknown>;
+  assessmentId?: string;
+}) {
+  if (!isMockMode() || supabasePersistenceEnabled()) {
+    throw new Error("Not found");
+  }
+  return withStore(() => {
+    const hash = hashToken(input.accessToken);
+    let assessment = getStore().assessments.find((item) => item.accessTokenHash === hash);
+    if (!assessment && input.assessmentId) {
+      assessment = getStore().assessments.find((item) => item.id === input.assessmentId);
+    }
+    if (!assessment) {
+      assessment = {
+        id: input.assessmentId ?? randomUUID(),
+        email: input.email,
+        accessTokenHash: hash,
+        accessExpiresAt: Date.now() + accessTtlMs(),
+        status: "review_pending",
+        answers: input.answers,
+        productConsentVersion: PRODUCT_CONSENT_COPY_VERSION,
+        productConsentedAt: new Date().toISOString(),
+      };
+      getStore().assessments.push(assessment);
+    } else {
+      assessment.email = input.email;
+      assessment.accessTokenHash = hash;
+      assessment.accessExpiresAt = Date.now() + accessTtlMs();
+      assessment.status = "review_pending";
+      assessment.answers = input.answers;
+      assessment.productConsentVersion ??= PRODUCT_CONSENT_COPY_VERSION;
+      assessment.productConsentedAt ??= new Date().toISOString();
+    }
+    return { assessmentId: assessment.id };
+  });
 }
 
 export function hashToken(token: string) {

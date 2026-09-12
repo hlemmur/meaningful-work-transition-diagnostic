@@ -135,16 +135,33 @@ function collapseNullUnionObject(obj: JsonSchema): JsonSchema {
   return { ...merged, ...obj, nullable: true };
 }
 
+const NULLABLE_OBJECT_KEYS = new Set(["adaptiveQuestion", "hiddenPosition"]);
+
 function withPropertyOrdering(obj: JsonSchema): JsonSchema {
   const properties = obj.properties;
   if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
     return obj;
   }
   const keys = Object.keys(properties);
-  if (!keys.length || Array.isArray(obj.propertyOrdering)) {
+  if (!keys.length) {
     return obj;
   }
-  return { ...obj, propertyOrdering: keys };
+  const requiredSet = new Set(Array.isArray(obj.required) ? (obj.required as string[]) : []);
+  const nextProperties: JsonSchema = {};
+  for (const key of keys) {
+    const value = (properties as JsonSchema)[key];
+    if (!requiredSet.has(key) && value && typeof value === "object" && !Array.isArray(value)) {
+      nextProperties[key] = { ...(value as JsonSchema), nullable: true };
+    } else {
+      nextProperties[key] = value;
+    }
+  }
+  return {
+    ...obj,
+    properties: nextProperties,
+    required: keys,
+    propertyOrdering: keys,
+  };
 }
 
 export function coerceLiveStructuredOutput(output: Record<string, unknown>): Record<string, unknown> {
@@ -152,6 +169,9 @@ export function coerceLiveStructuredOutput(output: Record<string, unknown>): Rec
 }
 
 function coerceValue(value: unknown, key?: string): unknown {
+  if (value === null) {
+    return key && NULLABLE_OBJECT_KEYS.has(key) ? null : undefined;
+  }
   if (Array.isArray(value)) {
     if (key === "originForks" || key === "openForks") {
       return value.filter((item): item is string => typeof item === "string" && FORK_IDS.has(item));
@@ -168,7 +188,10 @@ function coerceValue(value: unknown, key?: string): unknown {
   const source = value as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [childKey, child] of Object.entries(source)) {
-    out[childKey] = coerceValue(child, childKey);
+    const coerced = coerceValue(child, childKey);
+    if (coerced !== undefined) {
+      out[childKey] = coerced;
+    }
   }
   for (const arrayKey of ARRAY_KEYS) {
     if (!(arrayKey in out) || out[arrayKey] == null) {
