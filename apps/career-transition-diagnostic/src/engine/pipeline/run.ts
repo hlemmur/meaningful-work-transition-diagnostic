@@ -106,6 +106,7 @@ export async function executeAnalysis(input: {
           answers: input.answers,
           failSchema: fixture === "schema-fail" && stage === "pass3",
           failStage: input.failStage,
+          draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
         }),
       });
 

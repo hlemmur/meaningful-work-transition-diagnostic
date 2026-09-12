@@ -1,4 +1,4 @@
-import type { Contradiction, Hypothesis } from "../schemas/analysis";
+import type { Contradiction, Hypothesis, ReportSection } from "../schemas/analysis";
 import {
   contradictionSchema,
   experimentSchema,
@@ -10,6 +10,7 @@ import {
   reportSectionSchema,
 } from "../schemas/analysis";
 import type { AnalysisStage } from "./models";
+import { failingReportSectionIds } from "./report-grounding";
 
 export type AnalysisFixture =
   | "default"
@@ -100,7 +101,12 @@ function contradiction(assessmentId: string, evidenceRef: string): Contradiction
 export function passOutputFor(
   stage: AnalysisStage,
   fixture: AnalysisFixture,
-  ctx: { assessmentId: string; evidenceRef: string; requestedInsight?: string },
+  ctx: {
+    assessmentId: string;
+    evidenceRef: string;
+    requestedInsight?: string;
+    draftReport?: { sections: ReportSection[] };
+  },
 ) {
   if (fixture === "schema-fail" && stage === "pass3") {
     return {};
@@ -312,7 +318,26 @@ export function passOutputFor(
       }
       return { sections };
     }
-    case "pass10":
-      return { failingSectionIds: [], regeneratedSections: [] };
+    case "pass10": {
+      const draft = ctx.draftReport?.sections ?? [];
+      const failingSectionIds = failingReportSectionIds({
+        sections: draft,
+        requestedInsight: ctx.requestedInsight,
+      });
+      if (!failingSectionIds.length) {
+        return { failingSectionIds: [], regeneratedSections: [] };
+      }
+      const grounded = (
+        passOutputFor("pass9", fixture, {
+          assessmentId: ctx.assessmentId,
+          evidenceRef: ctx.evidenceRef,
+          requestedInsight: ctx.requestedInsight,
+        }) as { sections: ReportSection[] }
+      ).sections;
+      return {
+        failingSectionIds,
+        regeneratedSections: grounded.filter((section) => failingSectionIds.includes(section.id)),
+      };
+    }
   }
 }

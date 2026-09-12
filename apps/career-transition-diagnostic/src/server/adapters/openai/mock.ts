@@ -93,6 +93,14 @@ export const mockLlmAdapter: LlmAdapter = {
         };
       }
       const assessmentId = String(input.assessmentId ?? "assess-1");
+      const draftReport =
+        input.draftReport &&
+        typeof input.draftReport === "object" &&
+        Array.isArray((input.draftReport as { sections?: unknown }).sections)
+          ? (input.draftReport as {
+              sections: Array<{ id: string; title: string; body: string; evidenceRefs: string[] }>;
+            })
+          : undefined;
       return {
         stage,
         fixture,
@@ -101,6 +109,7 @@ export const mockLlmAdapter: LlmAdapter = {
           evidenceRef: String(input.evidenceRef ?? `${assessmentId}:Q1.1`),
           requestedInsight:
             typeof input.requestedInsight === "string" ? input.requestedInsight : undefined,
+          draftReport,
         }),
         model,
         usage: {

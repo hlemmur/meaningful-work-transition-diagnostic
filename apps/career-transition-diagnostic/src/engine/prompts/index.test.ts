@@ -128,6 +128,9 @@ describe("promptRegistry contracts", () => {
       "peel",
       "one-sentence",
       "distinct question",
+      "draftReport",
+      "evidenceAllowlist",
+      "requestedInsight",
     ]);
   });
 });
