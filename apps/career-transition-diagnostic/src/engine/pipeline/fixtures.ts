@@ -98,6 +98,68 @@ function contradiction(assessmentId: string, evidenceRef: string): Contradiction
   });
 }
 
+function groundedReportSections(
+  fixture: AnalysisFixture,
+  ctx: { assessmentId: string; evidenceRef: string },
+): ReportSection[] {
+  const q = (questionId: string) => `${ctx.assessmentId}:${questionId}`;
+  const sections = [
+    reportSectionSchema.parse({
+      id: "problem",
+      title: "The problem as you see it",
+      body: "You described a stall next to a desire for more alive work.",
+      evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
+    }),
+    reportSectionSchema.parse({
+      id: "reality",
+      title: "What reality says",
+      body: "Practical constraints and missing structure are in the picture.",
+      evidenceRefs: [q("Q0.4"), q("Q0.5")],
+    }),
+    reportSectionSchema.parse({
+      id: "contradiction",
+      title: "The contradiction at the center",
+      body: "Wanting the work and not taking the next step sit together.",
+      evidenceRefs: [q("Q1.1"), q("Q1.3")],
+    }),
+    reportSectionSchema.parse({
+      id: "alternative",
+      title: "Another plausible interpretation",
+      body: "The stall may be a sufficient response to constraints, not a hidden stance.",
+      evidenceRefs: [q("Q0.5")],
+    }),
+    reportSectionSchema.parse({
+      id: "experiment",
+      title: "Your experiment",
+      body: "Try two weeks of external deadlines and watch both output and charge.",
+      evidenceRefs: [q("Q1.1")],
+    }),
+  ];
+  if (fixture !== "critic-constraints-win") {
+    sections.splice(
+      3,
+      0,
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis is that structure is being asked to serve aliveness.",
+        evidenceRefs: [q("Q1.3"), q("Q2.1")],
+      }),
+    );
+  }
+  if (fixture !== "empty-jungian") {
+    sections.push(
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "Compensation may illuminate the stall without naming you as an archetype.",
+        evidenceRefs: [q("Q2.1")],
+      }),
+    );
+  }
+  return sections;
+}
+
 export function passOutputFor(
   stage: AnalysisStage,
   fixture: AnalysisFixture,
@@ -260,64 +322,8 @@ export function passOutputFor(
           }),
         ],
       };
-    case "pass9": {
-      const q = (questionId: string) => `${ctx.assessmentId}:${questionId}`;
-      const sections = [
-        reportSectionSchema.parse({
-          id: "problem",
-          title: "The problem as you see it",
-          body: "You described a stall next to a desire for more alive work.",
-          evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
-        }),
-        reportSectionSchema.parse({
-          id: "reality",
-          title: "What reality says",
-          body: "Practical constraints and missing structure are in the picture.",
-          evidenceRefs: [q("Q0.4"), q("Q0.5")],
-        }),
-        reportSectionSchema.parse({
-          id: "contradiction",
-          title: "The contradiction at the center",
-          body: "Wanting the work and not taking the next step sit together.",
-          evidenceRefs: [q("Q1.1"), q("Q1.3")],
-        }),
-        reportSectionSchema.parse({
-          id: "alternative",
-          title: "Another plausible interpretation",
-          body: "The stall may be a sufficient response to constraints, not a hidden stance.",
-          evidenceRefs: [q("Q0.5")],
-        }),
-        reportSectionSchema.parse({
-          id: "experiment",
-          title: "Your experiment",
-          body: "Try two weeks of external deadlines and watch both output and charge.",
-          evidenceRefs: [q("Q1.1")],
-        }),
-      ];
-      if (fixture !== "critic-constraints-win") {
-        sections.splice(
-          3,
-          0,
-          reportSectionSchema.parse({
-            id: "hidden",
-            title: "A possible hidden position",
-            body: "One hypothesis is that structure is being asked to serve aliveness.",
-            evidenceRefs: [q("Q1.3"), q("Q2.1")],
-          }),
-        );
-      }
-      if (fixture !== "empty-jungian") {
-        sections.push(
-          reportSectionSchema.parse({
-            id: "jungian",
-            title: "A Jungian lens",
-            body: "Compensation may illuminate the stall without naming you as an archetype.",
-            evidenceRefs: [q("Q2.1")],
-          }),
-        );
-      }
-      return { sections };
-    }
+    case "pass9":
+      return { sections: groundedReportSections(fixture, ctx) };
     case "pass10": {
       const draft = ctx.draftReport?.sections ?? [];
       const failingSectionIds = failingReportSectionIds({
@@ -327,13 +333,7 @@ export function passOutputFor(
       if (!failingSectionIds.length) {
         return { failingSectionIds: [], regeneratedSections: [] };
       }
-      const grounded = (
-        passOutputFor("pass9", fixture, {
-          assessmentId: ctx.assessmentId,
-          evidenceRef: ctx.evidenceRef,
-          requestedInsight: ctx.requestedInsight,
-        }) as { sections: ReportSection[] }
-      ).sections;
+      const grounded = groundedReportSections(fixture, ctx);
       return {
         failingSectionIds,
         regeneratedSections: grounded.filter((section) => failingSectionIds.includes(section.id)),

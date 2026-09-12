@@ -6,7 +6,7 @@ import {
   type AnalysisFixture,
 } from "@/engine/pipeline/fixtures";
 import { costForModel, type AnalysisStage } from "@/engine/pipeline/models";
-import { forkIdSchema, type ForkId } from "@/engine/schemas/analysis";
+import { forkIdSchema, reportSectionSchema, type ForkId } from "@/engine/schemas/analysis";
 
 function checkpointOutput(fixture: unknown) {
   if (fixture === "safety-high") {
@@ -93,13 +93,14 @@ export const mockLlmAdapter: LlmAdapter = {
         };
       }
       const assessmentId = String(input.assessmentId ?? "assess-1");
+      const draftRaw = input.draftReport as { sections?: unknown } | undefined;
       const draftReport =
-        input.draftReport &&
-        typeof input.draftReport === "object" &&
-        Array.isArray((input.draftReport as { sections?: unknown }).sections)
-          ? (input.draftReport as {
-              sections: Array<{ id: string; title: string; body: string; evidenceRefs: string[] }>;
-            })
+        draftRaw && Array.isArray(draftRaw.sections)
+          ? {
+              sections: draftRaw.sections.map((section) =>
+                reportSectionSchema.parse(section),
+              ),
+            }
           : undefined;
       return {
         stage,
