@@ -166,14 +166,38 @@ describe("buildStageLlmInput", () => {
             stage: request.stage,
             fixture: "happy",
             output: {
-              sections: ["problem", "reality", "contradiction", "alternative", "experiment"].map(
-                (id) => ({
-                  id,
-                  title: id,
+              sections: [
+                {
+                  id: "problem",
+                  title: "problem",
                   body: "Evidence-backed paragraph about the stall and constraints.",
                   evidenceRefs: ["a1:Q1.1"],
-                }),
-              ),
+                },
+                {
+                  id: "reality",
+                  title: "reality",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q0.4", "a1:Q0.5"],
+                },
+                {
+                  id: "contradiction",
+                  title: "contradiction",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q1.1", "a1:Q1.3"],
+                },
+                {
+                  id: "alternative",
+                  title: "alternative",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q0.5"],
+                },
+                {
+                  id: "experiment",
+                  title: "experiment",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q1.1"],
+                },
+              ],
             },
             model: request.model ?? "mock-strong",
             usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.001 },

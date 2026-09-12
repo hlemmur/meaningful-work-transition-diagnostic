@@ -255,36 +255,37 @@ export function passOutputFor(
         ],
       };
     case "pass9": {
+      const q = (questionId: string) => `${ctx.assessmentId}:${questionId}`;
       const sections = [
         reportSectionSchema.parse({
           id: "problem",
           title: "The problem as you see it",
           body: "You described a stall next to a desire for more alive work.",
-          evidenceRefs: [ctx.evidenceRef],
+          evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
         }),
         reportSectionSchema.parse({
           id: "reality",
           title: "What reality says",
           body: "Practical constraints and missing structure are in the picture.",
-          evidenceRefs: [ctx.evidenceRef],
+          evidenceRefs: [q("Q0.4"), q("Q0.5")],
         }),
         reportSectionSchema.parse({
           id: "contradiction",
           title: "The contradiction at the center",
           body: "Wanting the work and not taking the next step sit together.",
-          evidenceRefs: [ctx.evidenceRef],
+          evidenceRefs: [q("Q1.1"), q("Q1.3")],
         }),
         reportSectionSchema.parse({
           id: "alternative",
           title: "Another plausible interpretation",
           body: "The stall may be a sufficient response to constraints, not a hidden stance.",
-          evidenceRefs: [ctx.evidenceRef],
+          evidenceRefs: [q("Q0.5")],
         }),
         reportSectionSchema.parse({
           id: "experiment",
           title: "Your experiment",
           body: "Try two weeks of external deadlines and watch both output and charge.",
-          evidenceRefs: [ctx.evidenceRef],
+          evidenceRefs: [q("Q1.1")],
         }),
       ];
       if (fixture !== "critic-constraints-win") {
@@ -295,7 +296,7 @@ export function passOutputFor(
             id: "hidden",
             title: "A possible hidden position",
             body: "One hypothesis is that structure is being asked to serve aliveness.",
-            evidenceRefs: [ctx.evidenceRef],
+            evidenceRefs: [q("Q1.3"), q("Q2.1")],
           }),
         );
       }
@@ -305,7 +306,7 @@ export function passOutputFor(
             id: "jungian",
             title: "A Jungian lens",
             body: "Compensation may illuminate the stall without naming you as an archetype.",
-            evidenceRefs: [ctx.evidenceRef],
+            evidenceRefs: [q("Q2.1")],
           }),
         );
       }

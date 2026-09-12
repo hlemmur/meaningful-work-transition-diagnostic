@@ -21,7 +21,7 @@ function expectMentions(text: string, needles: string[]) {
 describe("promptRegistry contracts", () => {
   it("bumps every stub off v1 and names a JSON contract", () => {
     for (const [key, prompt] of Object.entries(promptRegistry)) {
-      expect(prompt.version, key).toMatch(/\.v2$/);
+      expect(prompt.version, key).toMatch(/\.v[2-9]\d*$/);
       expect(prompt.text.length, key).toBeGreaterThan(200);
       expect(prompt.text, key).toMatch(/empty arrays? are valid/i);
     }
@@ -117,6 +117,9 @@ describe("promptRegistry contracts", () => {
       "contradiction",
       "alternative",
       "experiment",
+      "caseSnapshot",
+      "distinct question",
+      "Q11.3",
     ]);
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
@@ -124,6 +127,7 @@ describe("promptRegistry contracts", () => {
       "Q11.3",
       "peel",
       "one-sentence",
+      "distinct question",
     ]);
   });
 });

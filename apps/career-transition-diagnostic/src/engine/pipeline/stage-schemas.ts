@@ -10,8 +10,13 @@ import {
   reportSectionSchema,
   REQUIRED_PEEL_SECTION_IDS,
 } from "../schemas/analysis";
+import { hasDiverseEvidenceRefs, MIN_DISTINCT_EVIDENCE_QUESTION_IDS } from "./report-grounding";
 
 export { REQUIRED_PEEL_SECTION_IDS } from "../schemas/analysis";
+export {
+  hasDiverseEvidenceRefs,
+  MIN_DISTINCT_EVIDENCE_QUESTION_IDS,
+} from "./report-grounding";
 
 export const pass1OutputSchema = z.object({
   consciousExplanationTags: z.array(z.string()).default([]),
@@ -68,6 +73,12 @@ export const pass9OutputSchema = z.object({
             message: `Missing required peel section id: ${id}`,
           });
         }
+      }
+      if (!hasDiverseEvidenceRefs(sections)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Report evidenceRefs must cite at least ${MIN_DISTINCT_EVIDENCE_QUESTION_IDS} distinct question ids`,
+        });
       }
     }),
 });
