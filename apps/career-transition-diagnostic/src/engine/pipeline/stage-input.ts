@@ -16,7 +16,7 @@ export const STAGE_INPUT_TRIM = {
 
 const REPORT_STAGES = new Set(["pass9", "pass10"]);
 
-function trimText(value: unknown, max = STAGE_INPUT_TRIM.maxAnswerChars) {
+function trimText(value: unknown, max: number = STAGE_INPUT_TRIM.maxAnswerChars) {
   if (typeof value === "string") {
     const trimmed = value.trim();
     return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
