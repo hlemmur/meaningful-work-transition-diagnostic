@@ -158,6 +158,7 @@ export function buildStageLlmInput(input: {
   fixture?: unknown;
   failSchema?: boolean;
   failStage?: unknown;
+  draftReport?: { sections: Array<{ id: string; title: string; body: string; evidenceRefs: string[] }> };
 }): Record<string, unknown> {
   const base: Record<string, unknown> = {
     fixture: input.fixture,
@@ -170,11 +171,22 @@ export function buildStageLlmInput(input: {
   if (!REPORT_STAGES.has(input.stage)) {
     return base;
   }
-  return {
+  const withSnapshot: Record<string, unknown> = {
     ...base,
     caseSnapshot: buildCaseSnapshot({
       caseState: input.caseState,
       answers: input.answers,
     }),
   };
+  if (input.stage === "pass10" && input.draftReport) {
+    withSnapshot.draftReport = {
+      sections: input.draftReport.sections.map((section) => ({
+        id: section.id,
+        title: section.title,
+        body: trimText(section.body, STAGE_INPUT_TRIM.maxQuoteChars),
+        evidenceRefs: section.evidenceRefs,
+      })),
+    };
+  }
+  return withSnapshot;
 }

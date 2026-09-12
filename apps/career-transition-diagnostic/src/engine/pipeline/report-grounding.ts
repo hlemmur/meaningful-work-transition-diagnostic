@@ -45,3 +45,21 @@ export function isRequestedInsightSpine(
   });
   return matching.length / sections.length >= 0.6;
 }
+
+/** Sections the pass10 critic should fail for grounding / evidence diversity. */
+export function failingReportSectionIds(input: {
+  sections: Pick<ReportSection, "id" | "body" | "evidenceRefs">[];
+  requestedInsight?: string;
+}) {
+  if (input.sections.length === 0) {
+    return [] as string[];
+  }
+  const thin = input.sections.filter((section) => section.body.trim().split(/\s+/).length < 12);
+  if (
+    !hasDiverseEvidenceRefs(input.sections) ||
+    isRequestedInsightSpine(input.sections, input.requestedInsight)
+  ) {
+    return input.sections.map((section) => section.id);
+  }
+  return thin.map((section) => section.id);
+}

@@ -137,8 +137,108 @@ describe("buildStageLlmInput", () => {
       evidenceRef: "a1:Q0.5",
       caseState: seededCase(),
       answers,
+      draftReport: {
+        sections: [
+          {
+            id: "problem",
+            title: "problem",
+            body: "thin paraphrase of sharp angles I cannot unsee",
+            evidenceRefs: ["a1:Q0.5"],
+          },
+        ],
+      },
     });
     expect(forPass10.caseSnapshot).toBeTruthy();
+    expect(forPass10.draftReport).toEqual({
+      sections: [
+        expect.objectContaining({
+          id: "problem",
+          evidenceRefs: ["a1:Q0.5"],
+        }),
+      ],
+    });
+  });
+
+  it("wires pass10 executeAnalysis input with draftReport for the critic", async () => {
+    const captured: Array<{ stage: string; input: Record<string, unknown> }> = [];
+    const llm: LlmAdapter = {
+      async completeStructured(request) {
+        captured.push({ stage: request.stage, input: request.input });
+        if (request.stage === "pass9") {
+          return {
+            stage: request.stage,
+            fixture: "happy",
+            output: {
+              sections: [
+                {
+                  id: "problem",
+                  title: "problem",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q1.1"],
+                },
+                {
+                  id: "reality",
+                  title: "reality",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q0.4", "a1:Q0.5"],
+                },
+                {
+                  id: "contradiction",
+                  title: "contradiction",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q1.1", "a1:Q1.3"],
+                },
+                {
+                  id: "alternative",
+                  title: "alternative",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q0.5"],
+                },
+                {
+                  id: "experiment",
+                  title: "experiment",
+                  body: "Evidence-backed paragraph about the stall and constraints.",
+                  evidenceRefs: ["a1:Q1.1"],
+                },
+              ],
+            },
+            model: request.model ?? "mock-strong",
+            usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.001 },
+          };
+        }
+        return {
+          stage: request.stage,
+          fixture: "happy",
+          output: { failingSectionIds: [], regeneratedSections: [] },
+          model: request.model ?? "mock-cheap",
+          usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.001 },
+        };
+      },
+    };
+
+    await executeAnalysis({
+      assessmentId: "a1",
+      answers: { "Q1.1": "I quit IT and freeze on marketing." },
+      previousCaseState: seededCase("a1"),
+      completedStages: ["pass1", "pass2", "pass3", "pass4", "pass5", "pass6", "pass7", "pass8"],
+      llm,
+      persistRun() {},
+      persistCaseState() {},
+    });
+
+    const pass10 = captured.find((item) => item.stage === "pass10");
+    expect(pass10?.input).toEqual(
+      expect.objectContaining({
+        draftReport: expect.objectContaining({
+          sections: expect.arrayContaining([
+            expect.objectContaining({ id: "problem", evidenceRefs: ["a1:Q1.1"] }),
+          ]),
+        }),
+        caseSnapshot: expect.objectContaining({
+          evidenceAllowlist: expect.arrayContaining(["a1:Q1.1"]),
+        }),
+      }),
+    );
   });
 
   it("trims long answer strings so the snapshot stays bounded", () => {
