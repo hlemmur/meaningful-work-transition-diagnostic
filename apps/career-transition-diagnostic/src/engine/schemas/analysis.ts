@@ -122,8 +122,26 @@ export const experimentSchema = z.object({
   practicalRequirements: z.array(z.string()),
 });
 
+export const reportSectionIdSchema = z.enum([
+  "problem",
+  "reality",
+  "contradiction",
+  "hidden",
+  "alternative",
+  "experiment",
+  "jungian",
+]);
+
+export const REQUIRED_PEEL_SECTION_IDS = [
+  "problem",
+  "reality",
+  "contradiction",
+  "alternative",
+  "experiment",
+] as const satisfies ReadonlyArray<z.infer<typeof reportSectionIdSchema>>;
+
 export const reportSectionSchema = z.object({
-  id: z.string(),
+  id: reportSectionIdSchema,
   title: z.string(),
   body: z.string(),
   evidenceRefs: z.array(z.string()),

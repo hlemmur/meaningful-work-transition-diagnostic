@@ -56,6 +56,18 @@ export function evaluateReport(input: {
   findings.push(
     finding("has-sections", sections.length > 0, "Report must contain sections."),
   );
+  const peelIds = ["problem", "reality", "contradiction", "alternative", "experiment"];
+  const present = new Set(sections.map((section) => section.id));
+  const missingPeel = peelIds.filter((id) => !present.has(id));
+  findings.push(
+    finding(
+      "peel-sections",
+      missingPeel.length === 0,
+      missingPeel.length
+        ? `Missing peel sections: ${missingPeel.join(", ")}`
+        : "Core peel-order sections are present.",
+    ),
+  );
 
   const missingEvidence = sections.filter((section) => section.evidenceRefs.length === 0);
   findings.push(

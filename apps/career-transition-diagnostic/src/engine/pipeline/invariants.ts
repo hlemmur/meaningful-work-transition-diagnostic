@@ -126,10 +126,10 @@ export function sanitizeReportSections(
 
   return sections
     .filter((section) => {
-      if (/jungian/i.test(section.title) && state.jungianLenses.length === 0) {
+      if ((section.id === "jungian" || /jungian/i.test(section.title)) && state.jungianLenses.length === 0) {
         return false;
       }
-      if (/hidden position/i.test(section.title) && !state.hiddenPosition) {
+      if ((section.id === "hidden" || /hidden position/i.test(section.title)) && !state.hiddenPosition) {
         return false;
       }
       return true;

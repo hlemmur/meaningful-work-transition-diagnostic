@@ -108,11 +108,22 @@ describe("promptRegistry contracts", () => {
       "imaginal",
       "riskLevel",
     ]);
-    expectMentions(promptRegistry.pass9.text, ["sections", "peel", "evidenceRefs"]);
+    expectMentions(promptRegistry.pass9.text, [
+      "sections",
+      "peel",
+      "evidenceRefs",
+      "problem",
+      "reality",
+      "contradiction",
+      "alternative",
+      "experiment",
+    ]);
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
       "regeneratedSections",
       "Q11.3",
+      "peel",
+      "one-sentence",
     ]);
   });
 });

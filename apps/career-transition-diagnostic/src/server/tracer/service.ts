@@ -8,7 +8,7 @@ import { isAdaptiveQuestionId } from "@/engine/checkpoints/schema";
 import { SUPPORT_COPY } from "@/engine/checkpoints/bank";
 import { executeAnalysis, type AnalysisPipelineResult } from "@/engine/pipeline/run";
 import type { AnalysisFixture } from "@/engine/pipeline/fixtures";
-import type { AnalysisStage } from "@/engine/pipeline/models";
+import { ANALYSIS_STAGES, type AnalysisStage } from "@/engine/pipeline/models";
 import type { ForkId } from "@/engine/schemas/analysis";
 import {
   MARKETING_CONSENT_COPY_VERSION,
@@ -16,7 +16,7 @@ import {
   type MarketingContact,
   type WelcomeConsentInput,
 } from "../consent/copy";
-import { isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
+import { assertMockMode, isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
 import { retentionMs } from "@/config/launch-gate";
 import { getActiveStore, getRepository, withStore } from "./repository";
 import type { AssessmentRecord, MarketingConsentRecord, TracerStore } from "./records";
@@ -728,6 +728,39 @@ export async function getAdminCase(assessmentId: string) {
       runs: getStore().analysisRuns.filter((item) => item.assessmentId === assessmentId),
       analysisStatus: analysisStatusInStore(assessmentId),
       draft: getDraftReportInStore(assessmentId),
+    };
+  });
+}
+
+export async function invalidateAnalysisFromStage(
+  assessmentId: string,
+  fromStage: AnalysisStage,
+) {
+  assertMockMode("invalidateAnalysisFromStage");
+  if (supabasePersistenceEnabled()) {
+    throw new Error("Not found");
+  }
+  const fromIndex = ANALYSIS_STAGES.indexOf(fromStage);
+  if (fromIndex < 0) {
+    throw new Error(`Unknown stage: ${fromStage}`);
+  }
+  const drop = new Set(ANALYSIS_STAGES.slice(fromIndex));
+  return withStore(() => {
+    const store = getStore();
+    const assessment = store.assessments.find((item) => item.id === assessmentId);
+    if (!assessment) {
+      throw new Error("Assessment not found");
+    }
+    store.analysisRuns = store.analysisRuns.filter(
+      (run) => run.assessmentId !== assessmentId || !drop.has(run.stage),
+    );
+    store.caseStateVersions = store.caseStateVersions.filter(
+      (version) => version.assessmentId !== assessmentId || !drop.has(version.stage as AnalysisStage),
+    );
+    store.reports = store.reports.filter((report) => report.assessmentId !== assessmentId);
+    return {
+      remainingRuns: store.analysisRuns.filter((run) => run.assessmentId === assessmentId).length,
+      clearedStages: [...drop],
     };
   });
 }

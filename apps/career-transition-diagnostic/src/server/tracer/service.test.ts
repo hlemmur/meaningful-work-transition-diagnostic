@@ -11,6 +11,7 @@ import {
   restoreMockSubmittedCase,
   exportMockTracerStore,
   importMockTracerStore,
+  invalidateAnalysisFromStage,
   saveAnswer,
   submitAssessment,
   runAnalysisPipeline,
@@ -215,6 +216,57 @@ describe("restoreMockSubmittedCase", () => {
     expect(restored?.answers["Q1.1"]).toBe("kept after restart");
     const exported = await exportMockTracerStore();
     expect(exported.analysisRuns.map((run) => run.stage)).toEqual(["pass1"]);
+  });
+
+  it("clears completed passes from a stage so resume can regenerate the draft", async () => {
+    process.env.APP_MODE = "mock";
+    const { assessmentId, accessToken } = await purchaseWithConsent();
+    await saveAnswer(accessToken, "Q1.1", "structure is the issue");
+    await importMockTracerStore({
+      ...(await exportMockTracerStore()),
+      analysisRuns: [
+        {
+          assessmentId,
+          stage: "pass8",
+          attempt: 1,
+          promptVersion: "test",
+          model: "mock-cheap",
+          status: "success",
+          idempotencyKey: "pass8",
+        },
+        {
+          assessmentId,
+          stage: "pass9",
+          attempt: 1,
+          promptVersion: "test",
+          model: "mock-strong",
+          status: "success",
+          idempotencyKey: "pass9",
+        },
+      ],
+      reports: [
+        {
+          assessmentId,
+          engineVersion: "engine.v2",
+          status: "draft",
+          sections: [
+            {
+              id: "problem",
+              title: "The problem",
+              body: "thin",
+              evidenceRefs: [`${assessmentId}:Q1.1`],
+            },
+          ],
+        },
+      ],
+    });
+
+    const cleared = await invalidateAnalysisFromStage(assessmentId, "pass9");
+    expect(cleared.clearedStages).toEqual(["pass9", "pass10"]);
+    const exported = await exportMockTracerStore();
+    expect(exported.analysisRuns.map((run) => run.stage)).toEqual(["pass8"]);
+    expect(exported.reports).toEqual([]);
+    expect(await getAssessmentByAccessToken(accessToken)).toBeTruthy();
   });
 
   it("refuses to write when a durable store is configured", async () => {

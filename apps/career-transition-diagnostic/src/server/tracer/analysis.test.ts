@@ -187,7 +187,11 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     const evidenceIds = new Set(
       result.caseState.consciousNarrative.statedProblem.map((item) => item.id),
     );
-    expect(report?.generated.sections.length).toBeGreaterThan(0);
+    expect(report?.generated.sections.length).toBeGreaterThanOrEqual(5);
+    const ids = new Set(report?.generated.sections.map((section) => section.id));
+    for (const id of ["problem", "reality", "contradiction", "alternative", "experiment"]) {
+      expect(ids.has(id)).toBe(true);
+    }
     for (const section of report?.generated.sections ?? []) {
       expect(section.evidenceRefs.length).toBeGreaterThan(0);
       for (const ref of section.evidenceRefs) {
