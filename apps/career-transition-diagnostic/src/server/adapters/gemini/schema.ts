@@ -112,7 +112,14 @@ function stripUnsupported(node: unknown): unknown {
   const obj = node as JsonSchema;
   const out: JsonSchema = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (key === "$schema" || key === "$defs" || key === "definitions" || key === "additionalProperties") {
+    if (
+      key === "$schema" ||
+      key === "$defs" ||
+      key === "definitions" ||
+      key === "additionalProperties" ||
+      key === "minItems" ||
+      key === "maxItems"
+    ) {
       continue;
     }
     out[key] = stripUnsupported(value);
@@ -142,25 +149,26 @@ function withPropertyOrdering(obj: JsonSchema): JsonSchema {
   if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
     return obj;
   }
-  const keys = Object.keys(properties);
-  if (!keys.length) {
+  const allKeys = Object.keys(properties);
+  if (!allKeys.length) {
     return obj;
   }
-  const requiredSet = new Set(Array.isArray(obj.required) ? (obj.required as string[]) : []);
+  // Gemini 3 rejects schemas that list optional properties (and vague 400s on
+  // overly complex ones). Keep only required keys; Zod still accepts extras.
+  const required = (
+    Array.isArray(obj.required) && (obj.required as string[]).length
+      ? (obj.required as string[])
+      : allKeys
+  ).filter((key) => key in (properties as JsonSchema));
   const nextProperties: JsonSchema = {};
-  for (const key of keys) {
-    const value = (properties as JsonSchema)[key];
-    if (!requiredSet.has(key) && value && typeof value === "object" && !Array.isArray(value)) {
-      nextProperties[key] = { ...(value as JsonSchema), nullable: true };
-    } else {
-      nextProperties[key] = value;
-    }
+  for (const key of required) {
+    nextProperties[key] = (properties as JsonSchema)[key];
   }
   return {
     ...obj,
     properties: nextProperties,
-    required: keys,
-    propertyOrdering: keys,
+    required,
+    propertyOrdering: required,
   };
 }
 

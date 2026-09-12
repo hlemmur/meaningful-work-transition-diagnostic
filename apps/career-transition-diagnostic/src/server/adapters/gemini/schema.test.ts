@@ -39,35 +39,31 @@ describe("Gemini schema sanitizer", () => {
     }
   });
 
-  it("marks optional pass3 fields nullable and lists every property as required", () => {
+  it("omits optional pass3 fields so Gemini does not receive listed-but-optional properties", () => {
     const pass3 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass3")).properties);
     const item = asObject(asObject(pass3.hypotheses).items);
     expect(item.required).toEqual(Object.keys(asObject(item.properties)));
     expect(item.propertyOrdering).toEqual(item.required);
-    expect(item.properties).toEqual(
-      expect.objectContaining({
-        consciousPosition: expect.objectContaining({ type: "string", nullable: true }),
-        proposedHiddenPosition: expect.objectContaining({ type: "string", nullable: true }),
-        possibleProtectiveFunction: expect.objectContaining({ type: "string", nullable: true }),
-        possibleCompensatoryAim: expect.objectContaining({ type: "string", nullable: true }),
-        developmentalTension: expect.objectContaining({ type: "string", nullable: true }),
-      }),
-    );
+    expect(item.properties).not.toHaveProperty("consciousPosition");
+    expect(item.properties).not.toHaveProperty("proposedHiddenPosition");
+    expect(item.properties).not.toHaveProperty("possibleProtectiveFunction");
+    expect(item.properties).not.toHaveProperty("possibleCompensatoryAim");
+    expect(item.properties).not.toHaveProperty("developmentalTension");
   });
 
-  it("keeps min/max item counts for pass2, pass3, pass5, and pass8", () => {
+  it("strips min/max item counts that inflate Gemini schema complexity", () => {
     const pass2 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass2")).properties);
-    expect(asObject(pass2.contradictions).minItems).toBe(1);
+    expect(asObject(pass2.contradictions).minItems).toBeUndefined();
 
     const pass3 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass3")).properties);
-    expect(asObject(pass3.hypotheses).minItems).toBe(3);
-    expect(asObject(pass3.hypotheses).maxItems).toBe(5);
+    expect(asObject(pass3.hypotheses).minItems).toBeUndefined();
+    expect(asObject(pass3.hypotheses).maxItems).toBeUndefined();
 
     const pass5 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass5")).properties);
-    expect(asObject(pass5.votes).minItems).toBe(1);
+    expect(asObject(pass5.votes).minItems).toBeUndefined();
 
     const pass8 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass8")).properties);
-    expect(asObject(pass8.experiments).minItems).toBe(1);
+    expect(asObject(pass8.experiments).minItems).toBeUndefined();
   });
 });
 
