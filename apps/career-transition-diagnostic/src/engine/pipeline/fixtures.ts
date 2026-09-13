@@ -534,8 +534,8 @@ function groundedReportSections(
     reportSectionSchema.parse({
       id: "reality",
       title: "What reality says",
-      body: "Your practical constraints and missing structure are in the picture.",
-      evidenceRefs: [q("Q0.4"), q("Q0.5")],
+      body: "Your practical constraints and missing structure are in the picture. When an image or scene arrives, it belongs here as material, not garnish.",
+      evidenceRefs: [q("Q0.4"), q("Q0.5"), q("Q10.1")],
     }),
     reportSectionSchema.parse({
       id: "contradiction",
@@ -563,8 +563,8 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis is that your structure is being asked to serve aliveness without collapsing into grind-only identity.",
-        evidenceRefs: [q("Q1.3"), q("Q2.1")],
+        body: "One hypothesis is that your structure is being asked to serve aliveness without collapsing into grind-only identity. Any symbolic scene can mark the threshold you keep circling.",
+        evidenceRefs: [q("Q1.3"), q("Q2.1"), q("Q10.1")],
       }),
     );
   }

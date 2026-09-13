@@ -1,7 +1,23 @@
 import { describe, expect, it } from "vitest";
+import { emptyCaseState } from "@/engine/checkpoints/empty-case-state";
 import { REQUIRED_PEEL_SECTION_IDS } from "@/engine/schemas/analysis";
-import type { CaseState } from "@/engine/schemas/case-state";
 import { evaluateReport } from "./rubric";
+
+function chargeCase(chargeIntensity: number, emotion: string) {
+  const state = emptyCaseState("a1");
+  state.affect.chargeIntensity = chargeIntensity;
+  state.affect.emotions = [
+    {
+      id: "a1:Q3.1",
+      assessmentId: "a1",
+      questionId: "Q3.1",
+      rawQuote: emotion,
+      normalizedMeaning: emotion,
+      evidenceType: "emotion",
+    },
+  ];
+  return state;
+}
 
 describe("evaluateReport evidence grounding", () => {
   const section = (id: string, body: string, evidenceRefs: string[]) => ({
@@ -123,12 +139,7 @@ describe("evaluateReport evidence grounding", () => {
           ),
         ],
       },
-      caseState: {
-        affect: {
-          emotions: [{ text: "shame", evidenceRefs: ["a1:Q3.1"] }],
-          chargeIntensity: 2,
-        } as CaseState["affect"],
-      },
+      caseState: chargeCase(2, "shame"),
     });
     expect(withCharge.findings.find((item) => item.id === "charge-language")?.passed).toBe(true);
     expect(withCharge.passed).toBe(true);
@@ -157,12 +168,7 @@ describe("evaluateReport evidence grounding", () => {
           ]),
         ],
       },
-      caseState: {
-        affect: {
-          emotions: [{ text: "terror", evidenceRefs: ["a1:Q3.1"] }],
-          chargeIntensity: 3,
-        } as CaseState["affect"],
-      },
+      caseState: chargeCase(3, "terror"),
     });
     expect(withoutCharge.findings.find((item) => item.id === "charge-language")?.passed).toBe(false);
     expect(withoutCharge.passed).toBe(false);
