@@ -5,6 +5,7 @@ import {
   isParaphraseOf,
   reportLayerCoverage,
   senexScoldOnly,
+  clientVoiceGates,
 } from "@/engine/pipeline/gates";
 import { isRequestedInsightSpine } from "@/engine/pipeline/report-grounding";
 
@@ -177,6 +178,10 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
 
   const layers = reportLayerCoverage(sections, caseState);
   scores.push(score("layer_coverage", layers.passed, layers.detail));
+
+  for (const voice of clientVoiceGates(sections)) {
+    scores.push(score(voice.id, voice.passed, voice.detail));
+  }
 
   const inflation =
     /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)|you are (an? )?(puer|senex)\b/i.test(

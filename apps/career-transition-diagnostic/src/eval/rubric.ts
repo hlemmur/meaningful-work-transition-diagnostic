@@ -6,6 +6,7 @@ import {
   isRequestedInsightSpine,
   MIN_DISTINCT_EVIDENCE_QUESTION_IDS,
 } from "@/engine/pipeline/report-grounding";
+import { clientVoiceGates } from "@/engine/pipeline/gates";
 
 export type RubricFinding = {
   id: string;
@@ -183,6 +184,10 @@ export function evaluateReport(input: {
           : "Affect is indicated in CaseState but peel lacks charge/body language.",
       ),
     );
+  }
+
+  for (const voice of clientVoiceGates(sections)) {
+    findings.push(finding(voice.id, voice.passed, voice.detail));
   }
 
   const constraints = input.caseState?.practicalContext?.constraints.length ?? 0;
