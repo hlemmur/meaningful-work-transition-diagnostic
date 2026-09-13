@@ -27,8 +27,8 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
   },
   {
     id: "eternal-youth-identity",
-    re: /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)/i,
-    detail: "Report must not treat eternal youth as the person's identity.",
+    re: /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)|romance of eternal becoming|romance-of-eternal-becoming|you live in (an? )?(endless|eternal) becoming/i,
+    detail: "Report must not treat eternal youth / eternal becoming as the person's identity.",
   },
   {
     id: "confidence-only",

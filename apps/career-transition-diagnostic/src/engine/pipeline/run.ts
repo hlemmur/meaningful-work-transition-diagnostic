@@ -18,11 +18,8 @@ import {
   assertCaseStateCompleteness,
   critiquesNonEmpty,
   experimentBoundToHypothesis,
-  reportLayerCoverage,
-  senexScoldOnly,
-  clientVoiceGates,
+  assertPeelHardGates,
   throwGate,
-  tierACitationGates,
   warrantsJungianPolarity,
 } from "./gates";
 import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from "./models";
@@ -137,24 +134,7 @@ export async function executeAnalysis(input: {
           passOutputSchemas.pass9.parse(result.output).sections,
           caseState,
         );
-        const layers = reportLayerCoverage(sections, caseState);
-        if (!layers.passed) {
-          throwGate(layers);
-        }
-        for (const citation of tierACitationGates(sections, caseState)) {
-          if (!citation.passed) {
-            throwGate(citation);
-          }
-        }
-        for (const voice of clientVoiceGates(sections)) {
-          if (!voice.passed) {
-            throwGate(voice);
-          }
-        }
-        const senex = senexScoldOnly(sections.map((section) => section.body).join("\n"));
-        if (!senex.passed) {
-          throwGate(senex);
-        }
+        assertPeelHardGates(sections, caseState);
         report = {
           assessmentId: input.assessmentId,
           engineVersion: ENGINE_VERSION,
@@ -175,6 +155,7 @@ export async function executeAnalysis(input: {
             ),
           };
         }
+        assertPeelHardGates(report.sections, caseState);
       }
 
       input.persistRun({

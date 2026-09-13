@@ -14,6 +14,9 @@ import {
   secondPersonVoice,
   plainTitles,
   noAnalystOpeners,
+  protectionAndAimInPeel,
+  imaginalWhenSpeech,
+  antiInflationDiagnosis,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -307,5 +310,103 @@ describe("client voice gates", () => {
       ),
     ];
     expect(noAnalystOpeners(sections).passed).toBe(false);
+  });
+});
+
+describe("soft-depth conditional peel gates", () => {
+  it("protectionAndAimInPeel skips when hidden is absent", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    expect(protectionAndAimInPeel([section("problem", "You stall.", ["g1:Q1.1"])], state).passed).toBe(
+      true,
+    );
+  });
+
+  it("protectionAndAimInPeel fails when CaseState has aim but peel only names protection", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    state.hiddenPosition = {
+      consciousPosition: "freedom",
+      observedPattern: "stall",
+      possibleHiddenPosition: "keeps authority outside",
+      protectiveFunction: ["Protects ethereal identity"],
+      possibleCompensatoryAim: "structure in service of aliveness",
+      threatenedByChange: [],
+      developmentalTension: { poleA: "a", poleB: "b" },
+      imageVoteSummary: "n/a",
+      evidenceRefs: ["g1:Q1.1"],
+      counterEvidenceRefs: [],
+      confidence: "moderate",
+    };
+    const sections = [
+      section("hidden", "Your protection keeps lightness without ordinary exposure.", ["g1:Q1.1"]),
+    ];
+    expect(protectionAndAimInPeel(sections, state).passed).toBe(false);
+  });
+
+  it("protectionAndAimInPeel passes when peel names both siblings", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    state.hiddenPosition = {
+      consciousPosition: "freedom",
+      observedPattern: "stall",
+      possibleHiddenPosition: "keeps authority outside",
+      protectiveFunction: ["Protects ethereal identity"],
+      possibleCompensatoryAim: "structure in service of aliveness",
+      threatenedByChange: [],
+      developmentalTension: { poleA: "a", poleB: "b" },
+      imageVoteSummary: "n/a",
+      evidenceRefs: ["g1:Q1.1"],
+      counterEvidenceRefs: [],
+      confidence: "moderate",
+    };
+    const sections = [
+      section(
+        "hidden",
+        "Your protection keeps lightness; the developmental aim may be structure in service of aliveness.",
+        ["g1:Q1.1"],
+      ),
+    ];
+    expect(protectionAndAimInPeel(sections, state).passed).toBe(true);
+  });
+
+  it("imaginalWhenSpeech skips without obstacleSpeech", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    expect(
+      imaginalWhenSpeech([section("reality", "Practical notes only.", ["g1:Q1.1"])], state).passed,
+    ).toBe(true);
+  });
+
+  it("imaginalWhenSpeech fails when speech exists without imaginal or dialogue", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    state.symbolicMaterial.obstacleSpeech = "Turn back before you are seen.";
+    const sections = [
+      section("reality", "Money pressure is real and ADHD constraints matter.", ["g1:Q1.1"]),
+      section("hidden", "One hypothesis about authority outside.", ["g1:Q1.1"]),
+    ];
+    expect(imaginalWhenSpeech(sections, state).passed).toBe(false);
+  });
+
+  it("imaginalWhenSpeech passes with generic dialogue engagement (no origin tokens)", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    state.symbolicMaterial.obstacleSpeech = "Turn back before you are seen.";
+    const sections = [
+      section(
+        "reality",
+        "You ask the image what it wants; its voice says you are unequipped at the threshold.",
+        ["g1:Q1.1"],
+      ),
+    ];
+    expect(imaginalWhenSpeech(sections, state).passed).toBe(true);
+  });
+
+  it("antiInflationDiagnosis fails on romance of eternal becoming", () => {
+    expect(
+      antiInflationDiagnosis(
+        "Your stall is the romance of eternal becoming rather than ordinary steps.",
+      ).passed,
+    ).toBe(false);
+    expect(
+      antiInflationDiagnosis(
+        "One hypothesis: possibility preferred over incarnation, without diagnosing you as an archetype.",
+      ).passed,
+    ).toBe(true);
   });
 });
