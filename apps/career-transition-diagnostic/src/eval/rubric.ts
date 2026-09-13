@@ -34,6 +34,16 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
     re: /follow (your )?(alignment|purpose).{0,80}money|money (will )?comes? (from |through )?(ease|alignment|purpose)/i,
     detail: "Report must not claim that alignment or purpose produces money.",
   },
+  {
+    id: "senex-scold",
+    re: /grow up and (work|grind)|stop seeking (insight|revelation)|just (need )?(more )?discipline/i,
+    detail: "Report must not collapse development to senex-scold / grind-only.",
+  },
+  {
+    id: "magician-feed",
+    re: /this report (finally )?proves you (are|were) legitimate/i,
+    detail: "Report must not feed Magician hunger with authorizing certainty.",
+  },
 ];
 
 function finding(id: string, passed: boolean, detail: string): RubricFinding {

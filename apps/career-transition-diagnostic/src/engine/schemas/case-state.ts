@@ -141,10 +141,12 @@ export const caseStateSchema = z.object({
   imageVote: imageVoteSchema.optional(),
   hiddenPosition: hiddenPositionSchema.optional(),
   jungianLenses: z.array(jungianLensSchema),
+  jungianOmitReason: z.string().optional(),
   realityCheck: realityCheckSchema.optional(),
   experiments: z.array(experimentSchema),
   unresolvedQuestions: z.array(z.string()),
   safetyFlags: z.array(safetyFlagSchema),
+  gateRemediations: z.array(z.string()).optional(),
 });
 
 export type CaseState = z.infer<typeof caseStateSchema>;

@@ -32,13 +32,15 @@ export const pass3OutputSchema = z.object({
 });
 
 export const pass4OutputSchema = z.object({
-  critiques: z.array(
-    z.object({
-      hypothesisId: z.string(),
-      mundaneAlternative: z.string(),
-      survives: z.boolean(),
-    }),
-  ),
+  critiques: z
+    .array(
+      z.object({
+        hypothesisId: z.string(),
+        mundaneAlternative: z.string(),
+        survives: z.boolean(),
+      }),
+    )
+    .min(1),
 });
 
 export const pass5OutputSchema = z.object({
@@ -53,6 +55,7 @@ export const pass6OutputSchema = z.object({
 
 export const pass7OutputSchema = z.object({
   jungianLenses: z.array(jungianLensSchema).max(3),
+  omitReason: z.string().optional(),
 });
 
 export const pass8OutputSchema = z.object({

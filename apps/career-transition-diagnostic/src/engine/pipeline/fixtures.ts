@@ -18,21 +18,39 @@ export type AnalysisFixture =
   | "image-weakens"
   | "critic-constraints-win"
   | "empty-jungian"
-  | "schema-fail";
+  | "schema-fail"
+  | "origin-gold"
+  | "q113-as-hidden"
+  | "q113-as-central-contradiction"
+  | "empty-critiques"
+  | "image-insufficient-rich"
+  | "starved-case-report"
+  | "wrong-experiment"
+  | "jungian-diagnose"
+  | "senex-scold-only";
+
+const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
+  { marker: "FORCE_SCHEMA_FAILURE", fixture: "schema-fail" },
+  { marker: "IMAGE_WEAKENS", fixture: "image-weakens" },
+  { marker: "CRITIC_CONSTRAINTS_WIN", fixture: "critic-constraints-win" },
+  { marker: "EMPTY_JUNGIAN", fixture: "empty-jungian" },
+  { marker: "ORIGIN_GOLD", fixture: "origin-gold" },
+  { marker: "Q113_AS_HIDDEN", fixture: "q113-as-hidden" },
+  { marker: "Q113_AS_CENTRAL", fixture: "q113-as-central-contradiction" },
+  { marker: "EMPTY_CRITIQUES", fixture: "empty-critiques" },
+  { marker: "IMAGE_INSUFFICIENT_RICH", fixture: "image-insufficient-rich" },
+  { marker: "STARVED_CASE_REPORT", fixture: "starved-case-report" },
+  { marker: "WRONG_EXPERIMENT", fixture: "wrong-experiment" },
+  { marker: "JUNGIAN_DIAGNOSE", fixture: "jungian-diagnose" },
+  { marker: "SENEX_SCOLD_ONLY", fixture: "senex-scold-only" },
+];
 
 export function inferAnalysisFixture(answers: Record<string, unknown>): AnalysisFixture {
   const blob = JSON.stringify(answers);
-  if (blob.includes("FORCE_SCHEMA_FAILURE")) {
-    return "schema-fail";
-  }
-  if (blob.includes("IMAGE_WEAKENS")) {
-    return "image-weakens";
-  }
-  if (blob.includes("CRITIC_CONSTRAINTS_WIN")) {
-    return "critic-constraints-win";
-  }
-  if (blob.includes("EMPTY_JUNGIAN")) {
-    return "empty-jungian";
+  for (const { marker, fixture } of FIXTURE_MARKERS) {
+    if (blob.includes(marker)) {
+      return fixture;
+    }
   }
   if (typeof answers["Q0.5"] === "string" && answers["Q0.5"].trim()) {
     return "practical-rival";
@@ -79,7 +97,47 @@ function hyp(
   });
 }
 
-function contradiction(assessmentId: string, evidenceRef: string): Contradiction {
+function contradiction(
+  assessmentId: string,
+  evidenceRef: string,
+  fixture: AnalysisFixture,
+): Contradiction {
+  if (fixture === "q113-as-central-contradiction") {
+    return contradictionSchema.parse({
+      id: "c-central",
+      statementA: "I want sharp angles I cannot unsee",
+      statementB: "I want confirmation of the path",
+      evidenceA: [`${assessmentId}:Q11.3`],
+      evidenceB: [`${assessmentId}:Q11.3`],
+      significance: "meta hunger",
+      categories: ["insight"],
+      originForks: ["legitimacy_loop"],
+      scores: {
+        evidenceStrength: 0.8,
+        recurrence: 0.5,
+        explanatoryImportance: 0.9,
+        charge: 0.5,
+      },
+    });
+  }
+  if (fixture === "origin-gold" || fixture === "wrong-experiment") {
+    return contradictionSchema.parse({
+      id: "c-central",
+      statementA: "I want freedom and self-employment",
+      statementB: "I function when external structure carries deadlines",
+      evidenceA: [evidenceRef],
+      evidenceB: [`${assessmentId}:Q4.8`],
+      significance: "container vs freedom",
+      categories: ["structure"],
+      originForks: ["container_loss_vs_capacity"],
+      scores: {
+        evidenceStrength: 0.9,
+        recurrence: 0.9,
+        explanatoryImportance: 0.9,
+        charge: 0.8,
+      },
+    });
+  }
   return contradictionSchema.parse({
     id: "c-central",
     statementA: "I want work that feels alive.",
@@ -103,6 +161,171 @@ function groundedReportSections(
   ctx: { assessmentId: string; evidenceRef: string },
 ): ReportSection[] {
   const q = (questionId: string) => `${ctx.assessmentId}:${questionId}`;
+
+  if (fixture === "starved-case-report") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You seek sharp angles you cannot unsee.",
+        evidenceRefs: [q("Q11.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Insight hunger dominates.",
+        evidenceRefs: [q("Q11.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "Wanting revelation and confirmation.",
+        evidenceRefs: [q("Q11.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "Maybe confidence.",
+        evidenceRefs: [q("Q11.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "Ask for sharper critique.",
+        evidenceRefs: [q("Q11.3")],
+      }),
+    ];
+  }
+
+  if (fixture === "jungian-diagnose") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You described a stall next to a desire for more alive work.",
+        evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Practical constraints and missing structure are in the picture.",
+        evidenceRefs: [q("Q0.4"), q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "Wanting the work and not taking the next step sit together.",
+        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis is that structure is being asked to serve aliveness.",
+        evidenceRefs: [q("Q1.3"), q("Q2.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "The stall may be a sufficient response to constraints, not a hidden stance.",
+        evidenceRefs: [q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "Try two weeks of external deadlines and watch both output and charge.",
+        evidenceRefs: [q("Q1.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "You are a Puer. Grow up and grind until the vision dies into discipline.",
+        evidenceRefs: [q("Q2.1")],
+      }),
+    ];
+  }
+
+  if (fixture === "senex-scold-only") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You stall because you avoid the unglamorous discomfort of daily execution.",
+        evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Stop seeking insight. Grow up and grind. Just need more discipline every day.",
+        evidenceRefs: [q("Q0.4"), q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "Wanting ease while refusing ordinary work.",
+        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "There is no alternative reading; only harder work.",
+        evidenceRefs: [q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "Force yourself through two weeks of grind with no other measure of success.",
+        evidenceRefs: [q("Q1.1")],
+      }),
+    ];
+  }
+
+  if (fixture === "origin-gold") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You left IT for meaningful coaching work yet freeze at public exposure after years of container-supported functioning.",
+        evidenceRefs: [q("Q1.1"), q("Q2.2")],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Without external deadlines, salary, and legitimacy you stall; ADHD and financial pressure are real constraints. Money historically arrived through industry machinery, not pure self-authorization.",
+        evidenceRefs: [q("Q0.5"), q("Q8.4"), q("Q4.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You want freedom and self-employment, yet you function when structure and accountability impact someone else. Projection toward grounded mentors points to a hooked quality of claiming space.",
+        evidenceRefs: [q("Q1.2"), q("Q5.1"), q("Q4.8")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis: freedom while an external container still carries authority and money. Protection keeps lightness; the developmental aim may be structure in service of aliveness. The bargain protects ethereal identity while the pipe image marks a threshold mid-crossing.",
+        evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q10.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "This may simply be missing acquisition skill and ADHD-friendly infrastructure, not a hidden stance.",
+        evidenceRefs: [q("Q0.5"), q("Q8.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "For two weeks, run outreach under a mutual dependency with real stakes and watch output plus body charge — testing container loss versus capacity.",
+        evidenceRefs: [q("QB.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "A puer–senex polarity may illuminate possibility preferred over incarnation, without diagnosing you as an archetype. Limits: ADHD and job-shape mismatch may still suffice.",
+        evidenceRefs: [q("Q9.2")],
+      }),
+    ];
+  }
+
   const sections = [
     reportSectionSchema.parse({
       id: "problem",
@@ -177,9 +400,15 @@ export function passOutputFor(
   const depth = hyp(
     "hyp-depth",
     "psychological",
-    "The stall may be protecting a not-yet-incarnated way of working.",
+    fixture === "origin-gold" || fixture === "wrong-experiment"
+      ? "Container loss vs capacity — freedom without internalized structure stalls action"
+      : "The stall may be protecting a not-yet-incarnated way of working.",
     ctx.evidenceRef,
     {
+      originForks:
+        fixture === "origin-gold" || fixture === "wrong-experiment"
+          ? ["container_loss_vs_capacity"]
+          : ["history_vs_stated_cause"],
       scoring: scoring({
         imageConstraintFit: 0.9,
         simplerAlternativePenalty: 0.2,
@@ -214,7 +443,9 @@ export function passOutputFor(
   const includePractical =
     fixture === "practical-rival" ||
     fixture === "critic-constraints-win" ||
-    fixture === "image-weakens";
+    fixture === "image-weakens" ||
+    fixture === "origin-gold" ||
+    fixture === "empty-jungian";
   const hypotheses = includePractical
     ? [depth, practical, identity]
     : [depth, identity, hyp("hyp-env", "environmental", "The current container may be missing.", ctx.evidenceRef)];
@@ -223,10 +454,13 @@ export function passOutputFor(
     case "pass1":
       return { consciousExplanationTags: ["lack_of_confidence"], unresolvedQuestions: [] };
     case "pass2":
-      return { contradictions: [contradiction(ctx.assessmentId, ctx.evidenceRef)] };
+      return { contradictions: [contradiction(ctx.assessmentId, ctx.evidenceRef, fixture)] };
     case "pass3":
       return { hypotheses };
     case "pass4":
+      if (fixture === "empty-critiques") {
+        return { critiques: [] };
+      }
       return {
         critiques: hypotheses.map((item) => ({
           hypothesisId: item.id,
@@ -236,37 +470,89 @@ export function passOutputFor(
       };
     case "pass5": {
       const weakens = fixture === "image-weakens";
+      const richInsufficient = fixture === "image-insufficient-rich";
+      const originGold = fixture === "origin-gold";
       return {
         votes: [
           imageVoteSchema.parse({
             hypothesisId: "hyp-depth",
-            verdict: weakens ? "weakens" : "insufficient",
+            verdict: weakens
+              ? "weakens"
+              : originGold
+                ? "supports"
+                : richInsufficient
+                  ? "insufficient"
+                  : "insufficient",
             note: weakens
               ? "The empty landscape points to job-shape / direction, not a hidden stance."
-              : "The image is too thin to vote.",
-            evidenceRefs: [ctx.evidenceRef],
+              : originGold
+                ? "Pipe mid-threshold associations support container/authorization polarity."
+                : richInsufficient
+                  ? "Vote declined; material left uncited."
+                  : "Too thin to vote.",
+            evidenceRefs: originGold
+              ? [`${ctx.assessmentId}:Q10.1`, `${ctx.assessmentId}:Q10.6`]
+              : [ctx.evidenceRef],
           }),
           imageVoteSchema.parse({
             hypothesisId: practical.id,
-            verdict: weakens ? "supports" : "insufficient",
-            note: weakens ? "No path is a practical-direction constraint." : "Thin image.",
-            evidenceRefs: [ctx.evidenceRef],
+            verdict: weakens ? "supports" : originGold ? "splits" : "insufficient",
+            note: weakens
+              ? "No path is a practical-direction constraint."
+              : originGold
+                ? "Practical constraints remain a live rival beside the image."
+                : "Too thin.",
+            evidenceRefs: originGold
+              ? [`${ctx.assessmentId}:Q0.5`, `${ctx.assessmentId}:Q10.1`]
+              : [ctx.evidenceRef],
           }),
         ],
-        overallNote: weakens ? "Image weakens the psychological favorite." : "Insufficient image.",
+        overallNote: weakens
+          ? "Image weakens the psychological favorite."
+          : originGold
+            ? "Image supports container polarity with practical rival intact."
+            : richInsufficient
+              ? "Insufficient without citing associations."
+              : "Insufficient image.",
       };
     }
     case "pass6": {
       if (fixture === "critic-constraints-win") {
         return { hiddenPosition: null, alternative: practical.observedPattern };
       }
+      if (fixture === "q113-as-hidden") {
+        return {
+          hiddenPosition: hiddenPositionSchema.parse({
+            consciousPosition: "I need confidence.",
+            observedPattern: "Insight hunger.",
+            possibleHiddenPosition:
+              ctx.requestedInsight?.trim() ||
+              "I hope it shows me some sharp angles that I can't unsee",
+            protectiveFunction: ["Keeps seeking"],
+            threatenedByChange: ["Ordinary work"],
+            developmentalTension: { poleA: "insight", poleB: "execution" },
+            imageVoteSummary: "insufficient",
+            evidenceRefs: [`${ctx.assessmentId}:Q11.3`],
+            counterEvidenceRefs: [],
+            confidence: "tentative",
+          }),
+          alternative: practical.observedPattern,
+        };
+      }
       return {
         hiddenPosition: hiddenPositionSchema.parse({
           consciousPosition: "I need more confidence.",
-          observedPattern: "Desire without the next concrete step.",
+          observedPattern:
+            fixture === "origin-gold"
+              ? "Freeze at exposure without container"
+              : "Desire without the next concrete step.",
           possibleHiddenPosition:
-            "Structure is being asked to serve aliveness, not the other way around.",
+            fixture === "origin-gold"
+              ? "Freedom while an external container still carries authority and money"
+              : "Structure is being asked to serve aliveness, not the other way around.",
           protectiveFunction: ["Keeps the work from becoming only grind."],
+          possibleCompensatoryAim:
+            fixture === "origin-gold" ? "Structure in service of aliveness" : undefined,
           threatenedByChange: ["Losing the feeling of possibility."],
           developmentalTension: { poleA: "possibility", poleB: "incarnation" },
           imageVoteSummary: fixture === "image-weakens" ? "weakens" : "insufficient",
@@ -279,7 +565,24 @@ export function passOutputFor(
     }
     case "pass7":
       if (fixture === "empty-jungian") {
-        return { jungianLenses: [] };
+        return {
+          jungianLenses: [],
+          omitReason: "No clear archetypal polarity beyond practical constraints.",
+        };
+      }
+      if (fixture === "origin-gold") {
+        return {
+          jungianLenses: [
+            jungianLensSchema.parse({
+              concept: "puer-senex polarity",
+              observedPatternItIlluminates: "Possibility preferred over incarnation",
+              whyUseful: "Names the developmental orbit without killing play",
+              evidenceRefs: [ctx.evidenceRef],
+              limitsOfInterpretation: "May also be ADHD + job-shape mismatch",
+              confidence: "tentative",
+            }),
+          ],
+        };
       }
       return {
         jungianLenses: [
@@ -310,9 +613,24 @@ export function passOutputFor(
         experiments: [
           experimentSchema.parse({
             kind: "behavioral",
-            title: "Two weeks of external deadlines",
-            hypothesisTested: "container_loss_vs_capacity",
-            action: "Send one concrete artifact twice a week to a trusted reviewer.",
+            title:
+              fixture === "wrong-experiment"
+                ? "Mentor critique interview"
+                : "Two weeks of external deadlines",
+            hypothesisTested:
+              fixture === "wrong-experiment"
+                ? "intellectualizing delay"
+                : fixture === "critic-constraints-win"
+                  ? "hyp-practical"
+                  : fixture === "origin-gold"
+                    ? "container_loss_vs_capacity"
+                    : "hyp-depth",
+            action:
+              fixture === "wrong-experiment"
+                ? "Ask a mentor to list three blind spots and failure points in your method."
+                : fixture === "critic-constraints-win"
+                  ? "Add two external deadline blocks and one accountability check-in each week."
+                  : "Send one concrete artifact twice a week to a trusted reviewer.",
             duration: "14 days",
             whatToObserve: ["output count", "body charge after sending"],
             resultSupportingHypothesis: "Output rises when someone else holds the deadline.",
@@ -333,7 +651,10 @@ export function passOutputFor(
       if (!failingSectionIds.length) {
         return { failingSectionIds: [], regeneratedSections: [] };
       }
-      const grounded = groundedReportSections(fixture, ctx);
+      const grounded = groundedReportSections(
+        fixture === "starved-case-report" ? "default" : fixture,
+        ctx,
+      );
       return {
         failingSectionIds,
         regeneratedSections: grounded.filter((section) => failingSectionIds.includes(section.id)),

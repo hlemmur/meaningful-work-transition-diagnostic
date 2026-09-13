@@ -1,6 +1,12 @@
 import type { CaseState } from "../schemas/case-state";
 import type { Hypothesis, ReportSection } from "../schemas/analysis";
 import type { pass4OutputSchema, pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
+import {
+  hasRichImageAssociations,
+  imageVoteAdequate,
+  isParaphraseOf,
+  throwGate,
+} from "./gates";
 import type { z } from "zod";
 
 const PRACTICAL_CATEGORIES = new Set(["practical", "economic", "occupational"]);
@@ -84,6 +90,14 @@ export function applyImageVotes(
   );
   const favoriteVote = output.votes.find((vote) => vote.hypothesisId === "hyp-depth") ?? output.votes[0];
   state.imageVote = favoriteVote;
+  const imageGate = imageVoteAdequate(state, favoriteVote);
+  if (!imageGate.passed) {
+    // Prefer a splits/supports remediation signal rather than accepting blind insufficient.
+    if (hasRichImageAssociations(state) && favoriteVote?.verdict === "insufficient") {
+      state.gateRemediations = [...(state.gateRemediations ?? []), imageGate.detail];
+      throwGate(imageGate);
+    }
+  }
   return state;
 }
 
@@ -97,13 +111,39 @@ export function applyResolution(
     state.practicalContext.constraints.length > 0 &&
     critiques.some((item) => item.hypothesisId === "hyp-depth" && !item.survives);
 
-  if (
-    !output.hiddenPosition ||
-    criticAndConstraintsWin ||
-    (requested && output.hiddenPosition.possibleHiddenPosition.trim() === requested)
-  ) {
+  const paraphrasesInsight =
+    Boolean(requested) &&
+    Boolean(output.hiddenPosition) &&
+    isParaphraseOf(output.hiddenPosition!.possibleHiddenPosition, requested!);
+
+  if (paraphrasesInsight) {
+    state.gateRemediations = [
+      ...(state.gateRemediations ?? []),
+      "Dropped hiddenPosition that paraphrased Q11.3 requestedInsight.",
+    ];
+  }
+
+  if (!output.hiddenPosition || criticAndConstraintsWin || paraphrasesInsight) {
     state.hiddenPosition = undefined;
     return state;
+  }
+
+  // Central contradiction must not be Q11.3-only either (checked when contradictions exist).
+  const central = state.contradictions[0];
+  if (
+    requested &&
+    central &&
+    isParaphraseOf(`${central.statementA} ${central.statementB}`, requested)
+  ) {
+    state.gateRemediations = [
+      ...(state.gateRemediations ?? []),
+      "Central contradiction paraphrased Q11.3; keeping hiddenPosition only if life evidence supports it.",
+    ];
+    const lifeEvidence = output.hiddenPosition.evidenceRefs.some((ref) => !/:Q11\./.test(ref));
+    if (!lifeEvidence) {
+      state.hiddenPosition = undefined;
+      return state;
+    }
   }
 
   state.hiddenPosition = output.hiddenPosition;

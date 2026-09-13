@@ -1,5 +1,14 @@
 export const ENGINE_VERSION = "engine.v2" as const;
 
+export {
+  ANALYTICAL_OS,
+  ANALYTICAL_OS_VERSION,
+  ANALYTICAL_OS_REQUIRED_PHRASES,
+  ANALYTICAL_OS_BANNED_PHRASES,
+  ANALYTICAL_OS_MAX_CHARS,
+} from "./analytical-os";
+export { passCardFor, PASS_CARD_STAGES } from "./pass-cards";
+
 type PromptStub = {
   version: string;
   text: string;

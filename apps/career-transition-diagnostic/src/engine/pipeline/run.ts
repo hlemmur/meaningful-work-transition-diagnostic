@@ -1,4 +1,4 @@
-import { extractPass1Lite } from "../checkpoints/extract";
+import { extractCaseStateFull } from "../checkpoints/extract";
 import { ENGINE_VERSION } from "../prompts";
 import type { CaseState } from "../schemas/case-state";
 import type { Report } from "../schemas/analysis";
@@ -14,6 +14,15 @@ import {
   ensurePracticalRival,
   sanitizeReportSections,
 } from "./invariants";
+import {
+  assertCaseStateCompleteness,
+  critiquesNonEmpty,
+  experimentBoundToHypothesis,
+  reportLayerCoverage,
+  senexScoldOnly,
+  throwGate,
+  warrantsJungianPolarity,
+} from "./gates";
 import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from "./models";
 import { passOutputSchemas } from "./stage-schemas";
 import { buildStageLlmInput } from "./stage-input";
@@ -42,20 +51,12 @@ export type AnalysisPipelineResult = {
   failedStage?: AnalysisStage;
 };
 
-function asText(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
 function seedCaseState(
   assessmentId: string,
   answers: Record<string, unknown>,
   previous?: CaseState,
 ): CaseState {
-  const next = extractPass1Lite(assessmentId, "D", answers, previous);
-  next.userFinalReflection.requestedInsight =
-    asText(answers["Q11.3"]) || next.userFinalReflection.requestedInsight;
-  next.symbolicMaterial.scene = asText(answers["Q10.1"]) || next.symbolicMaterial.scene;
-  return next;
+  return extractCaseStateFull(assessmentId, answers, previous);
 }
 
 export async function executeAnalysis(input: {
@@ -79,6 +80,20 @@ export async function executeAnalysis(input: {
     input.answers,
     input.previousCaseState,
   );
+  const completeness = assertCaseStateCompleteness(caseState, input.answers);
+  if (!completeness.passed) {
+    input.persistRun({
+      assessmentId: input.assessmentId,
+      stage: "pass1",
+      attempt: 1,
+      promptVersion: "pass1.v1",
+      model: modelForStage("pass1"),
+      status: "failure",
+      error: completeness.detail,
+      idempotencyKey: `${input.assessmentId}:pass1:completeness-failure`,
+    });
+    return { status: "failed", caseState, failedStage: "pass1" };
+  }
   let critiques = hydrateCritiques(input.priorRuns);
   let report =
     input.existingReport ??
@@ -119,6 +134,14 @@ export async function executeAnalysis(input: {
           passOutputSchemas.pass9.parse(result.output).sections,
           caseState,
         );
+        const layers = reportLayerCoverage(sections, caseState);
+        if (!layers.passed) {
+          caseState.gateRemediations = [...(caseState.gateRemediations ?? []), layers.detail];
+        }
+        const senex = senexScoldOnly(sections.map((section) => section.body).join("\n"));
+        if (!senex.passed) {
+          throwGate(senex);
+        }
         report = {
           assessmentId: input.assessmentId,
           engineVersion: ENGINE_VERSION,
@@ -262,25 +285,57 @@ function applyStage(
       next.unresolvedQuestions = parsed.unresolvedQuestions;
       return next;
     }
-    case "pass2":
-      next.contradictions = passOutputSchemas.pass2.parse(output).contradictions;
+    case "pass2": {
+      const parsed = passOutputSchemas.pass2.parse(output);
+      next.contradictions = parsed.contradictions;
+      const forks = new Set(next.openForks);
+      for (const item of parsed.contradictions) {
+        for (const fork of item.originForks) {
+          forks.add(fork);
+        }
+      }
+      next.openForks = [...forks];
       return next;
+    }
     case "pass3":
       next.hypotheses = passOutputSchemas.pass3.parse(output).hypotheses;
       return ensurePracticalRival(next);
-    case "pass4":
+    case "pass4": {
+      const parsed = passOutputSchemas.pass4.parse(output);
+      const critiqueGate = critiquesNonEmpty(parsed.critiques);
+      if (!critiqueGate.passed) {
+        throwGate(critiqueGate);
+      }
       return next;
+    }
     case "pass5":
       return applyImageVotes(next, passOutputSchemas.pass5.parse(output));
     case "pass6":
       return applyResolution(next, passOutputSchemas.pass6.parse(output), critiques);
-    case "pass7":
-      next.jungianLenses = passOutputSchemas.pass7.parse(output).jungianLenses;
+    case "pass7": {
+      const parsed = passOutputSchemas.pass7.parse(output);
+      next.jungianLenses = parsed.jungianLenses;
+      if (!parsed.jungianLenses.length) {
+        if (warrantsJungianPolarity(next) && !parsed.omitReason?.trim()) {
+          throwGate({
+            id: "jungian-omit-reason",
+            passed: false,
+            detail:
+              "Empty jungianLenses requires omitReason when Tier-A supports a polarity.",
+          });
+        }
+        next.jungianOmitReason = parsed.omitReason?.trim() || next.jungianOmitReason;
+      }
       return next;
+    }
     case "pass8": {
       const parsed = passOutputSchemas.pass8.parse(output);
       next.realityCheck = parsed.realityCheck;
       next.experiments = parsed.experiments;
+      const bind = experimentBoundToHypothesis(next, parsed.experiments);
+      if (!bind.passed) {
+        throwGate(bind);
+      }
       return next;
     }
     default:
