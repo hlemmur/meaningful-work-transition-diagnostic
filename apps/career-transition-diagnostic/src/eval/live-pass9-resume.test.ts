@@ -104,7 +104,7 @@ describe("CAR-67 live pass9+ resume", () => {
             rubricFindings: rubric.findings,
             softNotes: {
               image_alive:
-                "Was Q10 pipe/associations treated as living material in reality/hidden?",
+                "Was Q10 image/associations treated as living material in reality/hidden?",
               cm_layer_feel:
                 "Does a depth beat lead with body/charge before theory?",
               softChecklistTemplate: fidelity.softChecklistTemplate,

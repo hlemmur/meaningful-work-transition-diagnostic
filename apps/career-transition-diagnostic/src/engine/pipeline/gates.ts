@@ -185,7 +185,7 @@ export function imageVoteAdequate(
   }
   const citesImage =
     vote.evidenceRefs.some((ref) => /:Q10\./.test(ref)) ||
-    /scene|pipe|association|image|obstacle|speech/i.test(vote.note);
+    /scene|association|image|obstacle|speech/i.test(vote.note);
   const failed = vote.verdict === "insufficient" && !citesImage;
   return {
     id: "image-adequacy",
@@ -261,12 +261,12 @@ export function experimentBoundToHypothesis(
 }
 
 const LAYER_PATTERNS: Record<string, RegExp> = {
-  persona: /persona|identity|legitimacy|authenticity|lightness|flow|hustler/i,
+  persona: /persona|identity|legitimacy|authenticity|role|self-image/i,
   projection: /projection|admir|fascination|rejected|watcher|gaze|figure/i,
   charge: /body|charge|shame|fear|anxiety|emotion|freeze/i,
   bargain: /protect|bargain|staying|threatened|benefit of staying/i,
   history: /history|recurrence|years|structure|container|institution/i,
-  symbol: /image|symbol|pipe|scene|dream|association/i,
+  symbol: /image|symbol|scene|dream|association/i,
 };
 
 export function reportLayerCoverage(

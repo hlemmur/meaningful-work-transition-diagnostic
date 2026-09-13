@@ -166,6 +166,77 @@ describe("Tier-A citation gates", () => {
     ];
     expect(reportLayerCoverage(sections, origin).passed).toBe(false);
   });
+
+  it("reportLayerCoverage passes with generic persona/symbol language (no origin tokens)", () => {
+    const state = extractCaseStateFull("gen", {
+      "Q1.1": "I stall on making the offer real.",
+      "Q5.1": "A mentor who claims space",
+      "Q10.1": "A dark hallway with a locked door ahead",
+      "Q10.2": "Cold stone walls",
+      "Q10.6": "Turn back before you are seen",
+    });
+    state.affect.chargeIntensity = 2;
+    state.affect.emotions = [
+      {
+        id: "gen:Q2.1",
+        assessmentId: "gen",
+        questionId: "Q2.1",
+        rawQuote: "anxiety and freeze",
+        normalizedMeaning: "anxiety and freeze",
+        evidenceType: "emotion",
+      },
+    ];
+    state.hiddenBargain.benefitsOfStaying = [
+      {
+        id: "gen:Q9.2",
+        assessmentId: "gen",
+        questionId: "Q9.2",
+        rawQuote: "Keeps identity intact",
+        normalizedMeaning: "Keeps identity intact",
+        evidenceType: "self_interpretation",
+      },
+    ];
+    state.history.supportiveStructures = [
+      {
+        id: "gen:Q4.1",
+        assessmentId: "gen",
+        questionId: "Q4.1",
+        rawQuote: "Years inside an institution",
+        normalizedMeaning: "Years inside an institution",
+        evidenceType: "history",
+      },
+    ];
+
+    const sections = [
+      section(
+        "problem",
+        "You stall when the role must become real — an identity and self-image bind.",
+        ["gen:Q1.1"],
+      ),
+      section(
+        "reality",
+        "The scene and associations mark a locked threshold; anxiety and freeze show in the body.",
+        ["gen:Q10.1", "gen:Q10.6"],
+      ),
+      section(
+        "contradiction",
+        "You admire figures who claim space while rejecting those who hustle for legitimacy.",
+        ["gen:Q5.1"],
+      ),
+      section(
+        "hidden",
+        "One hypothesis: the bargain protects you from ordinary exposure.",
+        ["gen:Q9.2"],
+      ),
+      section(
+        "alternative",
+        "A skill gap and missing institutional history may suffice without depth.",
+        ["gen:Q4.1"],
+      ),
+      section("experiment", "For two weeks, ship one small public offer.", ["gen:Q1.1"]),
+    ];
+    expect(reportLayerCoverage(sections, state).passed).toBe(true);
+  });
 });
 
 describe("client voice gates", () => {
