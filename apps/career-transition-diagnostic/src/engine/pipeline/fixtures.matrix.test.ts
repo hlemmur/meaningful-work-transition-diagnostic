@@ -81,7 +81,10 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("origin-gold passes rubric and framework fidelity", async () => {
-    const answers = { ...originAnswers, "Q1.1": `${String(originAnswers["Q1.1"])} ORIGIN_GOLD` };
+    const answers: Record<string, unknown> = {
+      ...originAnswers,
+      "Q1.1": `${String(originAnswers["Q1.1"] ?? "")} ORIGIN_GOLD`,
+    };
     const result = await executeAnalysis({
       assessmentId: "origin",
       answers,

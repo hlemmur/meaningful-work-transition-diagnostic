@@ -78,7 +78,7 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
     ),
   );
 
-  const peelIds = ["problem", "reality", "contradiction", "alternative", "experiment"];
+  const peelIds = ["problem", "reality", "contradiction", "alternative", "experiment"] as const;
   const present = new Set(sections.map((section) => section.id));
   const peelOk =
     peelIds.every((id) => present.has(id)) &&
