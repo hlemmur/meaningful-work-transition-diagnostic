@@ -109,6 +109,7 @@ describe("promptRegistry contracts", () => {
       "behavioral",
       "imaginal",
       "riskLevel",
+      "obstacleSpeech",
     ]);
     expectMentions(promptRegistry.pass9.text, [
       "sections",
@@ -132,8 +133,15 @@ describe("promptRegistry contracts", () => {
       "requiredCitations",
       "citeRefs",
       "requiredTitles",
+      "possibleCompensatoryAim",
+      "obstacleSpeech",
+      "wantedQuality",
+      "claim→cite",
+      "romance-of-eternal-becoming",
     ]);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v7");
+    expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
+    expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
+    expect(promptRegistry.pass9.version).toBe("pass-9.v8");
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
       "regeneratedSections",
@@ -150,7 +158,11 @@ describe("promptRegistry contracts", () => {
       "second-person",
       "requiredCitations",
       "requiredTitles",
+      "possibleCompensatoryAim",
+      "obstacleSpeech",
+      "eternal becoming",
     ]);
-    expect(promptRegistry.pass10.version).toBe("pass-10.v7");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v8");
+    expect(promptRegistry.pass8.version).toBe("pass-8.v3");
   });
 });
