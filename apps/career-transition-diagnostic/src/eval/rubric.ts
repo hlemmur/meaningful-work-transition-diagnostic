@@ -6,6 +6,7 @@ import {
   isRequestedInsightSpine,
   MIN_DISTINCT_EVIDENCE_QUESTION_IDS,
 } from "@/engine/pipeline/report-grounding";
+import { clientVoiceGates } from "@/engine/pipeline/gates";
 
 export type RubricFinding = {
   id: string;
@@ -23,6 +24,11 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
     id: "puer-diagnosis",
     re: /you are a puer/i,
     detail: "Report must not diagnose the person as a Puer.",
+  },
+  {
+    id: "eternal-youth-identity",
+    re: /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)/i,
+    detail: "Report must not treat eternal youth as the person's identity.",
   },
   {
     id: "confidence-only",
@@ -46,6 +52,9 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
   },
 ];
 
+const POLARITY_LANGUAGE = /polarity|enantiodromia|\bboth\b|compensation/i;
+const CHARGE_LANGUAGE = /shame|terror|freeze|chest|throat|body|charge/i;
+
 function finding(id: string, passed: boolean, detail: string): RubricFinding {
   return { id, passed, detail };
 }
@@ -56,7 +65,9 @@ function joinedText(sections: ReportSection[]) {
 
 export function evaluateReport(input: {
   report: Pick<Report, "engineVersion" | "sections">;
-  caseState?: Pick<CaseState, "practicalContext" | "hypotheses" | "jungianLenses">;
+  caseState?: Partial<
+    Pick<CaseState, "practicalContext" | "hypotheses" | "jungianLenses" | "affect">
+  >;
   requestedInsight?: string;
 }): RubricResult {
   const findings: RubricFinding[] = [];
@@ -146,7 +157,40 @@ export function evaluateReport(input: {
     ),
   );
 
-  const constraints = input.caseState?.practicalContext.constraints.length ?? 0;
+  const unanchoredAlone =
+    /unanchored ideal/i.test(text) && !POLARITY_LANGUAGE.test(text);
+  findings.push(
+    finding(
+      "unanchored-ideal-alone",
+      !unanchoredAlone,
+      unanchoredAlone
+        ? "Unanchored ideal as sole frame requires polarity/process language."
+        : "Unanchored ideal is not used as a sole frame without polarity language.",
+    ),
+  );
+
+  const affect = input.caseState?.affect;
+  const affectIndicated =
+    Boolean(affect) &&
+    ((affect!.chargeIntensity ?? 0) >= 1 || (affect!.emotions?.length ?? 0) > 0);
+  if (affectIndicated) {
+    const hasCharge = CHARGE_LANGUAGE.test(text);
+    findings.push(
+      finding(
+        "charge-language",
+        hasCharge,
+        hasCharge
+          ? "Peel includes charge/body language where affect is indicated."
+          : "Affect is indicated in CaseState but peel lacks charge/body language.",
+      ),
+    );
+  }
+
+  for (const voice of clientVoiceGates(sections)) {
+    findings.push(finding(voice.id, voice.passed, voice.detail));
+  }
+
+  const constraints = input.caseState?.practicalContext?.constraints.length ?? 0;
   if (constraints > 0) {
     const hasPracticalHypothesis = (input.caseState?.hypotheses ?? []).some((item) =>
       ["practical", "economic", "occupational"].includes(item.category),

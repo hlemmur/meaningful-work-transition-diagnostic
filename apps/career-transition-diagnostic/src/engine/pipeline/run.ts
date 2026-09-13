@@ -20,7 +20,9 @@ import {
   experimentBoundToHypothesis,
   reportLayerCoverage,
   senexScoldOnly,
+  clientVoiceGates,
   throwGate,
+  tierACitationGates,
   warrantsJungianPolarity,
 } from "./gates";
 import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from "./models";
@@ -49,6 +51,7 @@ export type AnalysisPipelineResult = {
   caseState: CaseState;
   report?: Report;
   failedStage?: AnalysisStage;
+  error?: string;
 };
 
 function seedCaseState(
@@ -136,7 +139,17 @@ export async function executeAnalysis(input: {
         );
         const layers = reportLayerCoverage(sections, caseState);
         if (!layers.passed) {
-          caseState.gateRemediations = [...(caseState.gateRemediations ?? []), layers.detail];
+          throwGate(layers);
+        }
+        for (const citation of tierACitationGates(sections, caseState)) {
+          if (!citation.passed) {
+            throwGate(citation);
+          }
+        }
+        for (const voice of clientVoiceGates(sections)) {
+          if (!voice.passed) {
+            throwGate(voice);
+          }
         }
         const senex = senexScoldOnly(sections.map((section) => section.body).join("\n"));
         if (!senex.passed) {
@@ -192,7 +205,7 @@ export async function executeAnalysis(input: {
         error: message,
         idempotencyKey: `${input.assessmentId}:${stage}:failure`,
       });
-      return { status: "failed", caseState, failedStage: stage, report };
+      return { status: "failed", caseState, failedStage: stage, report, error: message };
     }
   }
 

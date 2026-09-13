@@ -5,6 +5,42 @@ import { buildStageLlmInput } from "./stage-input";
 import type { CaseState } from "../schemas/case-state";
 import type { LlmAdapter } from "@/server/adapters/types";
 
+function peelSections(assessmentId = "a1") {
+  const q = (id: string) => `${assessmentId}:${id}`;
+  return [
+    {
+      id: "problem",
+      title: "The problem as you see it",
+      body: "You stall when marketing your coaching offer — an identity bind after leaving IT.",
+      evidenceRefs: [q("Q1.1")],
+    },
+    {
+      id: "reality",
+      title: "What reality says",
+      body: "Your ADHD constraints and missing structure are part of the picture.",
+      evidenceRefs: [q("Q0.4"), q("Q0.5")],
+    },
+    {
+      id: "contradiction",
+      title: "The contradiction at the center",
+      body: "You want freedom and still keep the offer secret.",
+      evidenceRefs: [q("Q1.1"), q("Q1.3")],
+    },
+    {
+      id: "alternative",
+      title: "Another plausible interpretation",
+      body: "Your stall may be a practical skill gap, not a hidden stance.",
+      evidenceRefs: [q("Q0.5")],
+    },
+    {
+      id: "experiment",
+      title: "Your experiment",
+      body: "For two weeks, run your outreach under external deadlines and watch charge.",
+      evidenceRefs: [q("Q1.1")],
+    },
+  ];
+}
+
 function seededCase(assessmentId = "a1"): CaseState {
   const state = emptyCaseState(assessmentId);
   state.consciousNarrative.statedProblem = [
@@ -195,38 +231,7 @@ describe("buildStageLlmInput", () => {
             stage: request.stage,
             fixture: "happy",
             output: {
-              sections: [
-                {
-                  id: "problem",
-                  title: "problem",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q1.1"],
-                },
-                {
-                  id: "reality",
-                  title: "reality",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q0.4", "a1:Q0.5"],
-                },
-                {
-                  id: "contradiction",
-                  title: "contradiction",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q1.1", "a1:Q1.3"],
-                },
-                {
-                  id: "alternative",
-                  title: "alternative",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q0.5"],
-                },
-                {
-                  id: "experiment",
-                  title: "experiment",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q1.1"],
-                },
-              ],
+              sections: peelSections("a1"),
             },
             model: request.model ?? "mock-strong",
             usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.001 },
@@ -292,38 +297,7 @@ describe("buildStageLlmInput", () => {
             stage: request.stage,
             fixture: "happy",
             output: {
-              sections: [
-                {
-                  id: "problem",
-                  title: "problem",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q1.1"],
-                },
-                {
-                  id: "reality",
-                  title: "reality",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q0.4", "a1:Q0.5"],
-                },
-                {
-                  id: "contradiction",
-                  title: "contradiction",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q1.1", "a1:Q1.3"],
-                },
-                {
-                  id: "alternative",
-                  title: "alternative",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q0.5"],
-                },
-                {
-                  id: "experiment",
-                  title: "experiment",
-                  body: "Evidence-backed paragraph about the stall and constraints.",
-                  evidenceRefs: ["a1:Q1.1"],
-                },
-              ],
+              sections: peelSections("a1"),
             },
             model: request.model ?? "mock-strong",
             usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.001 },

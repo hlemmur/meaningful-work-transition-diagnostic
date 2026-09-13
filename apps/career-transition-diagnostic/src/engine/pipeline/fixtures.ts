@@ -28,7 +28,11 @@ export type AnalysisFixture =
   | "starved-case-report"
   | "wrong-experiment"
   | "jungian-diagnose"
-  | "senex-scold-only";
+  | "senex-scold-only"
+  | "image-starved-peel"
+  | "projection-starved-peel"
+  | "money-starved-peel"
+  | "clinical-voice-peel";
 
 const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
   { marker: "FORCE_SCHEMA_FAILURE", fixture: "schema-fail" },
@@ -45,6 +49,10 @@ const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
   { marker: "WRONG_EXPERIMENT", fixture: "wrong-experiment" },
   { marker: "JUNGIAN_DIAGNOSE", fixture: "jungian-diagnose" },
   { marker: "SENEX_SCOLD_ONLY", fixture: "senex-scold-only" },
+  { marker: "IMAGE_STARVED_PEEL", fixture: "image-starved-peel" },
+  { marker: "PROJECTION_STARVED_PEEL", fixture: "projection-starved-peel" },
+  { marker: "MONEY_STARVED_PEEL", fixture: "money-starved-peel" },
+  { marker: "CLINICAL_VOICE_PEEL", fixture: "clinical-voice-peel" },
 ];
 
 export function inferAnalysisFixture(answers: Record<string, unknown>): AnalysisFixture {
@@ -175,25 +183,25 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "reality",
         title: "What reality says",
-        body: "Insight hunger dominates.",
+        body: "Insight hunger dominates your attention.",
         evidenceRefs: [q("Q11.3")],
       }),
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "Wanting revelation and confirmation.",
+        body: "You want revelation and confirmation at once.",
         evidenceRefs: [q("Q11.3")],
       }),
       reportSectionSchema.parse({
         id: "alternative",
         title: "Another plausible interpretation",
-        body: "Maybe confidence.",
+        body: "Maybe your issue is confidence.",
         evidenceRefs: [q("Q11.3")],
       }),
       reportSectionSchema.parse({
         id: "experiment",
         title: "Your experiment",
-        body: "Ask for sharper critique.",
+        body: "Ask for sharper critique of your method.",
         evidenceRefs: [q("Q11.3")],
       }),
     ];
@@ -210,31 +218,31 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "reality",
         title: "What reality says",
-        body: "Practical constraints and missing structure are in the picture.",
+        body: "Your practical constraints and missing structure are in the picture.",
         evidenceRefs: [q("Q0.4"), q("Q0.5")],
       }),
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "Wanting the work and not taking the next step sit together.",
+        body: "You want the work and are not taking the next step.",
         evidenceRefs: [q("Q1.1"), q("Q1.3")],
       }),
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis is that structure is being asked to serve aliveness.",
+        body: "One hypothesis is that your structure is being asked to serve aliveness.",
         evidenceRefs: [q("Q1.3"), q("Q2.1")],
       }),
       reportSectionSchema.parse({
         id: "alternative",
         title: "Another plausible interpretation",
-        body: "The stall may be a sufficient response to constraints, not a hidden stance.",
+        body: "Your stall may be a sufficient response to constraints, not a hidden stance.",
         evidenceRefs: [q("Q0.5")],
       }),
       reportSectionSchema.parse({
         id: "experiment",
         title: "Your experiment",
-        body: "Try two weeks of external deadlines and watch both output and charge.",
+        body: "Try two weeks of external deadlines and watch both your output and charge.",
         evidenceRefs: [q("Q1.1")],
       }),
       reportSectionSchema.parse({
@@ -257,19 +265,19 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "reality",
         title: "What reality says",
-        body: "Stop seeking insight. Grow up and grind. Just need more discipline every day.",
+        body: "Stop seeking insight. Grow up and grind. You just need more discipline every day.",
         evidenceRefs: [q("Q0.4"), q("Q0.5")],
       }),
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "Wanting ease while refusing ordinary work.",
+        body: "You want ease while refusing ordinary work.",
         evidenceRefs: [q("Q1.1"), q("Q1.3")],
       }),
       reportSectionSchema.parse({
         id: "alternative",
         title: "Another plausible interpretation",
-        body: "There is no alternative reading; only harder work.",
+        body: "There is no alternative reading for you; only harder work.",
         evidenceRefs: [q("Q0.5")],
       }),
       reportSectionSchema.parse({
@@ -277,6 +285,194 @@ function groundedReportSections(
         title: "Your experiment",
         body: "Force yourself through two weeks of grind with no other measure of success.",
         evidenceRefs: [q("Q1.1")],
+      }),
+    ];
+  }
+
+  if (fixture === "image-starved-peel") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You left container-supported work yet freeze at public exposure; legitimacy and identity feel unsettled.",
+        evidenceRefs: [q("Q1.1"), q("Q2.2")],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Without external deadlines, salary, and legitimacy you stall; ADHD and financial pressure are real. Money historically arrived through industry machinery.",
+        evidenceRefs: [q("Q0.5"), q("Q8.4"), q("Q4.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You want freedom yet function when structure impacts someone else. Admiration for grounded mentors marks a hooked quality of claiming space.",
+        evidenceRefs: [q("Q1.2"), q("Q5.1"), q("Q4.8")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis for you: freedom while an external container still carries authority. Your bargain protects ethereal identity and lightness; developmental aim may be structure in service of aliveness.",
+        evidenceRefs: [q("Q9.2"), q("Q9.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "You may simply be missing acquisition skill and ADHD-friendly infrastructure, not a hidden stance.",
+        evidenceRefs: [q("Q0.5"), q("Q8.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "For two weeks, run your outreach under mutual dependency — and briefly imagine the rusty pipe threshold as garnish only.",
+        evidenceRefs: [q("QB.1"), q("Q10.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "A puer–senex polarity may illuminate possibility preferred over incarnation, without diagnosing you as an archetype.",
+        evidenceRefs: [q("Q9.2")],
+      }),
+    ];
+  }
+
+  if (fixture === "projection-starved-peel") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You left IT for meaningful coaching work yet freeze at public exposure after years of container-supported functioning.",
+        evidenceRefs: [q("Q1.1"), q("Q2.2")],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Without external deadlines, salary, and legitimacy you stall; ADHD and financial pressure are real. Money historically arrived through industry machinery. The pipe associations mark a mid-crossing threshold.",
+        evidenceRefs: [q("Q0.5"), q("Q8.4"), q("Q10.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You want freedom and self-employment, yet you function when structure and accountability impact someone else.",
+        evidenceRefs: [q("Q1.2"), q("Q4.8")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis for you: freedom while an external container still carries authority and money. Your protection keeps lightness; the developmental aim may be structure in service of aliveness. The bargain protects ethereal identity while the pipe image marks a threshold mid-crossing.",
+        evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q10.6")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "You may simply be missing acquisition skill and ADHD-friendly infrastructure, not a hidden stance.",
+        evidenceRefs: [q("Q0.5"), q("Q8.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "For two weeks, run your outreach under a mutual dependency with real stakes and watch output plus body charge — testing container loss versus capacity.",
+        evidenceRefs: [q("QB.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "A puer–senex polarity may illuminate possibility preferred over incarnation, without diagnosing you as an archetype.",
+        evidenceRefs: [q("Q9.2")],
+      }),
+    ];
+  }
+
+  if (fixture === "money-starved-peel") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You left IT for meaningful coaching work yet freeze at public exposure after years of container-supported functioning.",
+        evidenceRefs: [q("Q1.1"), q("Q2.2")],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Without external deadlines and legitimacy you stall; ADHD pressure is real. The pipe associations mark a mid-crossing threshold without naming compensation history.",
+        evidenceRefs: [q("Q0.5"), q("Q4.5"), q("Q10.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You want freedom and self-employment, yet you function when structure and accountability impact someone else. Projection toward grounded mentors points to a hooked quality of claiming space.",
+        evidenceRefs: [q("Q1.2"), q("Q5.1"), q("Q4.8")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis for you: freedom while an external container still carries authority. Your protection keeps lightness; the developmental aim may be structure in service of aliveness. The bargain protects ethereal identity while the pipe image marks a threshold mid-crossing.",
+        evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q10.6")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "You may simply be missing outreach skill and ADHD-friendly routines, not a hidden stance.",
+        evidenceRefs: [q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "For two weeks, run your outreach under a mutual dependency with real stakes and watch output plus body charge — testing container loss versus capacity.",
+        evidenceRefs: [q("QB.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "A puer–senex polarity may illuminate possibility preferred over incarnation, without diagnosing you as an archetype.",
+        evidenceRefs: [q("Q9.2")],
+      }),
+    ];
+  }
+
+  if (fixture === "clinical-voice-peel") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The Stated Predicament and Economic Pressure",
+        body: "The client presents a compelling and urgent narrative centered around stall after leaving IT.",
+        evidenceRefs: [q("Q1.1"), q("Q2.2")],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "Image, Money Infrastructure, and Enacted History",
+        body: "Examining the deeper structural layers reveals evocative imagery: a rusty pipe mid-crossing. Money historically arrived through industry machinery.",
+        evidenceRefs: [q("Q0.5"), q("Q8.4"), q("Q10.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "Core Contradictions in the Transition Process",
+        body: "The client's freedom desire conflicts with freeze at exposure. Projection toward mentors marks a hooked quality of claiming space.",
+        evidenceRefs: [q("Q1.2"), q("Q5.1"), q("Q4.8")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "The Protective Bargain and Projected Desires",
+        body: "Beneath the surface lies a sophisticated psychological bargain illuminated by the client's projections onto admired figures.",
+        evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q6.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Alternative Interpretations and Practical Realities",
+        body: "The client's stall may simply be missing acquisition skill and ADHD-friendly infrastructure.",
+        evidenceRefs: [q("Q0.5"), q("Q8.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Empirical Investigations",
+        body: "The client should run outreach under mutual dependency and watch body charge.",
+        evidenceRefs: [q("QB.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "Polarity and Compensation Dynamics",
+        body: "From a process-oriented psychological perspective, the client's journey shows enantiodromia between possibility and incarnation.",
+        evidenceRefs: [q("Q9.2")],
       }),
     ];
   }
@@ -304,19 +500,19 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis: freedom while an external container still carries authority and money. Protection keeps lightness; the developmental aim may be structure in service of aliveness. The bargain protects ethereal identity while the pipe image marks a threshold mid-crossing.",
+        body: "One hypothesis for you: freedom while an external container still carries authority and money. Your protection keeps lightness; the developmental aim may be structure in service of aliveness. The bargain protects ethereal identity while the pipe image marks a threshold mid-crossing.",
         evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q10.1")],
       }),
       reportSectionSchema.parse({
         id: "alternative",
         title: "Another plausible interpretation",
-        body: "This may simply be missing acquisition skill and ADHD-friendly infrastructure, not a hidden stance.",
+        body: "You may simply be missing acquisition skill and ADHD-friendly infrastructure, not a hidden stance.",
         evidenceRefs: [q("Q0.5"), q("Q8.5")],
       }),
       reportSectionSchema.parse({
         id: "experiment",
         title: "Your experiment",
-        body: "For two weeks, run outreach under a mutual dependency with real stakes and watch output plus body charge — testing container loss versus capacity.",
+        body: "For two weeks, run your outreach under a mutual dependency with real stakes and watch output plus body charge — testing container loss versus capacity.",
         evidenceRefs: [q("QB.1"), q("Q1.3")],
       }),
       reportSectionSchema.parse({
@@ -332,31 +528,31 @@ function groundedReportSections(
     reportSectionSchema.parse({
       id: "problem",
       title: "The problem as you see it",
-      body: "You described a stall next to a desire for more alive work.",
+      body: "You described a stall next to a desire for more alive work; legitimacy and identity feel unsettled.",
       evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
     }),
     reportSectionSchema.parse({
       id: "reality",
       title: "What reality says",
-      body: "Practical constraints and missing structure are in the picture.",
-      evidenceRefs: [q("Q0.4"), q("Q0.5")],
+      body: "Your practical constraints and missing structure are in the picture. When an image or scene arrives, it belongs here as material, not garnish.",
+      evidenceRefs: [q("Q0.4"), q("Q0.5"), q("Q10.1")],
     }),
     reportSectionSchema.parse({
       id: "contradiction",
       title: "The contradiction at the center",
-      body: "Wanting the work and not taking the next step sit together.",
+      body: "You want the work and are not taking the next step.",
       evidenceRefs: [q("Q1.1"), q("Q1.3")],
     }),
     reportSectionSchema.parse({
       id: "alternative",
       title: "Another plausible interpretation",
-      body: "The stall may be a sufficient response to constraints, not a hidden stance.",
+      body: "Your stall may be a sufficient response to constraints, not a hidden stance.",
       evidenceRefs: [q("Q0.5")],
     }),
     reportSectionSchema.parse({
       id: "experiment",
       title: "Your experiment",
-      body: "Try two weeks of external deadlines and watch both output and charge.",
+      body: "Try two weeks of external deadlines and watch both your output and charge.",
       evidenceRefs: [q("Q1.1")],
     }),
   ];
@@ -367,8 +563,8 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis is that structure is being asked to serve aliveness.",
-        evidenceRefs: [q("Q1.3"), q("Q2.1")],
+        body: "One hypothesis is that your structure is being asked to serve aliveness without collapsing into grind-only identity. Any symbolic scene can mark the threshold you keep circling.",
+        evidenceRefs: [q("Q1.3"), q("Q2.1"), q("Q10.1")],
       }),
     );
   }
@@ -473,45 +669,50 @@ export function passOutputFor(
     case "pass5": {
       const weakens = fixture === "image-weakens";
       const richInsufficient = fixture === "image-insufficient-rich";
-      const originGold = fixture === "origin-gold";
+      const citesImage =
+        fixture === "origin-gold" ||
+        fixture === "image-starved-peel" ||
+        fixture === "projection-starved-peel" ||
+        fixture === "money-starved-peel" ||
+        fixture === "clinical-voice-peel";
       return {
         votes: [
           imageVoteSchema.parse({
             hypothesisId: "hyp-depth",
             verdict: weakens
               ? "weakens"
-              : originGold
+              : citesImage
                 ? "supports"
                 : richInsufficient
                   ? "insufficient"
                   : "insufficient",
             note: weakens
               ? "The empty landscape points to job-shape / direction, not a hidden stance."
-              : originGold
+              : citesImage
                 ? "Pipe mid-threshold associations support container/authorization polarity."
                 : richInsufficient
                   ? "Vote declined; material left uncited."
                   : "Too thin to vote.",
-            evidenceRefs: originGold
+            evidenceRefs: citesImage
               ? [`${ctx.assessmentId}:Q10.1`, `${ctx.assessmentId}:Q10.6`]
               : [ctx.evidenceRef],
           }),
           imageVoteSchema.parse({
             hypothesisId: practical.id,
-            verdict: weakens ? "supports" : originGold ? "splits" : "insufficient",
+            verdict: weakens ? "supports" : citesImage ? "splits" : "insufficient",
             note: weakens
               ? "No path is a practical-direction constraint."
-              : originGold
+              : citesImage
                 ? "Practical constraints remain a live rival beside the image."
                 : "Too thin.",
-            evidenceRefs: originGold
+            evidenceRefs: citesImage
               ? [`${ctx.assessmentId}:Q0.5`, `${ctx.assessmentId}:Q10.1`]
               : [ctx.evidenceRef],
           }),
         ],
         overallNote: weakens
           ? "Image weakens the psychological favorite."
-          : originGold
+          : citesImage
             ? "Image supports container polarity with practical rival intact."
             : richInsufficient
               ? "Insufficient without citing associations."

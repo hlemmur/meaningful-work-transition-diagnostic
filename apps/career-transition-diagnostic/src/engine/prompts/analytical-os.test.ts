@@ -26,5 +26,10 @@ describe("analytical OS contracts", () => {
       expect.arrayContaining(["pass2", "pass6", "pass7", "pass8", "pass9"]),
     );
     expect(passCardFor("pass6")).toMatch(/Q11\.3|requestedInsight/i);
+    expect(passCardFor("pass9")).toMatch(/image → projection → money → bargain|image.*projection.*money.*bargain/i);
+    expect(passCardFor("pass9")).toMatch(/Q11\.3 is never the plot|never the plot/i);
+    expect(passCardFor("pass9")).toMatch(/second person|You\/Your/i);
+    expect(passCardFor("pass9")).toMatch(/the client/i);
+    expect(passCardFor("pass10")).toMatch(/Tier-A citations|inflation diagnosis|the client|clinical/i);
   });
 });

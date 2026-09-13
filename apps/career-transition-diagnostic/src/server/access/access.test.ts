@@ -18,7 +18,7 @@ import { MARKETING_CONSENT_COPY } from "../consent/copy";
 import { processLemonWebhook } from "./webhook";
 
 function sign(rawBody: string) {
-  const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET ?? "mock-webhook-secret";
+  const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET || "mock-webhook-secret";
   return createHmac("sha256", secret).update(rawBody).digest("hex");
 }
 
