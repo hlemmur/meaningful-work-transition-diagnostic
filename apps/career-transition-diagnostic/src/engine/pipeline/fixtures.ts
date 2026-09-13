@@ -18,6 +18,7 @@ export type AnalysisFixture =
   | "image-weakens"
   | "critic-constraints-win"
   | "empty-jungian"
+  | "empty-jungian-no-omit"
   | "schema-fail"
   | "origin-gold"
   | "q113-as-hidden"
@@ -33,6 +34,7 @@ const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
   { marker: "FORCE_SCHEMA_FAILURE", fixture: "schema-fail" },
   { marker: "IMAGE_WEAKENS", fixture: "image-weakens" },
   { marker: "CRITIC_CONSTRAINTS_WIN", fixture: "critic-constraints-win" },
+  { marker: "EMPTY_JUNGIAN_NO_OMIT", fixture: "empty-jungian-no-omit" },
   { marker: "EMPTY_JUNGIAN", fixture: "empty-jungian" },
   { marker: "ORIGIN_GOLD", fixture: "origin-gold" },
   { marker: "Q113_AS_HIDDEN", fixture: "q113-as-hidden" },
@@ -529,6 +531,7 @@ export function passOutputFor(
               ctx.requestedInsight?.trim() ||
               "I hope it shows me some sharp angles that I can't unsee",
             protectiveFunction: ["Keeps seeking"],
+            possibleCompensatoryAim: "Sit with ordinary exposure instead of seeking revelation",
             threatenedByChange: ["Ordinary work"],
             developmentalTension: { poleA: "insight", poleB: "execution" },
             imageVoteSummary: "insufficient",
@@ -551,8 +554,7 @@ export function passOutputFor(
               ? "Freedom while an external container still carries authority and money"
               : "Structure is being asked to serve aliveness, not the other way around.",
           protectiveFunction: ["Keeps the work from becoming only grind."],
-          possibleCompensatoryAim:
-            fixture === "origin-gold" ? "Structure in service of aliveness" : undefined,
+          possibleCompensatoryAim: "Structure in service of aliveness",
           threatenedByChange: ["Losing the feeling of possibility."],
           developmentalTension: { poleA: "possibility", poleB: "incarnation" },
           imageVoteSummary: fixture === "image-weakens" ? "weakens" : "insufficient",
@@ -564,6 +566,9 @@ export function passOutputFor(
       };
     }
     case "pass7":
+      if (fixture === "empty-jungian-no-omit") {
+        return { jungianLenses: [] };
+      }
       if (fixture === "empty-jungian") {
         return {
           jungianLenses: [],

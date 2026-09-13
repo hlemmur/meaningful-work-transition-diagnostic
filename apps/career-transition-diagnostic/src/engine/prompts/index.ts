@@ -63,12 +63,12 @@ export const promptRegistry = {
     text: `Image vote before resolution. Personal associations outrank symbol dictionaries. A weaken verdict must drop rank. Return JSON { votes: at least 1 of { hypothesisId, verdict: supports|weakens|splits|insufficient, note, evidenceRefs }, overallNote: string }. ${EMPTY_ARRAYS}`,
   },
   pass6: {
-    version: "pass-6.v2",
-    text: `Resolve Hidden Position as hypothesis language. Never use requestedInsight as possibleHiddenPosition. Keep a concrete alternative. Return JSON { hiddenPosition: nullable object with consciousPosition, observedPattern, possibleHiddenPosition, protectiveFunction, threatenedByChange, developmentalTension { poleA, poleB }, imageVoteSummary, evidenceRefs, counterEvidenceRefs, confidence tentative|moderate|strong; alternative: string }. ${EMPTY_ARRAYS} hiddenPosition may be null.`,
+    version: "pass-6.v3",
+    text: `Resolve Hidden Position as hypothesis language. Never use requestedInsight as possibleHiddenPosition. Keep a concrete alternative. Return JSON { hiddenPosition: nullable object with consciousPosition, observedPattern, possibleHiddenPosition, protectiveFunction, possibleCompensatoryAim (required non-empty string when hiddenPosition is present — name protection AND developmental aim, e.g. structure in service of aliveness), threatenedByChange, developmentalTension { poleA, poleB }, imageVoteSummary, evidenceRefs, counterEvidenceRefs, confidence tentative|moderate|strong; alternative: string }. ${EMPTY_ARRAYS} hiddenPosition may be null.`,
   },
   pass7: {
-    version: "pass-7.v2",
-    text: `Jungian amplification only after resolution. Return JSON { jungianLenses } with 0-3 items. Zero concepts is acceptable. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
+    version: "pass-7.v3",
+    text: `Jungian amplification only after resolution. Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
     version: "pass-8.v2",
