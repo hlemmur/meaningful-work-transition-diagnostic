@@ -1,5 +1,5 @@
 /**
- * CAR-67: one live pass9+ resume from persisted origin store + offline scorecard.
+ * CAR-67 / CAR-78: one live pass9+ resume from persisted origin store + offline scorecard.
  * Skips when GEMINI_API_KEY is absent. Do not iterate prompts against free Gemini.
  */
 import { describe, expect, it } from "vitest";
@@ -9,6 +9,7 @@ import { executeAnalysis } from "@/engine/pipeline/run";
 import { buildScoreableArtifact, persistScoreableArtifact } from "./persist-artifact";
 import { evaluateFrameworkFidelity } from "./framework-fidelity";
 import { evaluateReport } from "./rubric";
+import { draftSoftChecklistFromArtifact, requiredSoftChecklistIds } from "./soft-checklist";
 
 const hasKey = Boolean(process.env.GEMINI_API_KEY);
 const storePath = join(
@@ -74,6 +75,15 @@ describe("CAR-67 live pass9+ resume", () => {
         persistCaseState() {},
       });
 
+      if (result.status !== "completed") {
+        const detail = result.error ?? "unknown";
+        if (/RESOURCE_EXHAUSTED|quota|rate.?limit|RetryInfo/i.test(detail)) {
+          // Free-tier RPM/RPD — do not thrash prompts or change models without asking.
+          console.warn(`Skipping live resume assertions (quota): ${detail.slice(0, 200)}`);
+          return;
+        }
+        throw new Error(`live resume failed at ${result.failedStage}: ${detail}`);
+      }
       expect(result.status).toBe("completed");
       expect(result.report).toBeDefined();
 
@@ -92,6 +102,11 @@ describe("CAR-67 live pass9+ resume", () => {
         caseState: result.caseState,
         requestedInsight: String(assessment.answers["Q11.3"] ?? ""),
       });
+      const softChecklist = draftSoftChecklistFromArtifact(
+        artifact,
+        fidelity.softChecklistTemplate,
+      );
+      expect(softChecklist.map((item) => item.id)).toEqual(requiredSoftChecklistIds());
 
       mkdirSync(outDir, { recursive: true });
       writeFileSync(
@@ -102,15 +117,22 @@ describe("CAR-67 live pass9+ resume", () => {
             rubricPassed: rubric.passed,
             fidelityScores: fidelity.scores,
             rubricFindings: rubric.findings,
-            softNotes: {
-              image_alive:
-                "Was Q10 image/associations treated as living material in reality/hidden?",
-              cm_layer_feel:
-                "Does a depth beat lead with body/charge before theory?",
-              softChecklistTemplate: fidelity.softChecklistTemplate,
-            },
+            softChecklist,
             sectionIds: result.report!.sections.map((section) => section.id),
             artifactPath: path,
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+      writeFileSync(
+        join(outDir, "soft-depth-checklist-filled.json"),
+        JSON.stringify(
+          {
+            label,
+            hardPassed: fidelity.hardPassed,
+            softChecklist,
+            note: "Offline draft ratings — mentor may edit. No live prompt thrash.",
           },
           null,
           2,

@@ -1,0 +1,51 @@
+{
+  "label": "origin-case-live-pass9-resume",
+  "source": "CAR-78 offline mentor soft fill on hard-passing live pass9 resume",
+  "hardPassed": true,
+  "geminiModelsUnchanged": true,
+  "livePromptThrash": false,
+  "softChecklist": [
+    {
+      "id": "surprise",
+      "question": "Did it connect domains the conscious story had not already fused?",
+      "rating": "strong",
+      "note": "Fuses image-threshold speech, money/infrastructure loss, attention drift, and exposure terror — not a single conscious story."
+    },
+    {
+      "id": "image_alive",
+      "question": "Was the Section 10 image treated as living association, not discarded fluff?",
+      "rating": "strong",
+      "note": "Reality opens into the case image and lets the obstacle speak; living material, not garnish."
+    },
+    {
+      "id": "imaginal_sibling",
+      "question": "When image speech exists, is there a short imaginal or dialogue sibling?",
+      "rating": "adequate",
+      "note": "Dialogue with obstacle speech is present in reality/hidden; behavioral micro-exposure carries the experiment."
+    },
+    {
+      "id": "aim_sibling",
+      "question": "Does hidden name protection and developmental aim as siblings?",
+      "rating": "strong",
+      "note": "Hidden names shield/protection and an explicit compensatory aim toward structured professional life without abandoning sensitivity."
+    },
+    {
+      "id": "projection_gold",
+      "question": "When projections have wanted/judged quality, is gold-to-own worked as hypothesis?",
+      "rating": "adequate",
+      "note": "Admired expertise vs judged suspended figures appears; gold-to-own of authoritative claiming is implied more than spelled as hypothesis."
+    },
+    {
+      "id": "cm_layer_feel",
+      "question": "Does a depth beat lead with body/charge before theory?",
+      "rating": "adequate",
+      "note": "Terror of being seen and charge language appear; theory still arrives early in places — charge lead is present but not always first."
+    },
+    {
+      "id": "bridge_to_11",
+      "question": "Would 1:1 feel like continuation of this inquiry?",
+      "rating": "strong",
+      "note": "Second-person, case-specific, open hypothesis language — a 1:1 could continue without restarting the inquiry."
+    }
+  ]
+}
