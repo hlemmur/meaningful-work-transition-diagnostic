@@ -70,7 +70,7 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
   const tierAUsed =
     !hasTierAAnswers ||
     /:Q5\.|:Q6\.|:Q8\.|:Q9\.|:Q10\./.test(refs) ||
-    /projection|money|bargain|pipe|structure|container/i.test(text);
+    /projection|money|bargain|image|scene|structure|container/i.test(text);
   scores.push(
     score(
       "tier_a_used",
