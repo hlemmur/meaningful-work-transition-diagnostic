@@ -152,6 +152,63 @@ describe("buildStageLlmInput", () => {
     expect(input.requestedInsight).toBe("sharp angles I cannot unsee");
   });
 
+  it("exposes protectiveFunction and possibleCompensatoryAim on snapshot hiddenPosition", () => {
+    const state = seededCase("a1");
+    state.hiddenPosition = {
+      consciousPosition: "I want freedom",
+      observedPattern: "Stalls when the offer must become real",
+      possibleHiddenPosition: "Keeps authority outside while claiming autonomy",
+      protectiveFunction: [
+        "Protects ethereal identity from ordinary exposure",
+        `${"x".repeat(400)} keep-tail`,
+      ],
+      possibleCompensatoryAim: `structure in service of aliveness ${"y".repeat(400)}`,
+      threatenedByChange: ["Loss of lightness"],
+      developmentalTension: { poleA: "freedom", poleB: "container" },
+      imageVoteSummary: "image mid-crossing",
+      evidenceRefs: ["a1:Q9.3"],
+      counterEvidenceRefs: [],
+      confidence: "moderate",
+    };
+
+    const withHidden = buildStageLlmInput({
+      stage: "pass9",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: state,
+      answers: { "Q1.1": "stall" },
+    }).caseSnapshot as {
+      hiddenPosition: {
+        protectiveFunction: string[];
+        possibleCompensatoryAim: string;
+        possibleHiddenPosition: string;
+      } | null;
+    };
+
+    expect(withHidden.hiddenPosition).toEqual(
+      expect.objectContaining({
+        possibleHiddenPosition: "Keeps authority outside while claiming autonomy",
+        protectiveFunction: [
+          "Protects ethereal identity from ordinary exposure",
+          expect.stringMatching(/^x+…$/),
+        ],
+        possibleCompensatoryAim: expect.stringMatching(/^structure in service of aliveness y+…$/),
+      }),
+    );
+    expect(withHidden.hiddenPosition!.protectiveFunction[1]!.length).toBeLessThanOrEqual(401);
+    expect(withHidden.hiddenPosition!.possibleCompensatoryAim.length).toBeLessThanOrEqual(401);
+
+    const withoutHidden = buildStageLlmInput({
+      stage: "pass9",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: seededCase("a1"),
+      answers: { "Q1.1": "stall" },
+    }).caseSnapshot as { hiddenPosition: null };
+
+    expect(withoutHidden.hiddenPosition).toBeNull();
+  });
+
   it("exposes Tier-A citeRefs and requiredCitations so pass9 can satisfy hard gates", () => {
     const state = seededCase("a1");
     state.symbolicMaterial = {

@@ -280,6 +280,13 @@ export function buildCaseSnapshot(input: {
           consciousPosition: trimText(caseState.hiddenPosition.consciousPosition),
           observedPattern: trimText(caseState.hiddenPosition.observedPattern),
           possibleHiddenPosition: trimText(caseState.hiddenPosition.possibleHiddenPosition),
+          protectiveFunction: caseState.hiddenPosition.protectiveFunction
+            .map((item) => trimText(item))
+            .filter((item): item is string => typeof item === "string" && item.length > 0),
+          possibleCompensatoryAim: (() => {
+            const aim = trimText(caseState.hiddenPosition.possibleCompensatoryAim);
+            return typeof aim === "string" && aim.length > 0 ? aim : undefined;
+          })(),
           evidenceRefs: caseState.hiddenPosition.evidenceRefs,
           confidence: caseState.hiddenPosition.confidence,
         }
