@@ -2,6 +2,7 @@ import type { CaseState } from "../schemas/case-state";
 import type { Hypothesis, ReportSection } from "../schemas/analysis";
 import type { pass4OutputSchema, pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
 import {
+  CANONICAL_PEEL_TITLES,
   hasRichImageAssociations,
   imageVoteAdequate,
   isParaphraseOf,
@@ -176,8 +177,11 @@ export function sanitizeReportSections(
     })
     .map((section) => {
       const refs = section.evidenceRefs.filter((ref) => known.has(ref) || ref.startsWith(`${state.assessmentId}:`));
+      const canonical = CANONICAL_PEEL_TITLES[section.id];
       return {
         ...section,
+        // Peel titles are structural labels — normalize so voice gates don't thrash live drafts.
+        title: canonical ?? section.title,
         evidenceRefs: refs.length ? refs : [fallback],
       };
     });

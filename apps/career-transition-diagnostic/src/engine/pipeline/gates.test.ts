@@ -197,6 +197,36 @@ describe("client voice gates", () => {
     expect(plainTitles(sections).passed).toBe(false);
   });
 
+  it("plain_titles accepts The-… near-canonical peel labels", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "The hidden position",
+        body: "You may be protecting a purity bargain.",
+        evidenceRefs: ["o1:Q9.2"],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "The alternative",
+        body: "Your stall may be a skill and structure gap.",
+        evidenceRefs: ["o1:Q0.5"],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "The experiment",
+        body: "For two weeks you run a minimum viable offer.",
+        evidenceRefs: ["o1:Q1.1"],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "The Jungian lens",
+        body: "A polarity may illuminate the stall without diagnosing you.",
+        evidenceRefs: ["o1:Q2.1"],
+      }),
+    ];
+    expect(plainTitles(sections).passed).toBe(true);
+  });
+
   it("no_analyst_openers fails on clinical essay openers", () => {
     const sections = [
       section(

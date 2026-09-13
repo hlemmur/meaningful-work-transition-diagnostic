@@ -308,14 +308,29 @@ const SECOND_PERSON = /\byou\b|\byour\b|\byourself\b|\byours\b/i;
 const ANALYST_OPENERS =
   /presents a compelling|examining the deeper|illuminated by|sophisticated (psychological )?bargain|from a process-oriented|evocative imagery|stark contrast between/i;
 
+/** Canonical peel labels used in fixtures, snapshot requiredTitles, and sanitize. */
+export const CANONICAL_PEEL_TITLES: Record<string, string> = {
+  problem: "The problem as you see it",
+  reality: "What reality says",
+  contradiction: "The contradiction at the center",
+  hidden: "A possible hidden position",
+  alternative: "Another plausible interpretation",
+  experiment: "Your experiment",
+  jungian: "A Jungian lens",
+};
+
+/**
+ * Accept short peel labels including “The …” variants.
+ * Reject long thesis subtitles (also enforced by length > 48).
+ */
 const PLAIN_TITLE_BY_ID: Record<string, RegExp> = {
   problem: /^(the )?problem( as you see it)?$/i,
   reality: /^(what )?reality( says)?$/i,
   contradiction: /^(the )?contradiction( at the center)?$/i,
-  hidden: /^(a )?possible hidden position$|^hidden( position)?$/i,
-  alternative: /^(another )?plausible interpretation$|^alternative$/i,
-  experiment: /^(your )?experiment$/i,
-  jungian: /^(a )?jungian lens$/i,
+  hidden: /^(the |a )?(possible )?hidden( position)?$/i,
+  alternative: /^(the |another )?(plausible )?interpretation$|^(the )?alternative$/i,
+  experiment: /^(the |your )?experiment$/i,
+  jungian: /^(the |a )?jungian lens$/i,
 };
 
 function sectionById(sections: ReportSection[], id: string) {

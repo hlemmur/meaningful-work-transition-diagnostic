@@ -152,6 +152,99 @@ describe("buildStageLlmInput", () => {
     expect(input.requestedInsight).toBe("sharp angles I cannot unsee");
   });
 
+  it("exposes Tier-A citeRefs and requiredCitations so pass9 can satisfy hard gates", () => {
+    const state = seededCase("a1");
+    state.symbolicMaterial = {
+      scene: "A rusty pipe across a threshold",
+      surroundings: "Muddy water",
+      obstacleSpeech: "Stay mid-crossing",
+    };
+    state.projections.admiredFigures = [
+      {
+        id: "a1:Q5.1:fig",
+        figure: "A grounded mentor",
+        wantedQuality: "claims space",
+        evidenceRefs: ["a1:Q5.1"],
+      },
+    ];
+    state.projections.rejectedFigures = [
+      {
+        id: "a1:Q6.1:fig",
+        figure: "A hustler",
+        judgedQuality: "sells air",
+        evidenceRefs: ["a1:Q6.1"],
+      },
+    ];
+    state.money.easyMoneyHistory = [
+      {
+        id: "a1:Q8.2",
+        assessmentId: "a1",
+        questionId: "Q8.2",
+        rawQuote: "Money arrived through industry demand",
+        normalizedMeaning: "Money arrived through industry demand",
+        evidenceType: "history",
+      },
+    ];
+
+    const snapshot = buildStageLlmInput({
+      stage: "pass9",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: state,
+      answers: {
+        "Q1.1": "stall",
+        "Q5.1": "mentor",
+        "Q6.1": "hustler",
+        "Q8.2": "industry money",
+        "Q10.1": "A rusty pipe",
+        "Q10.2": "Muddy water",
+        "Q10.6": "Stay mid-crossing",
+      },
+    }).caseSnapshot as {
+      evidenceAllowlist: string[];
+      tierA: {
+        image: { citeRefs: string[] };
+        projections: { admired: Array<{ evidenceRefs: string[] }> };
+        money: { citeRefs: string[] };
+      };
+      requiredCitations: {
+        image: { mustCiteIn: string[]; refs: string[] };
+        projection: { mustCiteIn: string[]; refs: string[] };
+        money: { mustCiteIn: string[]; refs: string[] };
+      };
+      requiredTitles: Record<string, string>;
+    };
+
+    expect(snapshot.tierA.image.citeRefs).toEqual(
+      expect.arrayContaining(["a1:Q10.1", "a1:Q10.2", "a1:Q10.6"]),
+    );
+    expect(snapshot.tierA.projections.admired[0]?.evidenceRefs).toContain("a1:Q5.1");
+    expect(snapshot.tierA.money.citeRefs).toContain("a1:Q8.2");
+    expect(snapshot.evidenceAllowlist).toEqual(
+      expect.arrayContaining(["a1:Q10.1", "a1:Q5.1", "a1:Q6.1", "a1:Q8.2"]),
+    );
+    expect(snapshot.requiredCitations.image).toEqual({
+      mustCiteIn: ["reality", "hidden"],
+      refs: expect.arrayContaining(["a1:Q10.1", "a1:Q10.6"]),
+    });
+    expect(snapshot.requiredCitations.projection).toEqual({
+      mustCiteIn: ["contradiction", "hidden"],
+      refs: expect.arrayContaining(["a1:Q5.1", "a1:Q6.1"]),
+    });
+    expect(snapshot.requiredCitations.money).toEqual({
+      mustCiteIn: ["reality", "alternative"],
+      refs: expect.arrayContaining(["a1:Q8.2"]),
+    });
+    expect(snapshot.requiredTitles).toEqual(
+      expect.objectContaining({
+        problem: "The problem as you see it",
+        hidden: "A possible hidden position",
+        experiment: "Your experiment",
+        jungian: "A Jungian lens",
+      }),
+    );
+  });
+
   it("adds a bounded case snapshot for pass9 and pass10", () => {
     const answers = {
       "Q0.5": "I have ADHD",
