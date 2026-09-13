@@ -212,6 +212,7 @@ describe("buildStageLlmInput", () => {
         projection: { mustCiteIn: string[]; refs: string[] };
         money: { mustCiteIn: string[]; refs: string[] };
       };
+      requiredTitles: Record<string, string>;
     };
 
     expect(snapshot.tierA.image.citeRefs).toEqual(
