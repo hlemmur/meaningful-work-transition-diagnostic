@@ -127,8 +127,10 @@ describe("promptRegistry contracts", () => {
       "money",
       "bargain",
       "polarity",
+      "second person",
+      "the client",
     ]);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v4");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v5");
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
       "regeneratedSections",
@@ -141,7 +143,9 @@ describe("promptRegistry contracts", () => {
       "requestedInsight",
       "Tier-A",
       "inflation",
+      "the client",
+      "second-person",
     ]);
-    expect(promptRegistry.pass10.version).toBe("pass-10.v4");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v5");
   });
 });
