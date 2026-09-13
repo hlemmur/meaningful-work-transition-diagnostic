@@ -303,6 +303,116 @@ export function reportLayerCoverage(
   };
 }
 
+const IMAGE_CUES = /pipe|association|image|scene|obstacle|speech|threshold|dream|symbol/i;
+const PROJECTION_CUES = /admir|reject|gaze|fascination|figure|projection|hooked/i;
+const MONEY_CUES =
+  /money|income|salary|infrastructure|machinery|financial|economic|paid|acquisition|earn/i;
+
+function sectionById(sections: ReportSection[], id: string) {
+  return sections.find((section) => section.id === id);
+}
+
+function sectionBlob(section?: ReportSection) {
+  if (!section) {
+    return "";
+  }
+  return `${section.title}\n${section.body}`;
+}
+
+function refsBlob(sections: ReportSection[]) {
+  return sections.flatMap((section) => section.evidenceRefs).join(" ");
+}
+
+export function hasProjectionFigures(state: CaseState) {
+  return (
+    state.projections.admiredFigures.length + state.projections.rejectedFigures.length > 0
+  );
+}
+
+export function hasMoneyTierA(state: CaseState) {
+  return Object.values(state.money).some((items) => items.length > 0);
+}
+
+/** When rich Q10 associations exist, reality or hidden must cite/use them (not experiment garnish only). */
+export function imageCited(sections: ReportSection[], state: CaseState): GateFinding {
+  if (!hasRichImageAssociations(state)) {
+    return {
+      id: "image_cited",
+      passed: true,
+      detail: "No rich image associations requiring citation.",
+    };
+  }
+  const reality = sectionById(sections, "reality");
+  const hidden = sectionById(sections, "hidden");
+  const core = [reality, hidden].filter(Boolean) as ReportSection[];
+  const coreParticipates = core.some(
+    (section) =>
+      section.evidenceRefs.some((ref) => /:Q10\./.test(ref)) || IMAGE_CUES.test(sectionBlob(section)),
+  );
+  return {
+    id: "image_cited",
+    passed: coreParticipates,
+    detail: coreParticipates
+      ? "Image associations appear in reality or hidden."
+      : "Rich Q10 associations present but reality/hidden omit image cues and :Q10. citations.",
+  };
+}
+
+/** When admired/rejected figures exist, contradiction or hidden must cite Q5/Q6 or use hooked-quality language. */
+export function projectionCited(sections: ReportSection[], state: CaseState): GateFinding {
+  if (!hasProjectionFigures(state)) {
+    return {
+      id: "projection_cited",
+      passed: true,
+      detail: "No projection figures requiring citation.",
+    };
+  }
+  const target = [sectionById(sections, "contradiction"), sectionById(sections, "hidden")].filter(
+    Boolean,
+  ) as ReportSection[];
+  const hasRefs = /:Q5\.|:Q6\./.test(refsBlob(sections));
+  const hasLanguage = PROJECTION_CUES.test(target.map(sectionBlob).join("\n"));
+  const passed = hasRefs || hasLanguage;
+  return {
+    id: "projection_cited",
+    passed,
+    detail: passed
+      ? "Projection figures appear via refs or hooked-quality language."
+      : "Admired/rejected figures present but contradiction/hidden omit :Q5./:Q6. and hooked-quality language.",
+  };
+}
+
+/** When money Tier-A buckets exist, reality or alternative must cite Q8 or use money/infrastructure language. */
+export function moneyCited(sections: ReportSection[], state: CaseState): GateFinding {
+  if (!hasMoneyTierA(state)) {
+    return {
+      id: "money_cited",
+      passed: true,
+      detail: "No money Tier-A buckets requiring citation.",
+    };
+  }
+  const target = [sectionById(sections, "reality"), sectionById(sections, "alternative")].filter(
+    Boolean,
+  ) as ReportSection[];
+  const hasRefs = /:Q8\./.test(refsBlob(sections));
+  const hasLanguage = MONEY_CUES.test(target.map(sectionBlob).join("\n"));
+  const passed = hasRefs || hasLanguage;
+  return {
+    id: "money_cited",
+    passed,
+    detail: passed
+      ? "Money Tier-A appears via refs or money/infrastructure language."
+      : "Money Tier-A present but reality/alternative omit :Q8. and money/infrastructure language.",
+  };
+}
+
+export function tierACitationGates(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding[] {
+  return [imageCited(sections, state), projectionCited(sections, state), moneyCited(sections, state)];
+}
+
 export function senexScoldOnly(text: string): GateFinding {
   const grind = /grow up|just (need )?(more )?discipline|stop seeking (insight|revelation)|unglamorous discomfort of daily execution/i.test(
     text,
