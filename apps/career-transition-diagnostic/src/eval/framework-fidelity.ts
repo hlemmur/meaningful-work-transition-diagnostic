@@ -178,6 +178,36 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
   const layers = reportLayerCoverage(sections, caseState);
   scores.push(score("layer_coverage", layers.passed, layers.detail));
 
+  const inflation =
+    /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)|you are (an? )?(puer|senex)\b/i.test(
+      text,
+    ) ||
+    (/unanchored ideal/i.test(text) && !/polarity|enantiodromia|\bboth\b|compensation/i.test(text));
+  scores.push(
+    score(
+      "anti_inflation",
+      !inflation,
+      inflation
+        ? "Client-facing inflation or unanchored ideal without polarity language."
+        : "No client-facing inflation diagnosis.",
+    ),
+  );
+
+  const affectIndicated =
+    (caseState.affect.chargeIntensity ?? 0) >= 1 || caseState.affect.emotions.length > 0;
+  if (affectIndicated) {
+    const hasCharge = /shame|terror|freeze|chest|throat|body|charge/i.test(text);
+    scores.push(
+      score(
+        "charge_language",
+        hasCharge,
+        hasCharge
+          ? "Peel includes charge/body language."
+          : "Affect indicated but peel lacks charge/body language.",
+      ),
+    );
+  }
+
   return {
     hardPassed: scores.filter((item) => item.hard).every((item) => item.passed),
     scores,

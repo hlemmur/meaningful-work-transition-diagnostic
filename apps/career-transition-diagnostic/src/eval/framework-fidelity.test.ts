@@ -306,4 +306,115 @@ describe("evaluateFrameworkFidelity", () => {
       true,
     );
   });
+
+  it("fails inflation-shaped report and charge-missing when affect indicated", () => {
+    const caseState = extractCaseStateFull("inf", originAnswers);
+    caseState.affect = {
+      ...caseState.affect,
+      chargeIntensity: 3,
+      emotions: [
+        {
+          id: "e1",
+          assessmentId: "inf",
+          questionId: "Q3.1",
+          normalizedMeaning: "shame",
+          evidenceType: "emotion",
+        },
+      ],
+    };
+    caseState.hypotheses = [
+      {
+        id: "hyp-practical",
+        title: "Constraints may suffice",
+        category: "practical",
+        observedPattern: "ADHD and money pressure",
+        evidenceFor: ["inf:Q0.5"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: ["rational_caution_vs_hidden_bargain"],
+        scoring: {
+          evidenceCoverage: 0.6,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.5,
+          personSpecificity: 0.5,
+          developmentalFit: 0.4,
+          imageConstraintFit: 0.4,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.1,
+        },
+        confidence: "tentative",
+      },
+    ];
+    caseState.experiments = [
+      {
+        kind: "behavioral",
+        title: "Stakes",
+        hypothesisTested: "rational_caution_vs_hidden_bargain",
+        action: "Two weeks of outreach",
+        duration: "14 days",
+        whatToObserve: ["output"],
+        resultSupportingHypothesis: "motion",
+        resultWeakeningHypothesis: "stall",
+        riskLevel: "low",
+        practicalRequirements: [],
+      },
+    ];
+    caseState.openForks = ["rational_caution_vs_hidden_bargain"];
+
+    const inflation = evaluateFrameworkFidelity({
+      answers: originAnswers,
+      caseState,
+      report: {
+        engineVersion: "engine.v2",
+        sections: [
+          {
+            id: "problem",
+            title: "Problem",
+            body: "You are an eternal youth stuck in unanchored ideal without taking ordinary steps into work.",
+            evidenceRefs: ["inf:Q1.1", "inf:Q2.2"],
+          },
+          {
+            id: "reality",
+            title: "Reality",
+            body: "ADHD and money pressure are real; legitimacy and structure are missing from the week.",
+            evidenceRefs: ["inf:Q0.5", "inf:Q8.4"],
+          },
+          {
+            id: "contradiction",
+            title: "Contradiction",
+            body: "You want freedom yet function only when someone else carries the calendar.",
+            evidenceRefs: ["inf:Q1.2", "inf:Q5.1"],
+          },
+          {
+            id: "hidden",
+            title: "Hidden",
+            body: "Protection keeps lightness; the bargain protects ethereal identity from ordinary exposure.",
+            evidenceRefs: ["inf:Q9.2", "inf:Q9.3"],
+          },
+          {
+            id: "alternative",
+            title: "Alternative",
+            body: "Missing acquisition skill and ADHD-friendly infrastructure may be enough.",
+            evidenceRefs: ["inf:Q0.5", "inf:Q8.5"],
+          },
+          {
+            id: "experiment",
+            title: "Experiment",
+            body: "For two weeks run outreach under mutual dependency and watch whether output rises.",
+            evidenceRefs: ["inf:QB.1", "inf:Q1.3"],
+          },
+        ],
+      },
+    });
+    expect(inflation.hardPassed).toBe(false);
+    expect(inflation.scores.some((item) => item.id === "anti_inflation" && !item.passed)).toBe(
+      true,
+    );
+    expect(inflation.scores.some((item) => item.id === "charge_language" && !item.passed)).toBe(
+      true,
+    );
+  });
 });
