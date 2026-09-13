@@ -11,6 +11,9 @@ import {
   projectionCited,
   moneyCited,
   reportLayerCoverage,
+  secondPersonVoice,
+  plainTitles,
+  noAnalystOpeners,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -109,12 +112,24 @@ describe("Tier-A citation gates", () => {
     expect(finding.id).toBe("projection_cited");
   });
 
-  it("projection_cited passes with hooked-quality language", () => {
+  it("projection_cited fails when only hooked-quality language is present without Q5/Q6 refs", () => {
     const sections = [
       section(
         "contradiction",
         "Admiration for grounded mentors marks a hooked quality of claiming space.",
         ["o1:Q1.2"],
+      ),
+      section("hidden", "Protection keeps lightness.", ["o1:Q9.2"]),
+    ];
+    expect(projectionCited(sections, origin).passed).toBe(false);
+  });
+
+  it("projection_cited passes with Q5 refs on contradiction", () => {
+    const sections = [
+      section(
+        "contradiction",
+        "Admiration for grounded mentors marks a hooked quality of claiming space.",
+        ["o1:Q1.2", "o1:Q5.1"],
       ),
       section("hidden", "Protection keeps lightness.", ["o1:Q9.2"]),
     ];
@@ -150,5 +165,46 @@ describe("Tier-A citation gates", () => {
       section("reality", "Only practical notes.", ["o1:Q0.5"]),
     ];
     expect(reportLayerCoverage(sections, origin).passed).toBe(false);
+  });
+});
+
+describe("client voice gates", () => {
+  it("second_person fails on the-client diction", () => {
+    const sections = [
+      section("problem", "The client presents a stall after leaving IT.", ["o1:Q1.1"]),
+      section("reality", "Practical constraints matter.", ["o1:Q0.5"]),
+    ];
+    expect(secondPersonVoice(sections).passed).toBe(false);
+  });
+
+  it("second_person passes You-address without the-client", () => {
+    const sections = [
+      section("problem", "You stall after leaving IT.", ["o1:Q1.1"]),
+      section("reality", "Your constraints include ADHD and money pressure.", ["o1:Q0.5"]),
+    ];
+    expect(secondPersonVoice(sections).passed).toBe(true);
+  });
+
+  it("plain_titles fails on thesis subtitles", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The Stated Predicament and Economic Pressure",
+        body: "You stall after leaving IT for coaching.",
+        evidenceRefs: ["o1:Q1.1"],
+      }),
+    ];
+    expect(plainTitles(sections).passed).toBe(false);
+  });
+
+  it("no_analyst_openers fails on clinical essay openers", () => {
+    const sections = [
+      section(
+        "reality",
+        "Examining the deeper structural layers reveals evocative imagery in your pipe scene.",
+        ["o1:Q10.1"],
+      ),
+    ];
+    expect(noAnalystOpeners(sections).passed).toBe(false);
   });
 });

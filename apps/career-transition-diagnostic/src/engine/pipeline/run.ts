@@ -20,6 +20,7 @@ import {
   experimentBoundToHypothesis,
   reportLayerCoverage,
   senexScoldOnly,
+  clientVoiceGates,
   throwGate,
   tierACitationGates,
   warrantsJungianPolarity,
@@ -143,6 +144,11 @@ export async function executeAnalysis(input: {
         for (const citation of tierACitationGates(sections, caseState)) {
           if (!citation.passed) {
             throwGate(citation);
+          }
+        }
+        for (const voice of clientVoiceGates(sections)) {
+          if (!voice.passed) {
+            throwGate(voice);
           }
         }
         const senex = senexScoldOnly(sections.map((section) => section.body).join("\n"));

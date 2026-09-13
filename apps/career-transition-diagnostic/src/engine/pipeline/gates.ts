@@ -303,24 +303,27 @@ export function reportLayerCoverage(
   };
 }
 
-const IMAGE_CUES = /pipe|association|image|scene|obstacle|speech|threshold|dream|symbol/i;
-const PROJECTION_CUES = /admir|reject|gaze|fascination|figure|projection|hooked/i;
-const MONEY_CUES =
-  /money|income|salary|infrastructure|machinery|financial|economic|paid|acquisition|earn/i;
+const CLIENT_THIRD_PERSON = /\bthe client\b|\bthis client\b|\bthe client's\b/i;
+const SECOND_PERSON = /\byou\b|\byour\b|\byourself\b|\byours\b/i;
+const ANALYST_OPENERS =
+  /presents a compelling|examining the deeper|illuminated by|sophisticated (psychological )?bargain|from a process-oriented|evocative imagery|stark contrast between/i;
+
+const PLAIN_TITLE_BY_ID: Record<string, RegExp> = {
+  problem: /^(the )?problem( as you see it)?$/i,
+  reality: /^(what )?reality( says)?$/i,
+  contradiction: /^(the )?contradiction( at the center)?$/i,
+  hidden: /^(a )?possible hidden position$|^hidden( position)?$/i,
+  alternative: /^(another )?plausible interpretation$|^alternative$/i,
+  experiment: /^(your )?experiment$/i,
+  jungian: /^(a )?jungian lens$/i,
+};
 
 function sectionById(sections: ReportSection[], id: string) {
   return sections.find((section) => section.id === id);
 }
 
-function sectionBlob(section?: ReportSection) {
-  if (!section) {
-    return "";
-  }
-  return `${section.title}\n${section.body}`;
-}
-
-function refsBlob(sections: ReportSection[]) {
-  return sections.flatMap((section) => section.evidenceRefs).join(" ");
+function refsOn(sections: ReportSection[]) {
+  return sections.flatMap((section) => section.evidenceRefs);
 }
 
 export function hasProjectionFigures(state: CaseState) {
@@ -333,7 +336,7 @@ export function hasMoneyTierA(state: CaseState) {
   return Object.values(state.money).some((items) => items.length > 0);
 }
 
-/** When rich Q10 associations exist, reality or hidden must cite/use them (not experiment garnish only). */
+/** When rich Q10 associations exist, reality or hidden must cite :Q10. (cues alone insufficient). */
 export function imageCited(sections: ReportSection[], state: CaseState): GateFinding {
   if (!hasRichImageAssociations(state)) {
     return {
@@ -342,23 +345,20 @@ export function imageCited(sections: ReportSection[], state: CaseState): GateFin
       detail: "No rich image associations requiring citation.",
     };
   }
-  const reality = sectionById(sections, "reality");
-  const hidden = sectionById(sections, "hidden");
-  const core = [reality, hidden].filter(Boolean) as ReportSection[];
-  const coreParticipates = core.some(
-    (section) =>
-      section.evidenceRefs.some((ref) => /:Q10\./.test(ref)) || IMAGE_CUES.test(sectionBlob(section)),
-  );
+  const core = [sectionById(sections, "reality"), sectionById(sections, "hidden")].filter(
+    Boolean,
+  ) as ReportSection[];
+  const hasRef = refsOn(core).some((ref) => /:Q10\./.test(ref));
   return {
     id: "image_cited",
-    passed: coreParticipates,
-    detail: coreParticipates
-      ? "Image associations appear in reality or hidden."
-      : "Rich Q10 associations present but reality/hidden omit image cues and :Q10. citations.",
+    passed: hasRef,
+    detail: hasRef
+      ? "Image associations cited via :Q10. in reality or hidden."
+      : "Rich Q10 associations present but reality/hidden lack :Q10. evidenceRefs.",
   };
 }
 
-/** When admired/rejected figures exist, contradiction or hidden must cite Q5/Q6 or use hooked-quality language. */
+/** When admired/rejected figures exist, contradiction or hidden must cite :Q5. or :Q6. */
 export function projectionCited(sections: ReportSection[], state: CaseState): GateFinding {
   if (!hasProjectionFigures(state)) {
     return {
@@ -370,19 +370,17 @@ export function projectionCited(sections: ReportSection[], state: CaseState): Ga
   const target = [sectionById(sections, "contradiction"), sectionById(sections, "hidden")].filter(
     Boolean,
   ) as ReportSection[];
-  const hasRefs = /:Q5\.|:Q6\./.test(refsBlob(sections));
-  const hasLanguage = PROJECTION_CUES.test(target.map(sectionBlob).join("\n"));
-  const passed = hasRefs || hasLanguage;
+  const hasRefs = refsOn(target).some((ref) => /:Q5\.|:Q6\./.test(ref));
   return {
     id: "projection_cited",
-    passed,
-    detail: passed
-      ? "Projection figures appear via refs or hooked-quality language."
-      : "Admired/rejected figures present but contradiction/hidden omit :Q5./:Q6. and hooked-quality language.",
+    passed: hasRefs,
+    detail: hasRefs
+      ? "Projection figures cited via :Q5./:Q6. in contradiction or hidden."
+      : "Admired/rejected figures present but contradiction/hidden lack :Q5./:Q6. evidenceRefs.",
   };
 }
 
-/** When money Tier-A buckets exist, reality or alternative must cite Q8 or use money/infrastructure language. */
+/** When money Tier-A buckets exist, reality or alternative must cite :Q8. */
 export function moneyCited(sections: ReportSection[], state: CaseState): GateFinding {
   if (!hasMoneyTierA(state)) {
     return {
@@ -394,15 +392,13 @@ export function moneyCited(sections: ReportSection[], state: CaseState): GateFin
   const target = [sectionById(sections, "reality"), sectionById(sections, "alternative")].filter(
     Boolean,
   ) as ReportSection[];
-  const hasRefs = /:Q8\./.test(refsBlob(sections));
-  const hasLanguage = MONEY_CUES.test(target.map(sectionBlob).join("\n"));
-  const passed = hasRefs || hasLanguage;
+  const hasRefs = refsOn(target).some((ref) => /:Q8\./.test(ref));
   return {
     id: "money_cited",
-    passed,
-    detail: passed
-      ? "Money Tier-A appears via refs or money/infrastructure language."
-      : "Money Tier-A present but reality/alternative omit :Q8. and money/infrastructure language.",
+    passed: hasRefs,
+    detail: hasRefs
+      ? "Money Tier-A cited via :Q8. in reality or alternative."
+      : "Money Tier-A present but reality/alternative lack :Q8. evidenceRefs.",
   };
 }
 
@@ -411,6 +407,58 @@ export function tierACitationGates(
   state: CaseState,
 ): GateFinding[] {
   return [imageCited(sections, state), projectionCited(sections, state), moneyCited(sections, state)];
+}
+
+/** Client peel must address the person in second person, not as “the client”. */
+export function secondPersonVoice(sections: ReportSection[]): GateFinding {
+  const bodies = sections.map((section) => section.body);
+  const third = bodies.some((body) => CLIENT_THIRD_PERSON.test(body));
+  const missingYou = bodies.some((body) => !SECOND_PERSON.test(body));
+  const passed = !third && !missingYou;
+  return {
+    id: "second_person",
+    passed,
+    detail: passed
+      ? "Report bodies address the person in second person."
+      : third
+        ? "Report must not refer to the person as “the client”; use second person."
+        : "Every section body must include You/Your address.",
+  };
+}
+
+/** Titles must be short peel labels, not thesis subtitles. */
+export function plainTitles(sections: ReportSection[]): GateFinding {
+  const bad = sections.filter((section) => {
+    const pattern = PLAIN_TITLE_BY_ID[section.id];
+    if (!pattern) {
+      return section.title.trim().split(/\s+/).length > 6;
+    }
+    return !pattern.test(section.title.trim()) || section.title.length > 48;
+  });
+  return {
+    id: "plain_titles",
+    passed: bad.length === 0,
+    detail: bad.length
+      ? `Titles must stay plain peel labels; rewrite: ${bad.map((item) => item.id).join(", ")}`
+      : "Section titles are plain peel labels.",
+  };
+}
+
+/** Ban stock clinical/essay openers. */
+export function noAnalystOpeners(sections: ReportSection[]): GateFinding {
+  const text = sections.map((section) => section.body).join("\n");
+  const hit = ANALYST_OPENERS.test(text);
+  return {
+    id: "no_analyst_openers",
+    passed: !hit,
+    detail: hit
+      ? "Report uses banned clinical/essay analyst openers."
+      : "No banned clinical/essay analyst openers.",
+  };
+}
+
+export function clientVoiceGates(sections: ReportSection[]): GateFinding[] {
+  return [secondPersonVoice(sections), plainTitles(sections), noAnalystOpeners(sections)];
 }
 
 export function senexScoldOnly(text: string): GateFinding {

@@ -32,6 +32,7 @@ describe("negative and positive mock fixtures", () => {
     expect(inferAnalysisFixture({ "Q1.1": "IMAGE_STARVED_PEEL" })).toBe("image-starved-peel");
     expect(inferAnalysisFixture({ "Q1.1": "PROJECTION_STARVED_PEEL" })).toBe("projection-starved-peel");
     expect(inferAnalysisFixture({ "Q1.1": "MONEY_STARVED_PEEL" })).toBe("money-starved-peel");
+    expect(inferAnalysisFixture({ "Q1.1": "CLINICAL_VOICE_PEEL" })).toBe("clinical-voice-peel");
   });
 
   it("fails closed on empty jungian without omitReason (live miss)", async () => {
@@ -136,6 +137,24 @@ describe("negative and positive mock fixtures", () => {
     expect(result.status).toBe("failed");
     expect(result.failedStage).toBe("pass9");
     expect(result.error).toMatch(/money|Q8|infrastructure/i);
+  });
+
+  it("fails clinical-voice-peel on third-person analyst diction", async () => {
+    const answers: Record<string, unknown> = {
+      ...originAnswers,
+      "Q1.1": `${String(originAnswers["Q1.1"] ?? "")} CLINICAL_VOICE_PEEL`,
+    };
+    const result = await executeAnalysis({
+      assessmentId: "origin",
+      answers,
+      completedStages: [],
+      llm: mockLlmAdapter,
+      persistRun() {},
+      persistCaseState() {},
+    });
+    expect(result.status).toBe("failed");
+    expect(result.failedStage).toBe("pass9");
+    expect(result.error).toMatch(/client|second person|titles|analyst|clinical|essay/i);
   });
 
   it("sanitizes Q11.3-as-hidden and completes", async () => {
