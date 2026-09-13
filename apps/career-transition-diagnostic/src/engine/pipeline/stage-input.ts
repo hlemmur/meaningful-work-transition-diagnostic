@@ -1,7 +1,12 @@
 import type { CaseState } from "../schemas/case-state";
 import type { EvidenceItem } from "../schemas/evidence";
 import { collectEvidenceIds } from "./evidence-ids";
-import { hasMoneyTierA, hasProjectionFigures, hasRichImageAssociations } from "./gates";
+import {
+  CANONICAL_PEEL_TITLES,
+  hasMoneyTierA,
+  hasProjectionFigures,
+  hasRichImageAssociations,
+} from "./gates";
 
 /** Trim rules for live report stages — keep snapshot under a few KB of JSON. */
 export const STAGE_INPUT_TRIM = {
@@ -193,6 +198,8 @@ export function buildCaseSnapshot(input: {
      * on the named sections — do not invent tierA-* placeholder ids.
      */
     requiredCitations,
+    /** Exact peel titles the report must use (also enforced by sanitize). */
+    requiredTitles: { ...CANONICAL_PEEL_TITLES },
     tierA: {
       projections: {
         admired: caseState.projections.admiredFigures.slice(0, 3).map((item) => ({

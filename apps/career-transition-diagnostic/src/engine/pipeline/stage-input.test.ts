@@ -234,6 +234,14 @@ describe("buildStageLlmInput", () => {
       mustCiteIn: ["reality", "alternative"],
       refs: expect.arrayContaining(["a1:Q8.2"]),
     });
+    expect(snapshot.requiredTitles).toEqual(
+      expect.objectContaining({
+        problem: "The problem as you see it",
+        hidden: "A possible hidden position",
+        experiment: "Your experiment",
+        jungian: "A Jungian lens",
+      }),
+    );
   });
 
   it("adds a bounded case snapshot for pass9 and pass10", () => {
