@@ -34,6 +34,11 @@ describe("analytical OS contracts", () => {
     expect(passCardFor("pass9")).toMatch(/certainty-hunger|external-revelation hunger/i);
     expect(passCardFor("pass9")).not.toMatch(/\bpipe\b/i);
     expect(passCardFor("pass9")).not.toMatch(/Name Magician hunger/i);
+    expect(passCardFor("pass9")).toMatch(/possibleCompensatoryAim/i);
+    expect(passCardFor("pass9")).toMatch(/obstacleSpeech/i);
+    expect(passCardFor("pass9")).toMatch(/wantedQuality|judgedQuality/i);
+    expect(passCardFor("pass8")).toMatch(/imaginal|obstacleSpeech/i);
+    expect(passCardFor("pass10")).toMatch(/possibleCompensatoryAim|eternal becoming|obstacleSpeech/i);
     expect(passCardFor("pass10")).toMatch(/Tier-A citations|inflation diagnosis|the client|clinical/i);
   });
 });
