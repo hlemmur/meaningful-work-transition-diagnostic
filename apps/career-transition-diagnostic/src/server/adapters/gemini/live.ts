@@ -1,6 +1,6 @@
 import "server-only";
 
-import { promptRegistry } from "@/engine/prompts";
+import { ANALYTICAL_OS, passCardFor, promptRegistry } from "@/engine/prompts";
 import { costForModel } from "@/engine/pipeline/models";
 import type { LlmAdapter, StructuredLlmRequest, StructuredLlmResult } from "../types";
 import { coerceLiveStructuredOutput, jsonSchemaForStage, sanitizeGeminiSchema } from "./schema";
@@ -10,7 +10,7 @@ const GEMINI_GENERATE_CONTENT =
 
 const STRONG_STAGES = new Set(["pass3", "pass6", "pass9"]);
 
-function promptForStage(stage: string, input: Record<string, unknown>) {
+export function buildGeminiContents(stage: string, input: Record<string, unknown>) {
   const key =
     stage.startsWith("checkpoint-")
       ? stage === "checkpoint-A"
@@ -24,7 +24,19 @@ function promptForStage(stage: string, input: Record<string, unknown>) {
               : "checkpointSafety"
       : (stage as keyof typeof promptRegistry);
   const prompt = promptRegistry[key] ?? promptRegistry.pass1;
-  return `${prompt.text}\n\nStage input:\n${JSON.stringify(input)}`;
+  const card = passCardFor(stage);
+  const system = card ? `${ANALYTICAL_OS}\n\nPass focus:\n${card}` : ANALYTICAL_OS;
+  const user = `${prompt.text}\n\nStage input:\n${JSON.stringify(input)}`;
+  return {
+    system,
+    user,
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: `SYSTEM:\n${system}\n\nUSER:\n${user}` }],
+      },
+    ],
+  };
 }
 
 function liveModel(request: StructuredLlmRequest) {
@@ -54,10 +66,13 @@ export const liveLlmAdapter: LlmAdapter = {
   async completeStructured(request: StructuredLlmRequest): Promise<StructuredLlmResult> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("Gemini live adapter is not configured. Set GEMINI_API_KEY or leave LLM_MODE unset for fixtures.");
+      throw new Error(
+        "Gemini live adapter is not configured. Set GEMINI_API_KEY or leave LLM_MODE unset for fixtures.",
+      );
     }
 
     const model = liveModel(request);
+    const { contents } = buildGeminiContents(request.stage, request.input);
     const response = await fetch(`${GEMINI_GENERATE_CONTENT}/${model}:generateContent`, {
       method: "POST",
       headers: {
@@ -65,7 +80,7 @@ export const liveLlmAdapter: LlmAdapter = {
         "x-goog-api-key": apiKey,
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: promptForStage(request.stage, request.input) }] }],
+        contents,
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: sanitizeGeminiSchema(jsonSchemaForStage(request.stage)),

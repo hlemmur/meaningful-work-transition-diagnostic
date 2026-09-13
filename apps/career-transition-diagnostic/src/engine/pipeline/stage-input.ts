@@ -14,7 +14,17 @@ export const STAGE_INPUT_TRIM = {
   maxJungianLenses: 3,
 } as const;
 
-const REPORT_STAGES = new Set(["pass9", "pass10"]);
+const SNAPSHOT_STAGES = new Set([
+  "pass2",
+  "pass3",
+  "pass4",
+  "pass5",
+  "pass6",
+  "pass7",
+  "pass8",
+  "pass9",
+  "pass10",
+]);
 
 function trimText(value: unknown, max: number = STAGE_INPUT_TRIM.maxAnswerChars) {
   if (typeof value === "string") {
@@ -89,6 +99,52 @@ export function buildCaseSnapshot(input: {
     evidenceAllowlist: [...collectEvidenceIds(caseState)],
     evidence,
     answersByQuestionId: answersByQuestionId(answers),
+    tierA: {
+      projections: {
+        admired: caseState.projections.admiredFigures.slice(0, 3).map((item) => ({
+          figure: trimText(item.figure, STAGE_INPUT_TRIM.maxQuoteChars),
+          wantedQuality: trimText(item.wantedQuality, 160),
+        })),
+        rejected: caseState.projections.rejectedFigures.slice(0, 3).map((item) => ({
+          figure: trimText(item.figure, STAGE_INPUT_TRIM.maxQuoteChars),
+          judgedQuality: trimText(item.judgedQuality, 160),
+        })),
+      },
+      money: {
+        easy: trimText(caseState.money.easyMoneyHistory[0]?.rawQuote, STAGE_INPUT_TRIM.maxQuoteChars),
+        infrastructure: trimText(
+          caseState.money.invisibleMachinery[0]?.rawQuote,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+        hard: trimText(caseState.money.hardMoneyHistory[0]?.rawQuote, STAGE_INPUT_TRIM.maxQuoteChars),
+      },
+      bargain: {
+        benefits: trimText(
+          caseState.hiddenBargain.benefitsOfStaying[0]?.rawQuote,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+        protectThreaten: trimText(
+          caseState.hiddenBargain.protectAndThreaten[0]?.rawQuote,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+        developmentalAsk: trimText(
+          caseState.hiddenBargain.developmentalAsk[0]?.rawQuote,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+      },
+      image: {
+        scene: trimText(caseState.symbolicMaterial.scene, STAGE_INPUT_TRIM.maxQuoteChars),
+        surroundings: trimText(caseState.symbolicMaterial.surroundings, STAGE_INPUT_TRIM.maxQuoteChars),
+        obstacleSpeech: trimText(
+          caseState.symbolicMaterial.obstacleSpeech,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+      },
+      chargeIntensity: caseState.affect.chargeIntensity,
+      constraints: caseState.practicalContext.constraints
+        .slice(0, 3)
+        .map((item) => trimText(item.rawQuote, STAGE_INPUT_TRIM.maxQuoteChars)),
+    },
     practicalContext: {
       workStatus: caseState.practicalContext.workStatus,
       professionalBackground: trimText(caseState.practicalContext.professionalBackground),
@@ -145,7 +201,7 @@ export function buildCaseSnapshot(input: {
       evidenceHint: item.whatToObserve.slice(0, 3),
     })),
     requestedInsightNote:
-      "requestedInsight (Q11.3) is the client's wish for the report — not the report spine. Ground claims in evidenceAllowlist and answersByQuestionId.",
+      "requestedInsight (Q11.3) is the client's wish for the report — not the report spine. Ground claims in evidenceAllowlist, tierA, and answersByQuestionId.",
   };
 }
 
@@ -168,7 +224,7 @@ export function buildStageLlmInput(input: {
     failSchema: input.failSchema,
     failStage: input.failStage,
   };
-  if (!REPORT_STAGES.has(input.stage)) {
+  if (!SNAPSHOT_STAGES.has(input.stage)) {
     return base;
   }
   const withSnapshot: Record<string, unknown> = {

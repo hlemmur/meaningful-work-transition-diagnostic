@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "node ./node_modules/@playwright/test/cli.js test"
+    "test:e2e": "node ./node_modules/@playwright/test/cli.js test",
+    "eval:framework": "vitest run src/eval/framework-fidelity.test.ts src/eval/score-checked-in-artifact.test.ts",
+    "smoke:live": "vitest run src/eval/live-smoke.test.ts",
+    "artifact:mock": "vitest run src/eval/generate-sample-artifact.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

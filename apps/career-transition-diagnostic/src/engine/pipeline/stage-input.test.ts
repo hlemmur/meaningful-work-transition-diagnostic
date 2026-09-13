@@ -76,18 +76,44 @@ function seededCase(assessmentId = "a1"): CaseState {
 }
 
 describe("buildStageLlmInput", () => {
-  it("keeps early passes lean without a case snapshot", () => {
+  it("adds Tier-A case snapshot for pass2+ including early analysis passes", () => {
+    const state = seededCase();
+    state.projections.admiredFigures = [
+      {
+        id: "a1:Q5.1:fig",
+        figure: "A grounded mentor",
+        wantedQuality: "claims space",
+        evidenceRefs: ["a1:Q5.1"],
+      },
+    ];
+    state.money.easyMoneyHistory = [
+      {
+        id: "a1:Q8.2",
+        assessmentId: "a1",
+        questionId: "Q8.2",
+        rawQuote: "Money arrived through industry demand",
+        normalizedMeaning: "Money arrived through industry demand",
+        evidenceType: "history",
+      },
+    ];
+    state.symbolicMaterial.scene = "A rusty pipe";
     const input = buildStageLlmInput({
-      stage: "pass3",
+      stage: "pass2",
       assessmentId: "a1",
       evidenceRef: "a1:Q1.1",
-      caseState: seededCase(),
-      answers: { "Q1.1": "long answer" },
+      caseState: state,
+      answers: { "Q1.1": "long answer", "Q11.3": "sharp angles" },
       fixture: "happy",
     });
-    expect(input.caseSnapshot).toBeUndefined();
+    const snapshot = input.caseSnapshot as Record<string, unknown>;
+    expect(snapshot).toBeDefined();
+    expect(snapshot.tierA).toEqual(
+      expect.objectContaining({
+        image: expect.objectContaining({ scene: "A rusty pipe" }),
+      }),
+    );
+    expect(String(snapshot.requestedInsightNote)).toMatch(/not the report spine/i);
     expect(input.requestedInsight).toBe("sharp angles I cannot unsee");
-    expect(input.evidenceRef).toBe("a1:Q1.1");
   });
 
   it("adds a bounded case snapshot for pass9 and pass10", () => {
