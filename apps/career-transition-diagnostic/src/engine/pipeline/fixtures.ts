@@ -32,7 +32,11 @@ export type AnalysisFixture =
   | "image-starved-peel"
   | "projection-starved-peel"
   | "money-starved-peel"
-  | "clinical-voice-peel";
+  | "clinical-voice-peel"
+  | "aim-missing-peel"
+  | "speech-without-imaginal"
+  | "becoming-inflation-peel"
+  | "non-origin-soft-mini";
 
 const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
   { marker: "FORCE_SCHEMA_FAILURE", fixture: "schema-fail" },
@@ -53,6 +57,10 @@ const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
   { marker: "PROJECTION_STARVED_PEEL", fixture: "projection-starved-peel" },
   { marker: "MONEY_STARVED_PEEL", fixture: "money-starved-peel" },
   { marker: "CLINICAL_VOICE_PEEL", fixture: "clinical-voice-peel" },
+  { marker: "AIM_MISSING_PEEL", fixture: "aim-missing-peel" },
+  { marker: "SPEECH_WITHOUT_IMAGINAL", fixture: "speech-without-imaginal" },
+  { marker: "BECOMING_INFLATION_PEEL", fixture: "becoming-inflation-peel" },
+  { marker: "NON_ORIGIN_SOFT_MINI", fixture: "non-origin-soft-mini" },
 ];
 
 export function inferAnalysisFixture(answers: Record<string, unknown>): AnalysisFixture {
@@ -524,6 +532,194 @@ function groundedReportSections(
     ];
   }
 
+  if (fixture === "aim-missing-peel") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You described a stall next to a desire for more alive work; legitimacy and identity feel unsettled.",
+        evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Your practical constraints and missing structure are in the picture.",
+        evidenceRefs: [q("Q0.4"), q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You want the work and are not taking the next step.",
+        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis: your protection keeps possibility intact and the bargain shields you from ordinary exposure.",
+        evidenceRefs: [q("Q1.3"), q("Q2.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "Your stall may be a sufficient response to constraints, not a hidden stance.",
+        evidenceRefs: [q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "Try two weeks of external deadlines and watch both your output and charge.",
+        evidenceRefs: [q("Q1.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "Compensation may illuminate the stall without naming you as an archetype.",
+        evidenceRefs: [q("Q2.1")],
+      }),
+    ];
+  }
+
+  if (fixture === "speech-without-imaginal") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You freeze before claiming space; legitimacy and identity feel unsettled.",
+        evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Without a co-working block you stall; the locked garden gate threshold is material in the case record.",
+        evidenceRefs: [q("Q0.5"), q("Q10.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You want claimed pace and still wait for permission.",
+        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis: your protection keeps lightness while the developmental aim may be structure in service of aliveness — without naming the mid-crossing threshold further.",
+        evidenceRefs: [q("Q1.3"), q("Q10.6")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "Focus drift alone may explain your stall, not a hidden stance.",
+        evidenceRefs: [q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "For two weeks, add two co-working blocks for yourself and watch your output plus body charge.",
+        evidenceRefs: [q("Q1.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "Compensation may illuminate the stall without naming you as an archetype.",
+        evidenceRefs: [q("Q1.3")],
+      }),
+    ];
+  }
+
+  if (fixture === "becoming-inflation-peel") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You described a stall next to a desire for more alive work; legitimacy and identity feel unsettled.",
+        evidenceRefs: [q("Q1.1"), ctx.evidenceRef],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Your practical constraints and missing structure are in the picture.",
+        evidenceRefs: [q("Q0.4"), q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You want the work and are not taking the next step.",
+        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis: your protection keeps possibility intact while the developmental aim may be structure in service of aliveness. The romance of eternal becoming is named as your identity here.",
+        evidenceRefs: [q("Q1.3"), q("Q2.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "Your stall may be a sufficient response to constraints, not a hidden stance.",
+        evidenceRefs: [q("Q0.5")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "Try two weeks of external deadlines and watch both your output and charge.",
+        evidenceRefs: [q("Q1.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "Compensation may illuminate the stall without naming you as an archetype.",
+        evidenceRefs: [q("Q2.1")],
+      }),
+    ];
+  }
+
+  if (fixture === "non-origin-soft-mini") {
+    return [
+      reportSectionSchema.parse({
+        id: "problem",
+        title: "The problem as you see it",
+        body: "You freeze before claiming space and wait for permission; identity and legitimacy feel unsettled.",
+        evidenceRefs: [q("Q1.1"), q("Q2.2")],
+      }),
+      reportSectionSchema.parse({
+        id: "reality",
+        title: "What reality says",
+        body: "Without a co-working block you stall. Money historically arrived through a family shop till. Ask what the locked garden gate's voice wants when it replies turn back until the ground is yours.",
+        evidenceRefs: [q("Q0.5"), q("Q8.4"), q("Q10.1"), q("Q10.6")],
+      }),
+      reportSectionSchema.parse({
+        id: "contradiction",
+        title: "The contradiction at the center",
+        body: "You admire a quiet craftsperson who owns their pace, yet you reject loud hustle performers while still waiting to claim that pace yourself.",
+        evidenceRefs: [q("Q5.1"), q("Q6.1"), q("Q1.3")],
+      }),
+      reportSectionSchema.parse({
+        id: "hidden",
+        title: "A possible hidden position",
+        body: "One hypothesis for you: your protection keeps cool distance while the developmental aim may be structure in service of aliveness — owning pace without collapsing into grind-only identity.",
+        evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q10.6")],
+      }),
+      reportSectionSchema.parse({
+        id: "alternative",
+        title: "Another plausible interpretation",
+        body: "Focus drift and missing co-working infrastructure may suffice for you without a deeper stance.",
+        evidenceRefs: [q("Q0.5"), q("Q8.4")],
+      }),
+      reportSectionSchema.parse({
+        id: "experiment",
+        title: "Your experiment",
+        body: "For two weeks, run two co-working blocks with a mutual check-in and watch your output plus body charge.",
+        evidenceRefs: [q("Q1.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "jungian",
+        title: "A Jungian lens",
+        body: "A possibility–incarnation polarity may illuminate your stall without diagnosing you as an archetype.",
+        evidenceRefs: [q("Q9.2")],
+      }),
+    ];
+  }
+
   const sections = [
     reportSectionSchema.parse({
       id: "problem",
@@ -643,7 +839,9 @@ export function passOutputFor(
     fixture === "critic-constraints-win" ||
     fixture === "image-weakens" ||
     fixture === "origin-gold" ||
-    fixture === "empty-jungian";
+    fixture === "empty-jungian" ||
+    fixture === "non-origin-soft-mini" ||
+    fixture === "speech-without-imaginal";
   const hypotheses = includePractical
     ? [depth, practical, identity]
     : [depth, identity, hyp("hyp-env", "environmental", "The current container may be missing.", ctx.evidenceRef)];
@@ -674,7 +872,9 @@ export function passOutputFor(
         fixture === "image-starved-peel" ||
         fixture === "projection-starved-peel" ||
         fixture === "money-starved-peel" ||
-        fixture === "clinical-voice-peel";
+        fixture === "clinical-voice-peel" ||
+        fixture === "speech-without-imaginal" ||
+        fixture === "non-origin-soft-mini";
       return {
         votes: [
           imageVoteSchema.parse({
