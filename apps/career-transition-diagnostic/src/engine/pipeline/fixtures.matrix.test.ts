@@ -33,6 +33,10 @@ describe("negative and positive mock fixtures", () => {
     expect(inferAnalysisFixture({ "Q1.1": "PROJECTION_STARVED_PEEL" })).toBe("projection-starved-peel");
     expect(inferAnalysisFixture({ "Q1.1": "MONEY_STARVED_PEEL" })).toBe("money-starved-peel");
     expect(inferAnalysisFixture({ "Q1.1": "CLINICAL_VOICE_PEEL" })).toBe("clinical-voice-peel");
+    expect(inferAnalysisFixture({ "Q1.1": "AIM_MISSING_PEEL" })).toBe("aim-missing-peel");
+    expect(inferAnalysisFixture({ "Q1.1": "SPEECH_WITHOUT_IMAGINAL" })).toBe("speech-without-imaginal");
+    expect(inferAnalysisFixture({ "Q1.1": "BECOMING_INFLATION_PEEL" })).toBe("becoming-inflation-peel");
+    expect(inferAnalysisFixture({ "Q1.1": "NON_ORIGIN_SOFT_MINI" })).toBe("non-origin-soft-mini");
   });
 
   it("fails closed on empty jungian without omitReason (live miss)", async () => {
@@ -183,12 +187,96 @@ describe("negative and positive mock fixtures", () => {
     });
     expect(result.status).toBe("completed");
     expect(result.report).toBeDefined();
+    const peel = result.report!.sections.map((section) => section.body).join("\n");
+    expect(peel).toMatch(/protect|keeps|bargain/i);
+    expect(peel).toMatch(/aim|aliveness|structure in service/i);
+    expect(peel).toMatch(/image|scene|voice|ask/i);
+    expect(peel).not.toMatch(/romance of eternal becoming/i);
     const rubric = evaluateReport({
       report: result.report!,
       caseState: result.caseState,
       requestedInsight: String(answers["Q11.3"] ?? ""),
     });
     expect(rubric.passed).toBe(true);
+    const fidelity = evaluateFrameworkFidelity({
+      answers,
+      caseState: result.caseState,
+      report: result.report!,
+    });
+    expect(fidelity.hardPassed).toBe(true);
+  });
+
+  it("fails aim-missing-peel when CaseState has aim but peel only names protection", async () => {
+    const result = await runFixture("AIM_MISSING_PEEL", {
+      "Q1.1": "I stall",
+      "Q1.3": "I lack confidence",
+      "Q2.2": "I rewrote the site",
+      "Q11.3": "sharp angles",
+    });
+    expect(result.status).toBe("failed");
+    expect(result.failedStage).toBe("pass9");
+    expect(result.error).toMatch(/aim\/protection|lacks both/i);
+  });
+
+  it("fails speech-without-imaginal when obstacleSpeech lacks dialogue or imaginal", async () => {
+    const result = await runFixture("SPEECH_WITHOUT_IMAGINAL", {
+      "Q1.1": "I stall at exposure",
+      "Q1.3": "I lack confidence",
+      "Q2.2": "I rewrote the site",
+      "Q10.1": "A locked garden gate at dusk",
+      "Q10.6": "Turn back until the ground is yours",
+      "Q10.7": "Moss holds the latch shut",
+      "Q11.3": "sharp angles",
+    });
+    expect(result.status).toBe("failed");
+    expect(result.failedStage).toBe("pass9");
+    expect(result.error).toMatch(/imaginal|dialogue|obstacleSpeech/i);
+  });
+
+  it("fails becoming-inflation-peel on romance of eternal becoming", async () => {
+    const result = await runFixture("BECOMING_INFLATION_PEEL", {
+      "Q1.1": "I stall",
+      "Q1.3": "I lack confidence",
+      "Q2.2": "I rewrote the site",
+      "Q11.3": "sharp angles",
+    });
+    expect(result.status).toBe("failed");
+    expect(result.failedStage).toBe("pass9");
+    expect(result.error).toMatch(/inflation|eternal becoming|becoming/i);
+  });
+
+  it("non-origin soft mini passes soft-depth gates without pipe coupling", async () => {
+    const answers: Record<string, unknown> = {
+      "Q1.1": "I freeze before claiming space NON_ORIGIN_SOFT_MINI",
+      "Q1.3": "I wait for permission",
+      "Q2.2": "I circled the same draft for months",
+      "Q0.5": "Focus drifts without a co-working block",
+      "Q5.1": "I admire a quiet craftsperson who owns their pace",
+      "Q6.1": "I reject loud hustle performers",
+      "Q8.4": "Money used to arrive through a family shop till",
+      "Q9.2": "Staying uncertain keeps me light and unclaimed",
+      "Q9.3": "Claiming pace threatens my cool distance",
+      "Q10.1": "A locked garden gate at dusk",
+      "Q10.6": "Turn back until the ground is yours",
+      "Q10.7": "Moss holds the latch shut",
+      "Q11.3": "Show me the contradiction I cannot name",
+    };
+    const result = await executeAnalysis({
+      assessmentId: "soft-mini",
+      answers,
+      completedStages: [],
+      llm: mockLlmAdapter,
+      persistRun() {},
+      persistCaseState() {},
+    });
+    expect(result.status).toBe("completed");
+    expect(result.report).toBeDefined();
+    const peel = result.report!.sections.map((section) => section.body).join("\n");
+    expect(peel).not.toMatch(/\bpipe\b/i);
+    expect(peel).toMatch(/garden gate|gate/i);
+    expect(peel).toMatch(/protect|keeps|bargain/i);
+    expect(peel).toMatch(/aim|aliveness|structure in service/i);
+    expect(peel).toMatch(/ask|voice|speech|turn back/i);
     const fidelity = evaluateFrameworkFidelity({
       answers,
       caseState: result.caseState,
