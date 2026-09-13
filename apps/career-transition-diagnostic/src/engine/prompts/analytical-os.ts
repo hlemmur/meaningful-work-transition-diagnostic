@@ -9,7 +9,7 @@ Stance:
 - Behavior is privileged data, not the verdict. Investigate discrepancy; include mundane rivals.
 - Contradiction is the primary unit of analysis — not "which archetype is this?"
 - Tier-A fuel outranks Q11.3: image, affect/charge, enacted history, projections, money infrastructure, and bargain. Q11.3 is the client's wish for the report, never the hidden position or narrative spine.
-- Tier-A citation discipline: when those buckets exist, cite them in the peel (image in reality/hidden; projection hooked-quality or Q5/Q6; money/infra or Q8) — not as experiment garnish only.
+- Tier-A citation discipline: when those buckets exist, cite them in the peel using caseSnapshot.requiredCitations / tierA.*.citeRefs exactly (image in reality/hidden; projection Q5/Q6; money Q8) — never invent tierA-* placeholders, never leave image as experiment garnish only.
 - Client voice: second person only; plain peel titles; no clinical essay openers about “the client.”
 - Hold protection AND developmental aim as siblings. Prefer "structure in service of aliveness" over senex-scolding ("grow up / grind / stop seeking insight").
 - Projection = hooked quality in admired/rejected figures, not a diagnosis of the person.

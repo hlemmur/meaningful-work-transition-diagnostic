@@ -1,6 +1,7 @@
 import type { CaseState } from "../schemas/case-state";
 import type { EvidenceItem } from "../schemas/evidence";
 import { collectEvidenceIds } from "./evidence-ids";
+import { hasMoneyTierA, hasProjectionFigures, hasRichImageAssociations } from "./gates";
 
 /** Trim rules for live report stages — keep snapshot under a few KB of JSON. */
 export const STAGE_INPUT_TRIM = {
@@ -25,6 +26,21 @@ const SNAPSHOT_STAGES = new Set([
   "pass9",
   "pass10",
 ]);
+
+/** Map symbolicMaterial fields → questionnaire ids used by Tier-A image gates. */
+const IMAGE_FIELD_TO_QUESTION: Array<{
+  field: keyof CaseState["symbolicMaterial"];
+  questionId: string;
+}> = [
+  { field: "scene", questionId: "Q10.1" },
+  { field: "surroundings", questionId: "Q10.2" },
+  { field: "ahead", questionId: "Q10.3" },
+  { field: "obstacle", questionId: "Q10.4" },
+  { field: "figures", questionId: "Q10.5" },
+  { field: "obstacleSpeech", questionId: "Q10.6" },
+  { field: "obstacleWant", questionId: "Q10.7" },
+  { field: "ifNotRemoved", questionId: "Q10.8" },
+];
 
 function trimText(value: unknown, max: number = STAGE_INPUT_TRIM.maxAnswerChars) {
   if (typeof value === "string") {
@@ -81,6 +97,68 @@ function answersByQuestionId(answers: Record<string, unknown>) {
   return out;
 }
 
+function refId(assessmentId: string, questionId: string) {
+  return `${assessmentId}:${questionId}`;
+}
+
+function imageCiteRefs(state: CaseState): string[] {
+  const refs: string[] = [];
+  for (const { field, questionId } of IMAGE_FIELD_TO_QUESTION) {
+    const value = state.symbolicMaterial[field];
+    const present = Array.isArray(value) ? value.length > 0 : Boolean(value);
+    if (present) {
+      refs.push(refId(state.assessmentId, questionId));
+    }
+  }
+  return refs;
+}
+
+function projectionCiteRefs(state: CaseState): string[] {
+  const refs = new Set<string>();
+  for (const figure of [
+    ...state.projections.admiredFigures,
+    ...state.projections.rejectedFigures,
+  ]) {
+    for (const item of figure.evidenceRefs) {
+      refs.add(item);
+    }
+  }
+  return [...refs];
+}
+
+function moneyCiteRefs(state: CaseState): string[] {
+  const refs: string[] = [];
+  for (const items of Object.values(state.money)) {
+    for (const item of items) {
+      refs.push(item.id);
+    }
+  }
+  return [...new Set(refs)];
+}
+
+export function buildRequiredCitations(state: CaseState) {
+  return {
+    image: hasRichImageAssociations(state)
+      ? {
+          mustCiteIn: ["reality", "hidden"] as const,
+          refs: imageCiteRefs(state),
+        }
+      : null,
+    projection: hasProjectionFigures(state)
+      ? {
+          mustCiteIn: ["contradiction", "hidden"] as const,
+          refs: projectionCiteRefs(state),
+        }
+      : null,
+    money: hasMoneyTierA(state)
+      ? {
+          mustCiteIn: ["reality", "alternative"] as const,
+          refs: moneyCiteRefs(state),
+        }
+      : null,
+  };
+}
+
 export function buildCaseSnapshot(input: {
   caseState: CaseState;
   answers: Record<string, unknown>;
@@ -94,20 +172,38 @@ export function buildCaseSnapshot(input: {
       quote: trimText(item.rawQuote ?? item.normalizedMeaning, STAGE_INPUT_TRIM.maxQuoteChars),
     }));
 
+  const imageRefs = imageCiteRefs(caseState);
+  const projectionRefs = projectionCiteRefs(caseState);
+  const moneyRefs = moneyCiteRefs(caseState);
+  const requiredCitations = buildRequiredCitations(caseState);
+  const evidenceAllowlist = new Set([
+    ...collectEvidenceIds(caseState),
+    ...imageRefs,
+    ...projectionRefs,
+    ...moneyRefs,
+  ]);
+
   return {
     // Trim rules: maxAnswerEntries/maxAnswerChars, maxEvidenceItems, limited lists below.
-    evidenceAllowlist: [...collectEvidenceIds(caseState)],
+    evidenceAllowlist: [...evidenceAllowlist],
     evidence,
     answersByQuestionId: answersByQuestionId(answers),
+    /**
+     * Hard-gate citation targets. Pass9/10 must copy these ref strings into evidenceRefs
+     * on the named sections — do not invent tierA-* placeholder ids.
+     */
+    requiredCitations,
     tierA: {
       projections: {
         admired: caseState.projections.admiredFigures.slice(0, 3).map((item) => ({
           figure: trimText(item.figure, STAGE_INPUT_TRIM.maxQuoteChars),
           wantedQuality: trimText(item.wantedQuality, 160),
+          evidenceRefs: item.evidenceRefs,
         })),
         rejected: caseState.projections.rejectedFigures.slice(0, 3).map((item) => ({
           figure: trimText(item.figure, STAGE_INPUT_TRIM.maxQuoteChars),
           judgedQuality: trimText(item.judgedQuality, 160),
+          evidenceRefs: item.evidenceRefs,
         })),
       },
       money: {
@@ -117,6 +213,7 @@ export function buildCaseSnapshot(input: {
           STAGE_INPUT_TRIM.maxQuoteChars,
         ),
         hard: trimText(caseState.money.hardMoneyHistory[0]?.rawQuote, STAGE_INPUT_TRIM.maxQuoteChars),
+        citeRefs: moneyRefs,
       },
       bargain: {
         benefits: trimText(
@@ -139,6 +236,7 @@ export function buildCaseSnapshot(input: {
           caseState.symbolicMaterial.obstacleSpeech,
           STAGE_INPUT_TRIM.maxQuoteChars,
         ),
+        citeRefs: imageRefs,
       },
       chargeIntensity: caseState.affect.chargeIntensity,
       constraints: caseState.practicalContext.constraints
@@ -201,7 +299,7 @@ export function buildCaseSnapshot(input: {
       evidenceHint: item.whatToObserve.slice(0, 3),
     })),
     requestedInsightNote:
-      "requestedInsight (Q11.3) is the client's wish for the report — not the report spine. Ground claims in evidenceAllowlist, tierA, and answersByQuestionId.",
+      "requestedInsight (Q11.3) is the client's wish for the report — not the report spine. Ground claims in evidenceAllowlist, tierA, requiredCitations, and answersByQuestionId. Never invent tierA-* placeholder evidenceRefs.",
   };
 }
 
