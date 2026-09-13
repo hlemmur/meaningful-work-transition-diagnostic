@@ -94,10 +94,12 @@ describe("promptRegistry contracts", () => {
       "nullable",
       "alternative",
       "requestedInsight",
+      "possibleCompensatoryAim",
     ]);
     expectMentions(promptRegistry.pass7.text, [
       "jungianLenses",
       "0-3",
+      "omitReason",
       "You are a Puer",
       "tentative",
     ]);

@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   contradictionSchema,
   experimentSchema,
-  hiddenPositionSchema,
+  hiddenPositionLlmSchema,
   hypothesisSchema,
   imageVoteSchema,
   jungianLensSchema,
@@ -49,14 +49,28 @@ export const pass5OutputSchema = z.object({
 });
 
 export const pass6OutputSchema = z.object({
-  hiddenPosition: hiddenPositionSchema.nullable(),
+  hiddenPosition: hiddenPositionLlmSchema.nullable(),
   alternative: z.string(),
 });
 
-export const pass7OutputSchema = z.object({
-  jungianLenses: z.array(jungianLensSchema).max(3),
-  omitReason: z.string().optional(),
-});
+export const pass7OutputSchema = z
+  .object({
+    jungianLenses: z.array(jungianLensSchema).max(3),
+    omitReason: z.string().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.jungianLenses.length > 0) {
+      return;
+    }
+    if (!value.omitReason?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["omitReason"],
+        message:
+          "omitReason is required when jungianLenses is empty (non-empty string).",
+      });
+    }
+  });
 
 export const pass8OutputSchema = z.object({
   realityCheck: realityCheckSchema,

@@ -27,7 +27,18 @@ async function runFixture(fixtureMarker: string, answers: Record<string, unknown
 describe("negative and positive mock fixtures", () => {
   it("infers fixture markers", () => {
     expect(inferAnalysisFixture({ "Q1.1": "EMPTY_CRITIQUES" })).toBe("empty-critiques");
+    expect(inferAnalysisFixture({ "Q1.1": "EMPTY_JUNGIAN_NO_OMIT" })).toBe("empty-jungian-no-omit");
     expect(inferAnalysisFixture({ "Q1.1": "ORIGIN_GOLD" })).toBe("origin-gold");
+  });
+
+  it("fails closed on empty jungian without omitReason (live miss)", async () => {
+    const result = await runFixture("EMPTY_JUNGIAN_NO_OMIT", {
+      "Q1.1": "I stall",
+      "Q0.5": "ADHD",
+      "Q11.3": "sharp angles",
+    });
+    expect(result.status).toBe("failed");
+    expect(result.failedStage).toBe("pass7");
   });
 
   it("fails closed on empty critiques", async () => {

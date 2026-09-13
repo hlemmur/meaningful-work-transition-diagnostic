@@ -3,6 +3,7 @@ export {
   contradictionSchema,
   experimentSchema,
   hiddenPositionSchema,
+  hiddenPositionLlmSchema,
   hypothesisSchema,
   imageVoteSchema,
   jungianLensSchema,

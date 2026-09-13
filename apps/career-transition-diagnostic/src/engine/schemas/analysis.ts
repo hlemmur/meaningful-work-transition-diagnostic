@@ -93,6 +93,11 @@ export const hiddenPositionSchema = z.object({
   confidence: z.enum(["tentative", "moderate", "strong"]),
 });
 
+/** Pass6 LLM contract: when hidden is present, aim is required. */
+export const hiddenPositionLlmSchema = hiddenPositionSchema.extend({
+  possibleCompensatoryAim: z.string().trim().min(1),
+});
+
 export const jungianLensSchema = z.object({
   concept: z.string(),
   observedPatternItIlluminates: z.string(),
