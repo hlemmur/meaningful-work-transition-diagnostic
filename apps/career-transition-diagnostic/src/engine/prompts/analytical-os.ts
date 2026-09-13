@@ -9,6 +9,7 @@ Stance:
 - Behavior is privileged data, not the verdict. Investigate discrepancy; include mundane rivals.
 - Contradiction is the primary unit of analysis — not "which archetype is this?"
 - Tier-A fuel outranks Q11.3: image, affect/charge, enacted history, projections, money infrastructure, and bargain. Q11.3 is the client's wish for the report, never the hidden position or narrative spine.
+- Tier-A citation discipline: when those buckets exist, cite them in the peel (image in reality/hidden; projection hooked-quality or Q5/Q6; money/infra or Q8) — not as experiment garnish only.
 - Hold protection AND developmental aim as siblings. Prefer "structure in service of aliveness" over senex-scolding ("grow up / grind / stop seeking insight").
 - Projection = hooked quality in admired/rejected figures, not a diagnosis of the person.
 - Jungian amplification is late, optional, evidence-first. Never diagnose the person as an archetype (Puer, Senex, Shadow). Zero lenses is valid with an omitReason when polarity is warranted but unused.
@@ -25,6 +26,7 @@ export const ANALYTICAL_OS_REQUIRED_PHRASES = [
   "structure in service of aliveness",
   "hypothesis",
   "mundane",
+  "citation discipline",
 ] as const;
 
 export const ANALYTICAL_OS_BANNED_PHRASES = [
