@@ -6,10 +6,20 @@ import {
   reportLayerCoverage,
   senexScoldOnly,
   clientVoiceGates,
+  protectionAndAimInPeel,
+  antiInflationDiagnosis,
+  imaginalWhenSpeech,
 } from "@/engine/pipeline/gates";
 import { isRequestedInsightSpine } from "@/engine/pipeline/report-grounding";
 
-export type SoftDimId = "surprise" | "image_alive" | "cm_layer_feel" | "bridge_to_11";
+export type SoftDimId =
+  | "surprise"
+  | "image_alive"
+  | "imaginal_sibling"
+  | "aim_sibling"
+  | "projection_gold"
+  | "cm_layer_feel"
+  | "bridge_to_11";
 
 export type FrameworkScore = {
   id: string;
@@ -92,24 +102,8 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
     ),
   );
 
-  const protection =
-    /protect|protective|keeps|shield|bargain|benefit of staying/i.test(text) ||
-    (caseState.hiddenPosition?.protectiveFunction.length ?? 0) > 0;
-  const aim =
-    /aim|develop|structure in service|aliveness|compensatory|asking you to/i.test(text) ||
-    Boolean(caseState.hiddenPosition?.possibleCompensatoryAim) ||
-    /omit|no hidden/i.test(text);
-  scores.push(
-    score(
-      "protection_and_aim",
-      !caseState.hiddenPosition || (protection && aim),
-      caseState.hiddenPosition
-        ? protection && aim
-          ? "Protection and developmental aim both present."
-          : "Hidden position lacks protection+aim balance."
-        : "No hidden position; protection/aim check skipped.",
-    ),
-  );
+  const aimGate = protectionAndAimInPeel(sections, caseState);
+  scores.push(score("protection_and_aim", aimGate.passed, aimGate.detail));
 
   const diagnosed = /you are (an? )?(puer|senex|anima|animus|hero|shadow)/i.test(text);
   const lensesOk =
@@ -183,20 +177,11 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
     scores.push(score(voice.id, voice.passed, voice.detail));
   }
 
-  const inflation =
-    /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)|you are (an? )?(puer|senex)\b/i.test(
-      text,
-    ) ||
-    (/unanchored ideal/i.test(text) && !/polarity|enantiodromia|\bboth\b|compensation/i.test(text));
-  scores.push(
-    score(
-      "anti_inflation",
-      !inflation,
-      inflation
-        ? "Client-facing inflation or unanchored ideal without polarity language."
-        : "No client-facing inflation diagnosis.",
-    ),
-  );
+  const inflation = antiInflationDiagnosis(text);
+  scores.push(score("anti_inflation", inflation.passed, inflation.detail));
+
+  const imaginal = imaginalWhenSpeech(sections, caseState);
+  scores.push(score("imaginal_when_speech", imaginal.passed, imaginal.detail, false));
 
   const affectIndicated =
     (caseState.affect.chargeIntensity ?? 0) >= 1 || caseState.affect.emotions.length > 0;
@@ -224,6 +209,18 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
       {
         id: "image_alive",
         question: "Was the Section 10 image treated as living association, not discarded fluff?",
+      },
+      {
+        id: "imaginal_sibling",
+        question: "When image speech exists, is there a short imaginal or dialogue sibling?",
+      },
+      {
+        id: "aim_sibling",
+        question: "Does hidden name protection and developmental aim as siblings?",
+      },
+      {
+        id: "projection_gold",
+        question: "When projections have wanted/judged quality, is gold-to-own worked as hypothesis?",
       },
       {
         id: "cm_layer_feel",

@@ -491,6 +491,125 @@ export function senexScoldOnly(text: string): GateFinding {
   };
 }
 
+const PROTECTION_PEEL = /protect|protective|keeps|shield|bargain|benefit of staying/i;
+const AIM_PEEL = /aim|develop|structure in service|aliveness|compensatory|asking you to/i;
+const DIALOGUE_PEEL = /ask|speak|say|said|voice|image|scene|obstacle|dialogue|reply|replies|whisper/i;
+const INFLATION_DIAGNOSIS =
+  /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)|you are (an? )?(puer|senex)\b|romance of eternal becoming|romance-of-eternal-becoming|you live in (an? )?(endless|eternal) becoming/i;
+
+/** When CaseState has hidden aim/protection fields, peel text must name both (CaseState alone is insufficient). */
+export function protectionAndAimInPeel(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const hidden = state.hiddenPosition;
+  if (!hidden) {
+    return {
+      id: "protection-and-aim",
+      passed: true,
+      detail: "No hidden position; protection/aim peel check skipped.",
+    };
+  }
+  const fieldsArmed =
+    hidden.protectiveFunction.length > 0 || Boolean(hidden.possibleCompensatoryAim?.trim());
+  if (!fieldsArmed) {
+    return {
+      id: "protection-and-aim",
+      passed: true,
+      detail: "Hidden position has no aim/protection fields to require in peel.",
+    };
+  }
+  const peel =
+    sections.find((section) => section.id === "hidden")?.body ??
+    sections.map((section) => section.body).join("\n");
+  const ok = PROTECTION_PEEL.test(peel) && AIM_PEEL.test(peel);
+  return {
+    id: "protection-and-aim",
+    passed: ok,
+    detail: ok
+      ? "Peel names protection and developmental aim as siblings."
+      : "Hidden CaseState has aim/protection fields but peel text lacks both.",
+  };
+}
+
+/** When obstacleSpeech exists, require imaginal experiment or dialogue engagement in reality/hidden. */
+export function imaginalWhenSpeech(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const speech = state.symbolicMaterial.obstacleSpeech?.trim();
+  if (!speech) {
+    return {
+      id: "imaginal-when-speech",
+      passed: true,
+      detail: "No obstacleSpeech; imaginal engagement check skipped.",
+    };
+  }
+  const hasImaginalExperiment = state.experiments.some((item) => item.kind === "imaginal");
+  const depthBodies = sections
+    .filter((section) => section.id === "reality" || section.id === "hidden")
+    .map((section) => section.body)
+    .join("\n");
+  const hasDialogue = DIALOGUE_PEEL.test(depthBodies);
+  const ok = hasImaginalExperiment || hasDialogue;
+  return {
+    id: "imaginal-when-speech",
+    passed: ok,
+    detail: ok
+      ? "Image speech engaged via imaginal experiment or reality/hidden dialogue."
+      : "obstacleSpeech present but peel lacks imaginal experiment or image dialogue.",
+  };
+}
+
+export function antiInflationDiagnosis(text: string): GateFinding {
+  const hit = INFLATION_DIAGNOSIS.test(text);
+  const unanchoredAlone =
+    /unanchored ideal/i.test(text) && !/polarity|enantiodromia|\bboth\b|compensation/i.test(text);
+  const failed = hit || unanchoredAlone;
+  return {
+    id: "anti-inflation",
+    passed: !failed,
+    detail: failed
+      ? "Client-facing inflation diagnosis (eternal youth / archetype identity / romance of eternal becoming)."
+      : "No client-facing inflation diagnosis.",
+  };
+}
+
+/** Hard peel gates shared by pass9 and post-pass10 merge. */
+export function assertPeelHardGates(sections: ReportSection[], state: CaseState): void {
+  const layers = reportLayerCoverage(sections, state);
+  if (!layers.passed) {
+    throwGate(layers);
+  }
+  for (const citation of tierACitationGates(sections, state)) {
+    if (!citation.passed) {
+      throwGate(citation);
+    }
+  }
+  for (const voice of clientVoiceGates(sections)) {
+    if (!voice.passed) {
+      throwGate(voice);
+    }
+  }
+  const body = sections.map((section) => section.body).join("\n");
+  const senex = senexScoldOnly(body);
+  if (!senex.passed) {
+    throwGate(senex);
+  }
+  const aim = protectionAndAimInPeel(sections, state);
+  if (!aim.passed) {
+    throwGate(aim);
+  }
+  const imaginal = imaginalWhenSpeech(sections, state);
+  if (!imaginal.passed) {
+    throwGate(imaginal);
+  }
+  const inflation = antiInflationDiagnosis(body);
+  if (!inflation.passed) {
+    throwGate(inflation);
+  }
+}
+
 export function warrantsJungianPolarity(state: CaseState) {
   return (
     state.history.supportiveStructures.length > 0 ||

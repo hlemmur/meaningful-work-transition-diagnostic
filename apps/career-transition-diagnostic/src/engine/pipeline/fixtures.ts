@@ -230,7 +230,7 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis is that your structure is being asked to serve aliveness.",
+        body: "One hypothesis is that your protection keeps possibility intact while structure is being asked to serve aliveness.",
         evidenceRefs: [q("Q1.3"), q("Q2.1")],
       }),
       reportSectionSchema.parse({
@@ -563,7 +563,7 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis is that your structure is being asked to serve aliveness without collapsing into grind-only identity. Any symbolic scene can mark the threshold you keep circling.",
+        body: "One hypothesis is that your protection keeps possibility intact while the developmental aim may be structure in service of aliveness — without collapsing into grind-only identity. Ask what the image's voice wants at the scene you keep circling.",
         evidenceRefs: [q("Q1.3"), q("Q2.1"), q("Q10.1")],
       }),
     );
