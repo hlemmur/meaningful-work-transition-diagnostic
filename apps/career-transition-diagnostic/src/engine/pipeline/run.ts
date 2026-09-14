@@ -106,6 +106,7 @@ export async function executeAnalysis(input: {
 
     const model = modelForStage(stage);
     const evidenceRef = firstEvidenceId(caseState, input.assessmentId);
+    let stageOutput: unknown;
     try {
       const result = await runStructuredStage({
         stage,
@@ -124,6 +125,7 @@ export async function executeAnalysis(input: {
           draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
         }),
       });
+      stageOutput = result.output;
 
       caseState = applyStage(stage, caseState, result.output, critiques);
       if (stage === "pass4") {
@@ -176,6 +178,12 @@ export async function executeAnalysis(input: {
     } catch (error) {
       const attempts = error instanceof StructuredStageError ? error.attempts : 1;
       const message = error instanceof Error ? error.message : "Analysis stage failed";
+      const failureOutput =
+        stageOutput !== undefined
+          ? stageOutput
+          : error instanceof StructuredStageError
+            ? error.output
+            : undefined;
       input.persistRun({
         assessmentId: input.assessmentId,
         stage,
@@ -185,6 +193,7 @@ export async function executeAnalysis(input: {
         status: "failure",
         error: message,
         idempotencyKey: `${input.assessmentId}:${stage}:failure`,
+        ...(failureOutput !== undefined ? { output: failureOutput } : {}),
       });
       return { status: "failed", caseState, failedStage: stage, report, error: message };
     }
