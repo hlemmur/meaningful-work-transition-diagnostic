@@ -4,13 +4,23 @@ import type { z } from "zod";
 export class StructuredStageError extends Error {
   readonly stage: string;
   readonly attempts: number;
+  readonly output?: unknown;
 
-  constructor(stage: string, attempts: number, cause?: unknown, issues: string[] = []) {
+  constructor(
+    stage: string,
+    attempts: number,
+    cause?: unknown,
+    issues: string[] = [],
+    output?: unknown,
+  ) {
     const detail = issues.length ? `: ${issues.join("; ")}` : "";
     super(`Schema validation failed for ${stage}${detail}`.slice(0, 800));
     this.name = "StructuredStageError";
     this.stage = stage;
     this.attempts = attempts;
+    if (output !== undefined) {
+      this.output = output;
+    }
     if (cause instanceof Error) {
       this.cause = cause;
     }
@@ -33,6 +43,7 @@ export async function runStructuredStage(input: {
 }) {
   let lastError: unknown;
   let previousIssues: string[] | undefined;
+  let lastOutput: unknown;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const raw = await input.llm.completeStructured({
       stage: input.stage,
@@ -43,6 +54,7 @@ export async function runStructuredStage(input: {
         ...(previousIssues?.length ? { schemaIssues: previousIssues } : {}),
       },
     });
+    lastOutput = raw.output;
     const parsed = input.schema.safeParse(raw.output);
     if (parsed.success) {
       return {
@@ -56,5 +68,5 @@ export async function runStructuredStage(input: {
     lastError = parsed.error;
     previousIssues = schemaIssueLines(parsed.error);
   }
-  throw new StructuredStageError(input.stage, 2, lastError, previousIssues);
+  throw new StructuredStageError(input.stage, 2, lastError, previousIssues, lastOutput);
 }
