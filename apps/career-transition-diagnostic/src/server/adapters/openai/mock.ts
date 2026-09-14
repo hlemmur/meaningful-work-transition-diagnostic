@@ -93,6 +93,15 @@ export const mockLlmAdapter: LlmAdapter = {
         };
       }
       const assessmentId = String(input.assessmentId ?? "assess-1");
+      const caseSnapshot = input.caseSnapshot as
+        | {
+            experimentBindings?: {
+              hypothesisIds: string[];
+              openForkIds: string[];
+              preferredHypothesisId?: string;
+            };
+          }
+        | undefined;
       const draftRaw = input.draftReport as { sections?: unknown } | undefined;
       const draftReport =
         draftRaw && Array.isArray(draftRaw.sections)
@@ -111,6 +120,7 @@ export const mockLlmAdapter: LlmAdapter = {
           requestedInsight:
             typeof input.requestedInsight === "string" ? input.requestedInsight : undefined,
           draftReport,
+          experimentBindings: caseSnapshot?.experimentBindings,
         }),
         model,
         usage: {

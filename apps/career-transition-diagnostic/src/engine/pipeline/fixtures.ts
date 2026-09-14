@@ -785,6 +785,11 @@ export function passOutputFor(
     evidenceRef: string;
     requestedInsight?: string;
     draftReport?: { sections: ReportSection[] };
+    experimentBindings?: {
+      hypothesisIds: string[];
+      openForkIds: string[];
+      preferredHypothesisId?: string;
+    };
   },
 ) {
   if (fixture === "schema-fail" && stage === "pass3") {
@@ -1002,7 +1007,11 @@ export function passOutputFor(
           }),
         ],
       };
-    case "pass8":
+    case "pass8": {
+      const closedSetBinding =
+        ctx.experimentBindings?.preferredHypothesisId ??
+        ctx.experimentBindings?.hypothesisIds[0] ??
+        ctx.experimentBindings?.openForkIds[0];
       return {
         realityCheck: realityCheckSchema.parse({
           sufficientWithoutDepth: fixture === "critic-constraints-win",
@@ -1026,11 +1035,12 @@ export function passOutputFor(
             hypothesisTested:
               fixture === "wrong-experiment"
                 ? "intellectualizing delay"
-                : fixture === "critic-constraints-win"
-                  ? "hyp-practical"
-                  : fixture === "origin-gold"
-                    ? "container_loss_vs_capacity"
-                    : "hyp-depth",
+                : closedSetBinding ??
+                  (fixture === "critic-constraints-win"
+                    ? "hyp-practical"
+                    : fixture === "origin-gold"
+                      ? "container_loss_vs_capacity"
+                      : "hyp-depth"),
             action:
               fixture === "wrong-experiment"
                 ? "Ask a mentor to list three blind spots and failure points in your method."
@@ -1046,6 +1056,7 @@ export function passOutputFor(
           }),
         ],
       };
+    }
     case "pass9":
       return { sections: groundedReportSections(fixture, ctx) };
     case "pass10": {
