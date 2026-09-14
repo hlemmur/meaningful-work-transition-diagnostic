@@ -275,6 +275,17 @@ export function buildCaseSnapshot(input: {
       evidenceFor: item.evidenceFor,
       evidenceAgainst: item.evidenceAgainst,
     })),
+    openForks: [...caseState.openForks],
+    experimentBindings: (() => {
+      const hypothesisIds = caseState.hypotheses
+        .slice(0, STAGE_INPUT_TRIM.maxHypotheses)
+        .map((item) => item.id);
+      const openForkIds = [...caseState.openForks];
+      const preferredHypothesisId = hypothesisIds[0];
+      return preferredHypothesisId
+        ? { hypothesisIds, openForkIds, preferredHypothesisId }
+        : { hypothesisIds, openForkIds };
+    })(),
     hiddenPosition: caseState.hiddenPosition
       ? {
           consciousPosition: trimText(caseState.hiddenPosition.consciousPosition),
