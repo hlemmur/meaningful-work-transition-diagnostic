@@ -38,6 +38,11 @@ describe("analytical OS contracts", () => {
     expect(passCardFor("pass9")).toMatch(/obstacleSpeech/i);
     expect(passCardFor("pass9")).toMatch(/wantedQuality|judgedQuality/i);
     expect(passCardFor("pass8")).toMatch(/imaginal|obstacleSpeech/i);
+    expect(passCardFor("pass8")).toMatch(/experimentBindings/i);
+    expect(passCardFor("pass8")).toMatch(/hypothesisTested/i);
+    expect(passCardFor("pass8")).toMatch(/hypothesisIds|openForkIds/i);
+    expect(passCardFor("pass8")).not.toMatch(/\bpipe\b/i);
+    expect(passCardFor("pass8")).not.toMatch(/\bprovider\b/i);
     expect(passCardFor("pass10")).toMatch(/possibleCompensatoryAim|eternal becoming|obstacleSpeech/i);
     expect(passCardFor("pass10")).toMatch(/Tier-A citations|inflation diagnosis|the client|clinical/i);
   });

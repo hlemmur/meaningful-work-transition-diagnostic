@@ -71,8 +71,8 @@ export const promptRegistry = {
     text: `Jungian amplification only after resolution. Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v3",
-    text: `Reality check plus experiments. Always include at least one behavioral experiment bound to the winning hypothesis or open fork. When charge is indicated or caseSnapshot.tierA.image has scene/obstacleSpeech, also include one short kind:imaginal sibling that engages that image speech/scene (not garnish-only). Return JSON { realityCheck: { sufficientWithoutDepth, categories, narrative, evidenceRefs }, experiments: at least 1 of { kind: behavioral|imaginal, title, hypothesisTested, action, duration, whatToObserve, resultSupportingHypothesis, resultWeakeningHypothesis, riskLevel: low|moderate, practicalRequirements } }. ${EMPTY_ARRAYS}`,
+    version: "pass-8.v4",
+    text: `Reality check plus experiments. Always include at least one behavioral experiment. Set that experiment's hypothesisTested to exactly one id from caseSnapshot.experimentBindings.hypothesisIds or caseSnapshot.experimentBindings.openForkIds (prefer preferredHypothesisId when present) — prose belongs in title/action, not free-form hypothesisTested. When charge is indicated or caseSnapshot.tierA.image has scene/obstacleSpeech, also include one short kind:imaginal sibling that engages that image speech/scene (not garnish-only). Return JSON { realityCheck: { sufficientWithoutDepth, categories, narrative, evidenceRefs }, experiments: at least 1 of { kind: behavioral|imaginal, title, hypothesisTested, action, duration, whatToObserve, resultSupportingHypothesis, resultWeakeningHypothesis, riskLevel: low|moderate, practicalRequirements } }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
     version: "pass-9.v8",

@@ -110,7 +110,14 @@ describe("promptRegistry contracts", () => {
       "imaginal",
       "riskLevel",
       "obstacleSpeech",
+      "experimentBindings",
+      "hypothesisTested",
+      "hypothesisIds",
+      "openForkIds",
     ]);
+    expect(promptRegistry.pass8.text).toMatch(/exactly one|exact id|exactly matching/i);
+    expect(promptRegistry.pass8.text).not.toMatch(/\bpipe\b/i);
+    expect(promptRegistry.pass8.text).not.toMatch(/\bprovider\b/i);
     expectMentions(promptRegistry.pass9.text, [
       "sections",
       "peel",
@@ -163,6 +170,6 @@ describe("promptRegistry contracts", () => {
       "eternal becoming",
     ]);
     expect(promptRegistry.pass10.version).toBe("pass-10.v8");
-    expect(promptRegistry.pass8.version).toBe("pass-8.v3");
+    expect(promptRegistry.pass8.version).toBe("pass-8.v4");
   });
 });
