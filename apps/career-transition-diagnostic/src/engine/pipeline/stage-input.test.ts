@@ -209,6 +209,75 @@ describe("buildStageLlmInput", () => {
     expect(withoutHidden.hiddenPosition).toBeNull();
   });
 
+  it("exposes openForks and experimentBindings for closed-set pass8 bind", () => {
+    const state = seededCase("a1");
+    state.openForks = ["rational_caution_vs_hidden_bargain", "background_income_relief_vs_replacement"];
+    state.hypotheses = [
+      { ...state.hypotheses[0]!, id: "hyp-2-image-protection-bargain" },
+      {
+        ...state.hypotheses[0]!,
+        id: "hyp-1-container-loss",
+        title: "Container loss",
+      },
+    ];
+
+    const snapshot = buildStageLlmInput({
+      stage: "pass8",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: state,
+      answers: { "Q1.1": "stall" },
+    }).caseSnapshot as {
+      openForks: string[];
+      experimentBindings: {
+        hypothesisIds: string[];
+        openForkIds: string[];
+        preferredHypothesisId?: string;
+      };
+    };
+
+    expect(snapshot.openForks).toEqual([
+      "rational_caution_vs_hidden_bargain",
+      "background_income_relief_vs_replacement",
+    ]);
+    expect(snapshot.experimentBindings).toEqual({
+      hypothesisIds: ["hyp-2-image-protection-bargain", "hyp-1-container-loss"],
+      openForkIds: [
+        "rational_caution_vs_hidden_bargain",
+        "background_income_relief_vs_replacement",
+      ],
+      preferredHypothesisId: "hyp-2-image-protection-bargain",
+    });
+  });
+
+  it("omits preferredHypothesisId and uses empty openForkIds when none exist", () => {
+    const state = seededCase("a1");
+    state.openForks = [];
+    state.hypotheses = [];
+
+    const snapshot = buildStageLlmInput({
+      stage: "pass8",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: state,
+      answers: { "Q1.1": "stall" },
+    }).caseSnapshot as {
+      openForks: string[];
+      experimentBindings: {
+        hypothesisIds: string[];
+        openForkIds: string[];
+        preferredHypothesisId?: string;
+      };
+    };
+
+    expect(snapshot.openForks).toEqual([]);
+    expect(snapshot.experimentBindings).toEqual({
+      hypothesisIds: [],
+      openForkIds: [],
+    });
+    expect(snapshot.experimentBindings).not.toHaveProperty("preferredHypothesisId");
+  });
+
   it("exposes Tier-A citeRefs and requiredCitations so pass9 can satisfy hard gates", () => {
     const state = seededCase("a1");
     state.symbolicMaterial = {
