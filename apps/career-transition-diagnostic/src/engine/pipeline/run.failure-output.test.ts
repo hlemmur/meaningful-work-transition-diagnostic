@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import { mockLlmAdapter } from "@/server/adapters/openai/mock";
 import { executeAnalysis, type AnalysisRunRecord } from "./run";
-import { runStructuredStage, StructuredStageError } from "./structured";
 
 describe("failure run output persistence", () => {
   it("persists LLM output on pass8 gate failure so bind misses are inspectable", async () => {
@@ -62,24 +60,36 @@ describe("failure run output persistence", () => {
     expect(failure).not.toHaveProperty("output");
   });
 
-  it("attaches last raw LLM output on StructuredStageError after schema miss", async () => {
-    const bad = { nope: true };
-    try {
-      await runStructuredStage({
-        stage: "pass3",
-        schema: z.object({ ok: z.literal(true) }),
-        input: {},
-        model: "mock-strong",
-        llm: {
-          async completeStructured({ stage }) {
-            return { stage, fixture: "bad", output: bad };
-          },
+  it("persists the final raw LLM output after schema retries are exhausted", async () => {
+    const runs: AnalysisRunRecord[] = [];
+    let attempt = 0;
+    const result = await executeAnalysis({
+      assessmentId: "fail-out-3",
+      answers: { "Q1.1": "I stall" },
+      completedStages: ["pass1", "pass2"],
+      llm: {
+        async completeStructured({ stage, model }) {
+          attempt += 1;
+          return {
+            stage,
+            fixture: "schema-fail",
+            output: { invalidAttempt: attempt },
+            model,
+          };
         },
-      });
-      expect.unreachable("expected schema failure");
-    } catch (error) {
-      expect(error).toBeInstanceOf(StructuredStageError);
-      expect((error as StructuredStageError).output).toEqual(bad);
-    }
+      },
+      persistRun(run) {
+        runs.push(run);
+      },
+      persistCaseState() {},
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.failedStage).toBe("pass3");
+    expect(attempt).toBe(2);
+    const failure = runs.find((run) => run.stage === "pass3" && run.status === "failure");
+    expect(failure).toBeDefined();
+    expect(failure!.attempt).toBe(2);
+    expect(failure!.output).toEqual({ invalidAttempt: 2 });
   });
 });
