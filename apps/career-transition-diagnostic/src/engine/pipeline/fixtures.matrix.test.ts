@@ -7,6 +7,7 @@ import { evaluateReport } from "@/eval/rubric";
 import { evaluateFrameworkFidelity } from "@/eval/framework-fidelity";
 import { executeAnalysis } from "./run";
 import { inferAnalysisFixture } from "./fixtures";
+import { pass8OutputSchema } from "./stage-schemas";
 
 const originAnswers = JSON.parse(
   readFileSync(join(__dirname, "fixtures/origin-case-answers.json"), "utf8"),
@@ -25,6 +26,28 @@ async function runFixture(fixtureMarker: string, answers: Record<string, unknown
 }
 
 describe("negative and positive mock fixtures", () => {
+  it("binds default pass8 output to the preferred caseSnapshot hypothesis id", async () => {
+    const result = await mockLlmAdapter.completeStructured({
+      stage: "pass8",
+      model: "mock-strong",
+      input: {
+        fixture: "default",
+        assessmentId: "fx-bind",
+        evidenceRef: "fx-bind:Q1.1",
+        caseSnapshot: {
+          experimentBindings: {
+            hypothesisIds: ["hyp-snapshot"],
+            openForkIds: ["legitimacy_loop"],
+            preferredHypothesisId: "hyp-snapshot",
+          },
+        },
+      },
+    });
+
+    const output = pass8OutputSchema.parse(result.output);
+    expect(output.experiments[0]?.hypothesisTested).toBe("hyp-snapshot");
+  });
+
   it("infers fixture markers", () => {
     expect(inferAnalysisFixture({ "Q1.1": "EMPTY_CRITIQUES" })).toBe("empty-critiques");
     expect(inferAnalysisFixture({ "Q1.1": "EMPTY_JUNGIAN_NO_OMIT" })).toBe("empty-jungian-no-omit");
