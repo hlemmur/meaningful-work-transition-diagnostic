@@ -2,12 +2,11 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { getQuestion } from "@/questionnaire/questionnaire.v2";
 import type { AdaptiveCheckpoint } from "@/questionnaire/adaptive";
 import { createVendorAdapters } from "../adapters";
-import type { OutboxEmail } from "../adapters/types";
+import type { LlmAdapter, OutboxEmail } from "../adapters/types";
 import { runCheckpoint } from "@/engine/checkpoints/run";
 import { isAdaptiveQuestionId } from "@/engine/checkpoints/schema";
 import { SUPPORT_COPY } from "@/engine/checkpoints/bank";
 import { executeAnalysis, type AnalysisPipelineResult } from "@/engine/pipeline/run";
-import type { AnalysisFixture } from "@/engine/pipeline/fixtures";
 import { ANALYSIS_STAGES, type AnalysisStage } from "@/engine/pipeline/models";
 import type { ForkId } from "@/engine/schemas/analysis";
 import {
@@ -765,7 +764,7 @@ export async function invalidateAnalysisFromStage(
 
 export async function runAnalysisPipeline(
   assessmentId: string,
-  options: { fixture?: AnalysisFixture; failStage?: AnalysisStage } = {},
+  options: { llm?: LlmAdapter; failStage?: AnalysisStage } = {},
 ): Promise<AnalysisPipelineResult> {
   return withStore(async () => {
     const assessment = getStore().assessments.find((item) => item.id === assessmentId);
@@ -791,8 +790,7 @@ export async function runAnalysisPipeline(
       completedStages: completed,
       priorRuns,
       existingReport,
-      llm: adapters.llm,
-      fixture: options.fixture,
+      llm: options?.llm ?? adapters.llm,
       failStage: options.failStage,
       persistRun(run) {
         getStore().analysisRuns.push({

@@ -15,7 +15,7 @@ describe("M6 live Gemini smoke", () => {
       const { liveLlmAdapter } = await import("@/server/adapters/gemini/live");
       const originPath = join(
         __dirname,
-        "../engine/pipeline/fixtures/origin-case-answers.json",
+        "../test-support/fixtures/origin-case-answers.json",
       );
       expect(existsSync(originPath)).toBe(true);
       const answers = JSON.parse(readFileSync(originPath, "utf8")) as Record<

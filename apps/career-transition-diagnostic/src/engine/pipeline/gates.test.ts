@@ -20,7 +20,7 @@ import {
 } from "./gates";
 
 const originAnswers = JSON.parse(
-  readFileSync(join(__dirname, "fixtures/origin-case-answers.json"), "utf8"),
+  readFileSync(join(__dirname, "../test-support/fixtures/origin-case-answers.json"), "utf8"),
 ) as Record<string, unknown>;
 
 function section(

@@ -73,6 +73,7 @@ export function emptyCaseState(assessmentId: string): CaseState {
       hardMoneyHistory: [],
       economicStructures: [],
       invisibleMachinery: [],
+      easyVsHardDifference: [],
       effortFairness: [],
       refusedWellPaidWork: [],
       continuePoorlyPaidWork: [],

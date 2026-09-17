@@ -7,7 +7,7 @@ import type { CaseState } from "@/engine/schemas/case-state";
 
 const originAnswers = JSON.parse(
   readFileSync(
-    join(__dirname, "../engine/pipeline/fixtures/origin-case-answers.json"),
+    join(__dirname, "../engine/test-support/fixtures/origin-case-answers.json"),
     "utf8",
   ),
 ) as Record<string, unknown>;

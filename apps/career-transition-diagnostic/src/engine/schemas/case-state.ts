@@ -102,14 +102,29 @@ export const caseStateSchema = z.object({
   }),
   money: z.object({
     beliefs: z.array(evidenceItemSchema),
+  
     easyMoneyHistory: z.array(evidenceItemSchema),
+  
     hardMoneyHistory: z.array(evidenceItemSchema),
+  
     economicStructures: z.array(evidenceItemSchema),
+  
     invisibleMachinery: z.array(evidenceItemSchema),
-    effortFairness: z.array(evidenceItemSchema),
-    refusedWellPaidWork: z.array(evidenceItemSchema),
-    continuePoorlyPaidWork: z.array(evidenceItemSchema),
-    backgroundIncome: z.array(evidenceItemSchema),
+  
+    easyVsHardDifference:
+      z.array(evidenceItemSchema),
+  
+    effortFairness:
+      z.array(evidenceItemSchema),
+  
+    refusedWellPaidWork:
+      z.array(evidenceItemSchema),
+  
+    continuePoorlyPaidWork:
+      z.array(evidenceItemSchema),
+  
+    backgroundIncome:
+      z.array(evidenceItemSchema),
   }),
   hiddenBargain: z.object({
     costsOfStaying: z.array(evidenceItemSchema),

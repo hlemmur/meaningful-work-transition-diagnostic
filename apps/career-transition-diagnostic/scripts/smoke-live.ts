@@ -28,7 +28,7 @@ async function main() {
 
   const originPath = join(
     process.cwd(),
-    "src/engine/pipeline/fixtures/origin-case-answers.json",
+    "src/engine/test-support/fixtures/origin-case-answers.json",
   );
   if (!existsSync(originPath)) {
     throw new Error(`Missing ${originPath}`);

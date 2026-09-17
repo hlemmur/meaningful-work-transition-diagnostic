@@ -76,6 +76,7 @@ describe("engine.v2 contracts", () => {
         hardMoneyHistory: [],
         economicStructures: [],
         invisibleMachinery: [],
+        easyVsHardDifference: [],
         effortFairness: [],
         refusedWellPaidWork: [],
         continuePoorlyPaidWork: [],

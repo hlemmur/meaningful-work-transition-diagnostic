@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetMockOutbox } from "../adapters/resend/mock";
+import { mockLlmAdapter } from "../adapters/openai/mock";
+import type { LlmAdapter } from "../adapters/types";
+import type { AnalysisFixture } from "@/engine/test-support/fixtures";
 import {
   completeMockPurchase,
   getAdminCase,
@@ -12,6 +15,27 @@ import {
   submitAssessment,
 } from "./service";
 import { REQUIRED_PEEL_SECTION_IDS } from "@/engine/schemas/analysis";
+
+function llmForFixture(
+  fixture: AnalysisFixture,
+): LlmAdapter {
+  return {
+    async completeStructured(request) {
+      return mockLlmAdapter.completeStructured({
+        ...request,
+        input: {
+          ...request.input,
+          fixture,
+
+          ...(fixture === "schema-fail" &&
+          request.stage === "pass3"
+            ? { failSchema: true }
+            : {}),
+        },
+      });
+    },
+  };
+}
 
 async function submittedAssessment(
   answers: Record<string, unknown> = {
@@ -89,21 +113,52 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
 
   it("retries a forced schema failure once then records error", async () => {
     const { assessmentId } = await submittedAssessment({
-      "Q1.1": "FORCE_SCHEMA_FAILURE",
+      "Q1.1": "I stall",
     });
-    const result = await runAnalysisPipeline(assessmentId);
-
+  
+    const result = await runAnalysisPipeline(
+      assessmentId,
+      {
+        llm: llmForFixture("schema-fail"),
+      },
+    );
+  
     expect(result.status).toBe("failed");
     expect(result.failedStage).toBe("pass3");
-    const pass3 = (await listAnalysisRuns(assessmentId)).filter((run) => run.stage === "pass3");
+  
+    const pass3 = (
+      await listAnalysisRuns(assessmentId)
+    ).filter(
+      (run) => run.stage === "pass3",
+    );
+  
     expect(pass3).toHaveLength(1);
     expect(pass3[0]?.status).toBe("failure");
     expect(pass3[0]?.attempt).toBe(2);
-    expect(pass3[0]?.error).toMatch(/schema validation failed for pass3:[\s\S]*hypotheses/i);
-    const admin = await getAdminCase(assessmentId);
-    expect(admin.analysisStatus.failedStage).toBe("pass3");
-    expect(admin.analysisStatus.error).toMatch(/hypotheses/i);
-    expect((await listAnalysisRuns(assessmentId)).some((run) => run.stage === "pass4")).toBe(false);
+    expect(pass3[0]?.error).toMatch(
+      /schema validation failed for pass3:[\s\S]*hypotheses/i,
+    );
+  
+    const admin =
+      await getAdminCase(assessmentId);
+  
+    expect(
+      admin.analysisStatus.failedStage,
+    ).toBe("pass3");
+  
+    expect(
+      admin.analysisStatus.error,
+    ).toMatch(/hypotheses/i);
+  
+    expect(
+      (
+        await listAnalysisRuns(
+          assessmentId,
+        )
+      ).some(
+        (run) => run.stage === "pass4",
+      ),
+    ).toBe(false);
   });
 
   it("includes a practical rival when constraints warrant it", async () => {
@@ -111,7 +166,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
       "Q1.1": "I want out.",
       "Q0.5": "Visa rules and rent due next month.",
     });
-    const result = await runAnalysisPipeline(assessmentId, { fixture: "practical-rival" });
+    const result = await runAnalysisPipeline(assessmentId, { llm: llmForFixture( "practical-rival") });
     const practical = result.caseState.hypotheses.filter(
       (item) =>
         item.category === "practical" ||
@@ -123,30 +178,30 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
 
   it("drops rank when the image vote weakens the favorite", async () => {
     const { assessmentId } = await submittedAssessment({
-      "Q1.1": "IMAGE_WEAKENS",
+      "Q1.1": "I feel stuck",
       "Q10.1": "An empty landscape with no path.",
     });
-    const result = await runAnalysisPipeline(assessmentId, { fixture: "image-weakens" });
+    const result = await runAnalysisPipeline(assessmentId, { llm: llmForFixture("image-weakens") });
     expect(result.caseState.hypotheses[0]?.id).toBe("hyp-practical");
     expect(result.caseState.imageVote?.verdict).toBe("weakens");
   });
 
   it("keeps critic+constraints resolution when a later stage is resumed", async () => {
     const { assessmentId } = await submittedAssessment({
-      "Q1.1": "CRITIC_CONSTRAINTS_WIN",
+      "Q1.1": "I feel stuck in the transition",
       "Q0.5": "No savings and a dependent parent.",
       "Q11.3": "See the contradiction I cannot name",
     });
 
     const interrupted = await runAnalysisPipeline(assessmentId, {
-      fixture: "critic-constraints-win",
+      llm: llmForFixture("critic-constraints-win"),
       failStage: "pass5",
     });
     expect(interrupted.status).toBe("failed");
     expect(interrupted.failedStage).toBe("pass5");
 
     const result = await runAnalysisPipeline(assessmentId, {
-      fixture: "critic-constraints-win",
+      llm: llmForFixture("critic-constraints-win"),
     });
     expect(result.status).toBe("completed");
     expect(result.caseState.hiddenPosition).toBeUndefined();
@@ -159,7 +214,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
       "Q11.3": "See the contradiction I cannot name",
     });
     const result = await runAnalysisPipeline(assessmentId, {
-      fixture: "critic-constraints-win",
+      llm: llmForFixture( "critic-constraints-win"),
     });
     expect(result.caseState.hiddenPosition).toBeUndefined();
     expect((await getDraftReport(assessmentId))?.generated.sections.some((section) =>
@@ -172,9 +227,9 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
 
   it("omits the Jungian report section when Pass 7 is empty", async () => {
     const { assessmentId } = await submittedAssessment({
-      "Q1.1": "EMPTY_JUNGIAN",
+      "Q1.1": "I feel stuck",
     });
-    const result = await runAnalysisPipeline(assessmentId, { fixture: "empty-jungian" });
+    const result = await runAnalysisPipeline(assessmentId, { llm: llmForFixture( "empty-jungian") });
     expect(result.caseState.jungianLenses).toEqual([]);
     expect((await getDraftReport(assessmentId))?.generated.sections.some((section) =>
       /jungian/i.test(section.title),
