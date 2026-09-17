@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2026-09-17T15:35:56.874Z",
+    "savedAt": "2026-09-17T15:49:47.784Z",
     "assessmentId": "sample-origin",
     "label": "origin-gold-mock",
     "models": [
@@ -882,7 +882,10 @@
           "evidenceStrength": 0.9,
           "recurrence": 0.9,
           "explanatoryImportance": 0.9,
-          "charge": 0.8
+          "charge": 0.8,
+          "crossDomainReach": 0,
+          "noveltyOfConnection": 0,
+          "consciousAwarenessPenalty": 0
         }
       }
     ],
@@ -1013,7 +1016,10 @@
         "practicalRequirements": [
           "one reviewer",
           "two calendar blocks"
-        ]
+        ],
+        "competingHypothesisIds": [],
+        "heldConstant": [],
+        "outcomeInterpretations": []
       }
     ],
     "unresolvedQuestions": [],
@@ -1025,7 +1031,8 @@
       "evidenceRefs": [
         "sample-origin:Q10.1",
         "sample-origin:Q10.6"
-      ]
+      ],
+      "exactClientMaterialUsed": []
     },
     "hiddenPosition": {
       "consciousPosition": "I need more confidence.",

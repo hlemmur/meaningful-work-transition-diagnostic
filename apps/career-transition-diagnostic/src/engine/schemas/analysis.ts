@@ -27,6 +27,9 @@ export const contradictionSchema = z.object({
     recurrence: z.number(),
     explanatoryImportance: z.number(),
     charge: z.number(),
+    crossDomainReach: z.number().default(0),
+    noveltyOfConnection: z.number().default(0),
+    consciousAwarenessPenalty: z.number().default(0),
   }),
 });
 
@@ -69,11 +72,50 @@ export const hypothesisSchema = z.object({
   confidence: z.enum(["weak", "tentative", "moderate", "strong"]),
 });
 
+export const hypothesisCritiqueSchema = z.object({
+  hypothesisId: z.string(),
+
+  strongestMundaneAlternative: z.string(),
+
+  counterEvidenceRefs: z.array(z.string()),
+
+  missingEvidence: z.array(z.string()),
+
+  confirmationBiasRisk: z.string(),
+
+  overPsychologizingRisk: z.string(),
+
+  evidenceActuallyUniqueToHypothesis:
+    z.array(z.string()),
+
+  rankAdjustment: z.enum([
+    "raise",
+    "keep",
+    "lower",
+    "reject",
+  ]),
+
+  reason: z.string(),
+});
+
 export const imageVoteSchema = z.object({
   hypothesisId: z.string(),
-  verdict: z.enum(["supports", "weakens", "splits", "insufficient"]),
-  note: z.string(),
+
+  verdict: z.enum([
+    "supports",
+    "weakens",
+    "splits",
+    "insufficient",
+  ]),
+
+  interpretation: z.string().optional(),
+
+  note: z.string().optional(),
+
   evidenceRefs: z.array(z.string()),
+
+  exactClientMaterialUsed:
+    z.array(z.string()).default([]),
 });
 
 export const hiddenPositionSchema = z.object({
@@ -91,6 +133,44 @@ export const hiddenPositionSchema = z.object({
   evidenceRefs: z.array(z.string()),
   counterEvidenceRefs: z.array(z.string()),
   confidence: z.enum(["tentative", "moderate", "strong"]),
+});
+
+export const forkResolutionSchema = z.object({
+  forkId: forkIdSchema,
+
+  status: z.enum([
+    "leans_a",
+    "leans_b",
+    "both",
+    "unresolved",
+    "not_relevant",
+  ]),
+
+  interpretation: z.string(),
+
+  evidenceRefs: z.array(z.string()),
+
+  importance: z.enum([
+    "low",
+    "medium",
+    "high",
+  ]),
+
+  reportWorthiness: z.boolean(),
+});
+
+export const finalFormulationSchema = z.object({
+  selectedHypothesisId: z.string(),
+
+  centralFormulation: z.string(),
+
+  whyItFits: z.array(z.string()),
+
+  whatItDoesNotExplain: z.array(z.string()),
+
+  strongestAlternative: z.string(),
+
+  unresolvedForks: z.array(forkIdSchema),
 });
 
 /** Pass6 LLM contract: when hidden is present, aim is required. */
@@ -115,16 +195,50 @@ export const realityCheckSchema = z.object({
 });
 
 export const experimentSchema = z.object({
-  kind: z.enum(["behavioral", "imaginal"]),
+  kind: z.enum([
+    "behavioral",
+    "imaginal",
+  ]),
+
   title: z.string(),
+
   hypothesisTested: z.string(),
+
   action: z.string(),
+
   duration: z.string(),
+
   whatToObserve: z.array(z.string()),
+
   resultSupportingHypothesis: z.string(),
+
   resultWeakeningHypothesis: z.string(),
-  riskLevel: z.enum(["low", "moderate"]),
-  practicalRequirements: z.array(z.string()),
+
+  riskLevel: z.enum([
+    "low",
+    "moderate",
+  ]),
+
+  practicalRequirements:
+    z.array(z.string()),
+
+  competingHypothesisIds:
+    z.array(z.string()).default([]),
+
+  manipulatedVariable:
+    z.string().optional(),
+
+  heldConstant:
+    z.array(z.string()).default([]),
+
+  outcomeInterpretations:
+    z.array(
+      z.object({
+        outcome: z.string(),
+        favors: z.string(),
+        because: z.string(),
+      }),
+    ).default([]),
 });
 
 export const reportSectionIdSchema = z.enum([
@@ -135,6 +249,8 @@ export const reportSectionIdSchema = z.enum([
   "alternative",
   "experiment",
   "jungian",
+  "questions",
+  "close",
 ]);
 
 export const REQUIRED_PEEL_SECTION_IDS = [
@@ -167,3 +283,6 @@ export type RealityCheck = z.infer<typeof realityCheckSchema>;
 export type Experiment = z.infer<typeof experimentSchema>;
 export type ReportSection = z.infer<typeof reportSectionSchema>;
 export type Report = z.infer<typeof reportSchema>;
+export type HypothesisCritique = z.infer<typeof hypothesisCritiqueSchema>;
+export type ForkResolution = z.infer<typeof forkResolutionSchema>;
+export type FinalFormulation = z.infer<typeof finalFormulationSchema>;
