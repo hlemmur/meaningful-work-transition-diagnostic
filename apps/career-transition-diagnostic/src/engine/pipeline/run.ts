@@ -316,11 +316,21 @@ function applyStage(
       next.hypotheses = passOutputSchemas.pass3.parse(output).hypotheses;
       return ensurePracticalRival(next);
     case "pass4": {
-      const parsed = passOutputSchemas.pass4.parse(output);
-      const critiqueGate = critiquesNonEmpty(parsed.critiques);
+      const parsed =
+        passOutputSchemas.pass4.parse(output);
+    
+      const critiqueGate =
+        critiquesNonEmpty(
+          parsed.critiques,
+        );
+    
       if (!critiqueGate.passed) {
         throwGate(critiqueGate);
       }
+    
+      next.hypothesisCritiques =
+        parsed.critiques;
+    
       return next;
     }
     case "pass5":

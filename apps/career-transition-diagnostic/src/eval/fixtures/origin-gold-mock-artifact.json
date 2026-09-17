@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2026-09-17T15:49:47.784Z",
+    "savedAt": "2026-09-17T19:32:43.666Z",
     "assessmentId": "sample-origin",
     "label": "origin-gold-mock",
     "models": [
@@ -987,6 +987,86 @@
         "confidence": "tentative"
       }
     ],
+    "hypothesisCritiques": [
+      {
+        "hypothesisId": "hyp-depth",
+        "strongestMundaneAlternative": "Money, practical constraints, or missing infrastructure may be sufficient.",
+        "counterEvidenceRefs": [],
+        "missingEvidence": [],
+        "confirmationBiasRisk": "The interpretation may privilege depth because a psychological explanation is more interesting.",
+        "overPsychologizingRisk": "Practical or environmental constraints may explain the stall without a hidden position.",
+        "evidenceActuallyUniqueToHypothesis": [
+          "sample-origin:Q0.4b"
+        ],
+        "rankAdjustment": "keep",
+        "reason": "The hypothesis remains plausible after considering the strongest simpler alternative."
+      },
+      {
+        "hypothesisId": "hyp-practical",
+        "strongestMundaneAlternative": "Money, practical constraints, or missing infrastructure may be sufficient.",
+        "counterEvidenceRefs": [],
+        "missingEvidence": [],
+        "confirmationBiasRisk": "Low, but practical explanations can also become overly convenient.",
+        "overPsychologizingRisk": "Low.",
+        "evidenceActuallyUniqueToHypothesis": [
+          "sample-origin:Q0.4b"
+        ],
+        "rankAdjustment": "keep",
+        "reason": "The hypothesis remains plausible after considering the strongest simpler alternative."
+      },
+      {
+        "hypothesisId": "hyp-identity",
+        "strongestMundaneAlternative": "Money, practical constraints, or missing infrastructure may be sufficient.",
+        "counterEvidenceRefs": [],
+        "missingEvidence": [],
+        "confirmationBiasRisk": "Low, but practical explanations can also become overly convenient.",
+        "overPsychologizingRisk": "Low.",
+        "evidenceActuallyUniqueToHypothesis": [
+          "sample-origin:Q0.4b"
+        ],
+        "rankAdjustment": "keep",
+        "reason": "The hypothesis remains plausible after considering the strongest simpler alternative."
+      }
+    ],
+    "imageVotes": [
+      {
+        "hypothesisId": "hyp-depth",
+        "verdict": "supports",
+        "interpretation": "The supplied threshold image is compatible with the container/authorization hypothesis.",
+        "evidenceRefs": [
+          "sample-origin:Q10.1",
+          "sample-origin:Q10.6"
+        ],
+        "exactClientMaterialUsed": [
+          "sample-origin:Q10.1",
+          "sample-origin:Q10.6"
+        ]
+      },
+      {
+        "hypothesisId": "hyp-practical",
+        "verdict": "splits",
+        "interpretation": "The image does not eliminate the practical explanation.",
+        "evidenceRefs": [
+          "sample-origin:Q0.5",
+          "sample-origin:Q10.1"
+        ],
+        "exactClientMaterialUsed": [
+          "sample-origin:Q10.1"
+        ]
+      }
+    ],
+    "forkResolutions": [
+      {
+        "forkId": "container_loss_vs_capacity",
+        "status": "leans_a",
+        "interpretation": "The available evidence currently leans toward the selected hypothesis, while the rival remains plausible.",
+        "evidenceRefs": [
+          "sample-origin:Q0.4b"
+        ],
+        "importance": "high",
+        "reportWorthiness": true
+      }
+    ],
     "jungianLenses": [
       {
         "concept": "puer-senex polarity",
@@ -1027,12 +1107,27 @@
     "imageVote": {
       "hypothesisId": "hyp-depth",
       "verdict": "supports",
-      "note": "Pipe mid-threshold associations support container/authorization polarity.",
+      "interpretation": "The supplied threshold image is compatible with the container/authorization hypothesis.",
       "evidenceRefs": [
         "sample-origin:Q10.1",
         "sample-origin:Q10.6"
       ],
-      "exactClientMaterialUsed": []
+      "exactClientMaterialUsed": [
+        "sample-origin:Q10.1",
+        "sample-origin:Q10.6"
+      ]
+    },
+    "finalFormulation": {
+      "selectedHypothesisId": "hyp-depth",
+      "centralFormulation": "Container loss vs capacity — freedom without internalized structure stalls action",
+      "whyItFits": [
+        "sample-origin:Q0.4b"
+      ],
+      "whatItDoesNotExplain": [
+        "Some practical constraints remain independently relevant."
+      ],
+      "strongestAlternative": "Constraints and missing infrastructure may be enough to explain the stall.",
+      "unresolvedForks": []
     },
     "hiddenPosition": {
       "consciousPosition": "I need more confidence.",

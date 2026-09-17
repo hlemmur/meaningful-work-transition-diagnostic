@@ -90,6 +90,7 @@ export function applyImageVotes(
     (left, right) => hypothesisScore(right) - hypothesisScore(left),
   );
   const favoriteVote = output.votes.find((vote) => vote.hypothesisId === "hyp-depth") ?? output.votes[0];
+  state.imageVotes = output.votes;
   state.imageVote = favoriteVote;
   const imageGate = imageVoteAdequate(state, favoriteVote);
   if (!imageGate.passed) {
@@ -107,6 +108,8 @@ export function applyResolution(
   output: z.infer<typeof pass6OutputSchema>,
   critiques: z.infer<typeof pass4OutputSchema>["critiques"],
 ) {
+  state.forkResolutions = output.forkResolutions;
+  state.finalFormulation = output.finalFormulation;
   const requested = state.userFinalReflection.requestedInsight?.trim();
   
   const selectedHypothesis =
