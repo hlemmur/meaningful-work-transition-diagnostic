@@ -47,7 +47,7 @@ export type AnalysisPipelineResult = {
   error?: string;
 };
 
-function seedCaseState(
+function extractInitialCaseState(
   assessmentId: string,
   answers: Record<string, unknown>,
   previous?: CaseState,
@@ -68,25 +68,48 @@ export async function executeAnalysis(input: {
   persistCaseState: (stage: AnalysisStage, snapshot: CaseState) => void;
 }): Promise<AnalysisPipelineResult> {
   const completed = new Set(input.completedStages);
-  let caseState = seedCaseState(
+  let caseState = extractInitialCaseState(
     input.assessmentId,
     input.answers,
     input.previousCaseState,
   );
-  const completeness = assertCaseStateCompleteness(caseState, input.answers);
+  
+  const completeness = assertCaseStateCompleteness(
+    caseState,
+    input.answers,
+  );
+  
   if (!completeness.passed) {
     input.persistRun({
       assessmentId: input.assessmentId,
+  
+      // This is still attributed to pass1 operationally,
+      // because analysis cannot begin with an incomplete extracted state.
       stage: "pass1",
+  
       attempt: 1,
-      promptVersion: "pass1.v1",
-      model: modelForStage("pass1"),
+  
+      // Make the reason explicit: this failure happened before
+      // the LLM pass, during deterministic extraction validation.
+      promptVersion: "deterministic-extraction",
+  
+      model: "deterministic",
+  
       status: "failure",
       error: completeness.detail,
-      idempotencyKey: `${input.assessmentId}:pass1:completeness-failure`,
+  
+      idempotencyKey:
+        `${input.assessmentId}:deterministic-extraction:completeness-failure`,
     });
-    return { status: "failed", caseState, failedStage: "pass1" };
+  
+    return {
+      status: "failed",
+      caseState,
+      failedStage: "pass1",
+      error: completeness.detail,
+    };
   }
+
   let critiques = hydrateCritiques(input.priorRuns);
   let report =
     input.existingReport ??
