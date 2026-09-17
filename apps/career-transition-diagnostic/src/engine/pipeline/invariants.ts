@@ -33,6 +33,36 @@ export function hypothesisScore(hypothesis: Hypothesis) {
   );
 }
 
+export function contradictionScore(
+  contradiction: CaseState["contradictions"][number],
+) {
+  const scores = contradiction.scores;
+
+  return (
+    scores.evidenceStrength * 0.15 +
+    scores.recurrence * 0.15 +
+    scores.explanatoryImportance * 0.2 +
+    scores.charge * 0.1 +
+    scores.crossDomainReach * 0.2 +
+    scores.noveltyOfConnection * 0.2 -
+    scores.consciousAwarenessPenalty * 0.2
+  );
+}
+
+export function rankContradictions(
+  state: CaseState,
+) {
+  state.contradictions = [
+    ...state.contradictions,
+  ].sort(
+    (left, right) =>
+      contradictionScore(right) -
+      contradictionScore(left),
+  );
+
+  return state;
+}
+
 export function applyCritiques(
   state: CaseState,
   critiques: HypothesisCritique[],

@@ -6,6 +6,7 @@ import type { LlmAdapter } from "@/server/adapters/types";
 import { firstEvidenceId } from "./evidence-ids";
 import {
   applyCritiques,
+  rankContradictions,
   applyImageVotes,
   applyResolution,
   ensurePracticalRival,
@@ -289,16 +290,32 @@ function applyStage(
       return next;
     }
     case "pass2": {
-      const parsed = passOutputSchemas.pass2.parse(output);
-      next.contradictions = parsed.contradictions;
-      const forks = new Set(next.openForks);
-      for (const item of parsed.contradictions) {
-        for (const fork of item.originForks) {
+      const parsed =
+        passOutputSchemas.pass2.parse(
+          output,
+        );
+    
+      next.contradictions =
+        parsed.contradictions;
+    
+      const forks =
+        new Set(next.openForks);
+    
+      for (
+        const item
+        of parsed.contradictions
+      ) {
+        for (
+          const fork
+          of item.originForks
+        ) {
           forks.add(fork);
         }
       }
+    
       next.openForks = [...forks];
-      return next;
+    
+      return rankContradictions(next);
     }
     case "pass3":
       next.hypotheses = passOutputSchemas.pass3.parse(output).hypotheses;
