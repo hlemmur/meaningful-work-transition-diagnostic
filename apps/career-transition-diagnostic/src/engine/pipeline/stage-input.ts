@@ -21,6 +21,7 @@ export const STAGE_INPUT_TRIM = {
 } as const;
 
 const SNAPSHOT_STAGES = new Set([
+  "pass1",
   "pass2",
   "pass3",
   "pass4",
@@ -39,8 +40,8 @@ const IMAGE_FIELD_TO_QUESTION: Array<{
 }> = [
   { field: "scene", questionId: "Q10.1" },
   { field: "surroundings", questionId: "Q10.2" },
-  { field: "ahead", questionId: "Q10.3" },
-  { field: "obstacle", questionId: "Q10.4" },
+  { field: "obstacle", questionId: "Q10.3" },
+  { field: "ahead", questionId: "Q10.4" },
   { field: "figures", questionId: "Q10.5" },
   { field: "obstacleSpeech", questionId: "Q10.6" },
   { field: "obstacleWant", questionId: "Q10.7" },
@@ -141,6 +142,46 @@ function moneyCiteRefs(state: CaseState): string[] {
   return [...new Set(refs)];
 }
 
+function evidenceSummary(
+  items: EvidenceItem[],
+  maxItems = 3,
+) {
+  return items
+    .slice(0, maxItems)
+    .map((item) => ({
+      id: item.id,
+      questionId: item.questionId,
+      quote: trimText(
+        item.rawQuote ??
+          item.normalizedMeaning,
+        STAGE_INPUT_TRIM.maxQuoteChars,
+      ),
+    }));
+}
+
+function projectionSummary(
+  items: CaseState["projections"]["admiredFigures"],
+  maxItems = 3,
+) {
+  return items
+    .slice(0, maxItems)
+    .map((item) => ({
+      figure: trimText(
+        item.figure,
+        STAGE_INPUT_TRIM.maxQuoteChars,
+      ),
+      wantedQuality: trimText(
+        item.wantedQuality,
+        160,
+      ),
+      judgedQuality: trimText(
+        item.judgedQuality,
+        160,
+      ),
+      evidenceRefs: item.evidenceRefs,
+    }));
+}
+
 export function buildRequiredCitations(state: CaseState) {
   return {
     image: hasRichImageAssociations(state)
@@ -200,6 +241,188 @@ export function buildCaseSnapshot(input: {
     requiredCitations,
     /** Exact peel titles the report must use (also enforced by sanitize). */
     requiredTitles: { ...CANONICAL_PEEL_TITLES },
+    signals: {
+      evidenceAbsorption: evidenceSummary(
+        caseState.history.evidenceAbsorption,
+      ),
+    
+      supportiveStructures: evidenceSummary(
+        caseState.history.supportiveStructures,
+      ),
+    
+      missingStructures: evidenceSummary(
+        caseState.history.missingStructures,
+      ),
+    
+      expectedInternalProvision: evidenceSummary(
+        caseState.history.expectedInternalProvision,
+      ),
+    
+      functionWithoutAudience: evidenceSummary(
+        caseState.history.functionWithoutAudience,
+      ),
+    
+      functionWithAccountability: evidenceSummary(
+        caseState.history.functionWithAccountability,
+      ),
+    
+      legitimacyLoop: evidenceSummary(
+        caseState.history.legitimacyLoop,
+      ),
+    
+      jobShape: {
+        identityWithoutWork:
+          evidenceSummary(
+            caseState.futureFantasy
+              .identityWithoutWork,
+          ),
+    
+        workWithoutIdentity:
+          evidenceSummary(
+            caseState.futureFantasy
+              .workWithoutIdentity,
+          ),
+    
+        jobShapeChange:
+          evidenceSummary(
+            caseState.futureFantasy
+              .jobShapeChange,
+          ),
+    
+        continueDespiteDifficulty:
+          evidenceSummary(
+            caseState.futureFantasy
+              .continueDespiteDifficulty,
+          ),
+    
+        wrongVsDifficult:
+          evidenceSummary(
+            caseState.futureFantasy
+              .wrongVsDifficult,
+          ),
+      },
+    
+      money: {
+        easyMoneyHistory:
+          evidenceSummary(
+            caseState.money.easyMoneyHistory,
+          ),
+    
+        hardMoneyHistory:
+          evidenceSummary(
+            caseState.money.hardMoneyHistory,
+          ),
+    
+        economicStructures:
+          evidenceSummary(
+            caseState.money.economicStructures,
+          ),
+    
+        invisibleMachinery:
+          evidenceSummary(
+            caseState.money.invisibleMachinery,
+          ),
+    
+        easyVsHardDifference:
+          evidenceSummary(
+            caseState.money
+              .easyVsHardDifference,
+          ),
+    
+        backgroundIncome:
+          evidenceSummary(
+            caseState.money.backgroundIncome,
+          ),
+      },
+    
+      projections: {
+        admired: projectionSummary(
+          caseState.projections
+            .admiredFigures,
+        ),
+    
+        rejected: projectionSummary(
+          caseState.projections
+            .rejectedFigures,
+        ),
+      },
+    
+      hiddenBargain: {
+        benefitsOfStaying:
+          evidenceSummary(
+            caseState.hiddenBargain
+              .benefitsOfStaying,
+          ),
+    
+        protectAndThreaten:
+          evidenceSummary(
+            caseState.hiddenBargain
+              .protectAndThreaten,
+          ),
+    
+        giveUpIfReal:
+          evidenceSummary(
+            caseState.hiddenBargain
+              .giveUpIfReal,
+          ),
+    
+        responsibilityOfSuccess:
+          evidenceSummary(
+            caseState.hiddenBargain
+              .responsibilityOfSuccess,
+          ),
+    
+        developmentalAsk:
+          evidenceSummary(
+            caseState.hiddenBargain
+              .developmentalAsk,
+          ),
+      },
+    
+      symbolicMaterial: {
+        scene: trimText(
+          caseState.symbolicMaterial.scene,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+    
+        surroundings: trimText(
+          caseState.symbolicMaterial
+            .surroundings,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+    
+        obstacle: trimText(
+          caseState.symbolicMaterial
+            .obstacle,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+    
+        ahead: trimText(
+          caseState.symbolicMaterial.ahead,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+    
+        obstacleSpeech: trimText(
+          caseState.symbolicMaterial
+            .obstacleSpeech,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+    
+        obstacleWant: trimText(
+          caseState.symbolicMaterial
+            .obstacleWant,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+    
+        ifNotRemoved: trimText(
+          caseState.symbolicMaterial
+            .ifNotRemoved,
+          STAGE_INPUT_TRIM.maxQuoteChars,
+        ),
+    
+        citeRefs: imageRefs,
+      },
+    },
     tierA: {
       projections: {
         admired: caseState.projections.admiredFigures.slice(0, 3).map((item) => ({
@@ -275,13 +498,135 @@ export function buildCaseSnapshot(input: {
       evidenceFor: item.evidenceFor,
       evidenceAgainst: item.evidenceAgainst,
     })),
+    hypothesisCritiques:
+  caseState.hypothesisCritiques.map(
+    (item) => ({
+      hypothesisId:
+        item.hypothesisId,
+
+      strongestMundaneAlternative:
+        trimText(
+          item.strongestMundaneAlternative,
+        ),
+
+      counterEvidenceRefs:
+        item.counterEvidenceRefs,
+
+      missingEvidence:
+        item.missingEvidence
+          .slice(0, 3),
+
+      confirmationBiasRisk:
+        trimText(
+          item.confirmationBiasRisk,
+        ),
+
+      overPsychologizingRisk:
+        trimText(
+          item.overPsychologizingRisk,
+        ),
+
+      evidenceActuallyUniqueToHypothesis:
+        item.evidenceActuallyUniqueToHypothesis,
+
+      rankAdjustment:
+        item.rankAdjustment,
+
+      reason:
+        trimText(item.reason),
+    }),
+  ),
+  imageVotes:
+  caseState.imageVotes.map(
+    (vote) => ({
+      hypothesisId:
+        vote.hypothesisId,
+
+      verdict:
+        vote.verdict,
+
+      interpretation:
+        trimText(
+          vote.interpretation ??
+            vote.note,
+        ),
+
+      evidenceRefs:
+        vote.evidenceRefs,
+
+      exactClientMaterialUsed:
+        vote.exactClientMaterialUsed ??
+        [],
+    }),
+  ),
+  forkResolutions:
+  caseState.forkResolutions.map(
+    (resolution) => ({
+      forkId:
+        resolution.forkId,
+
+      status:
+        resolution.status,
+
+      interpretation:
+        trimText(
+          resolution.interpretation,
+        ),
+
+      evidenceRefs:
+        resolution.evidenceRefs,
+
+      importance:
+        resolution.importance,
+
+      reportWorthiness:
+        resolution.reportWorthiness,
+    }),
+  ),
+  finalFormulation:
+  caseState.finalFormulation
+    ? {
+        selectedHypothesisId:
+          caseState.finalFormulation
+            .selectedHypothesisId,
+
+        centralFormulation:
+          trimText(
+            caseState.finalFormulation
+              .centralFormulation,
+          ),
+
+        whyItFits:
+          caseState.finalFormulation
+            .whyItFits
+            .slice(0, 4),
+
+        whatItDoesNotExplain:
+          caseState.finalFormulation
+            .whatItDoesNotExplain
+            .slice(0, 4),
+
+        strongestAlternative:
+          trimText(
+            caseState.finalFormulation
+              .strongestAlternative,
+          ),
+
+        unresolvedForks:
+          caseState.finalFormulation
+            .unresolvedForks,
+      }
+    : null,
     openForks: [...caseState.openForks],
     experimentBindings: (() => {
       const hypothesisIds = caseState.hypotheses
         .slice(0, STAGE_INPUT_TRIM.maxHypotheses)
         .map((item) => item.id);
       const openForkIds = [...caseState.openForks];
-      const preferredHypothesisId = hypothesisIds[0];
+      const preferredHypothesisId =
+  caseState.finalFormulation
+    ?.selectedHypothesisId ??
+  hypothesisIds[0];
       return preferredHypothesisId
         ? { hypothesisIds, openForkIds, preferredHypothesisId }
         : { hypothesisIds, openForkIds };
@@ -334,13 +679,11 @@ export function buildStageLlmInput(input: {
   evidenceRef: string;
   caseState: CaseState;
   answers: Record<string, unknown>;
-  fixture?: unknown;
   failSchema?: boolean;
   failStage?: unknown;
   draftReport?: { sections: Array<{ id: string; title: string; body: string; evidenceRefs: string[] }> };
 }): Record<string, unknown> {
   const base: Record<string, unknown> = {
-    fixture: input.fixture,
     assessmentId: input.assessmentId,
     evidenceRef: input.evidenceRef,
     requestedInsight: input.caseState.userFinalReflection.requestedInsight,
