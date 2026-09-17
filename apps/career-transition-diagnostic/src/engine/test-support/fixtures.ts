@@ -9,8 +9,8 @@ import {
   realityCheckSchema,
   reportSectionSchema,
 } from "../schemas/analysis";
-import type { AnalysisStage } from "./models";
-import { failingReportSectionIds } from "./report-grounding";
+import type { AnalysisStage } from "../pipeline/models";
+import { failingReportSectionIds } from "../pipeline/report-grounding";
 
 export type AnalysisFixture =
   | "default"

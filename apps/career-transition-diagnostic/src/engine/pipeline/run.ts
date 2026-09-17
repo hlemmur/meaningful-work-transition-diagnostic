@@ -5,10 +5,6 @@ import type { Report } from "../schemas/analysis";
 import type { LlmAdapter } from "@/server/adapters/types";
 import { firstEvidenceId } from "./evidence-ids";
 import {
-  inferAnalysisFixture,
-  type AnalysisFixture,
-} from "./fixtures";
-import {
   applyImageVotes,
   applyResolution,
   ensurePracticalRival,
@@ -67,14 +63,11 @@ export async function executeAnalysis(input: {
   priorRuns?: AnalysisRunRecord[];
   existingReport?: Report;
   llm: LlmAdapter;
-  fixture?: AnalysisFixture;
   failStage?: AnalysisStage;
   persistRun: (run: AnalysisRunRecord) => void;
   persistCaseState: (stage: AnalysisStage, snapshot: CaseState) => void;
 }): Promise<AnalysisPipelineResult> {
   const completed = new Set(input.completedStages);
-  const fixture =
-    input.fixture ?? inferAnalysisFixture(input.answers);
   let caseState = seedCaseState(
     input.assessmentId,
     input.answers,
@@ -115,12 +108,10 @@ export async function executeAnalysis(input: {
         llm: input.llm,
         input: buildStageLlmInput({
           stage,
-          fixture,
           assessmentId: input.assessmentId,
           evidenceRef,
           caseState,
           answers: input.answers,
-          failSchema: fixture === "schema-fail" && stage === "pass3",
           failStage: input.failStage,
           draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
         }),
@@ -244,7 +235,6 @@ export async function runAnalysisPasses(input: {
   assessmentId: string;
   answers: Record<string, unknown>;
   llm: LlmAdapter;
-  fixture?: AnalysisFixture;
   failStage?: AnalysisStage;
   store: AnalysisStore;
 }): Promise<PipelineResult> {
@@ -259,7 +249,6 @@ export async function runAnalysisPasses(input: {
     priorRuns: runs,
     existingReport: input.store.getReport?.(input.assessmentId),
     llm: input.llm,
-    fixture: input.fixture,
     failStage: input.failStage,
     persistRun: input.store.saveRun,
     persistCaseState(stage, snapshot) {
