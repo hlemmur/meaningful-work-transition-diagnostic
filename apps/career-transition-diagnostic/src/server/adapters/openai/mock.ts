@@ -4,7 +4,7 @@ import {
   inferAnalysisFixture,
   passOutputFor,
   type AnalysisFixture,
-} from "@/engine/pipeline/fixtures";
+} from "@/engine/test-support/fixtures";
 import { costForModel, type AnalysisStage } from "@/engine/pipeline/models";
 import { forkIdSchema, reportSectionSchema, type ForkId } from "@/engine/schemas/analysis";
 

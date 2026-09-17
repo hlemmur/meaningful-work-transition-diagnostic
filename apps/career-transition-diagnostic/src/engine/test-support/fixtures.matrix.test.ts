@@ -3,23 +3,48 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractCaseStateFull } from "@/engine/checkpoints/extract";
 import { mockLlmAdapter } from "@/server/adapters/openai/mock";
+import type { LlmAdapter } from "@/server/adapters/types";
 import { evaluateReport } from "@/eval/rubric";
 import { evaluateFrameworkFidelity } from "@/eval/framework-fidelity";
-import { executeAnalysis } from "./run";
-import { inferAnalysisFixture } from "./fixtures";
-import { pass8OutputSchema } from "./stage-schemas";
+import { executeAnalysis } from "@/engine/pipeline/run";
+import { inferAnalysisFixture, type AnalysisFixture } from "./fixtures";
+import { pass8OutputSchema } from "@/engine/pipeline/stage-schemas";
 
 const originAnswers = JSON.parse(
   readFileSync(join(__dirname, "fixtures/origin-case-answers.json"), "utf8"),
 ) as Record<string, unknown>;
 
-async function runFixture(fixtureMarker: string, answers: Record<string, unknown> = {}) {
-  const merged = { ...answers, "Q1.1": `${answers["Q1.1"] ?? "stall"} ${fixtureMarker}` };
+function llmForFixture(
+  fixture: AnalysisFixture,
+): LlmAdapter {
+  return {
+    async completeStructured(request) {
+      return mockLlmAdapter.completeStructured({
+        ...request,
+        input: {
+          ...request.input,
+          fixture,
+
+          ...(fixture === "schema-fail" &&
+          request.stage === "pass3"
+            ? { failSchema: true }
+            : {}),
+        },
+      });
+    },
+  };
+}
+
+async function runFixture(
+  fixture: AnalysisFixture,
+  answers: Record<string, unknown> = {},
+) {
   return executeAnalysis({
     assessmentId: "fx-1",
-    answers: merged,
+    answers,
     completedStages: [],
-    llm: mockLlmAdapter,
+    llm: llmForFixture(fixture),
+
     persistRun() {},
     persistCaseState() {},
   });
@@ -63,7 +88,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("fails closed on empty jungian without omitReason (live miss)", async () => {
-    const result = await runFixture("EMPTY_JUNGIAN_NO_OMIT", {
+    const result = await runFixture("empty-jungian-no-omit", {
       "Q1.1": "I stall",
       "Q0.5": "ADHD",
       "Q11.3": "sharp angles",
@@ -73,7 +98,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("fails closed on empty critiques", async () => {
-    const result = await runFixture("EMPTY_CRITIQUES", {
+    const result = await runFixture("empty-critiques", {
       "Q1.1": "I stall",
       "Q11.3": "sharp angles",
     });
@@ -82,7 +107,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("fails image-insufficient when rich associations exist", async () => {
-    const result = await runFixture("IMAGE_INSUFFICIENT_RICH", {
+    const result = await runFixture("image-insufficient-rich", {
       "Q1.1": "I stall",
       "Q10.1": "A rusty pipe across a threshold",
       "Q10.6": "The pipe says stay mid-crossing",
@@ -94,7 +119,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("fails wrong-experiment Magician critique on container fork", async () => {
-    const result = await runFixture("WRONG_EXPERIMENT", {
+    const result = await runFixture("wrong-experiment", {
       "Q1.1": "I stall without structure",
       "Q0.5": "ADHD",
       "Q11.3": "sharp angles",
@@ -104,7 +129,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("fails senex-scold-only reports", async () => {
-    const result = await runFixture("SENEX_SCOLD_ONLY", {
+    const result = await runFixture("senex-scold-only", {
       "Q1.1": "I stall",
       "Q11.3": "sharp angles",
     });
@@ -115,13 +140,12 @@ describe("negative and positive mock fixtures", () => {
   it("fails image-starved-peel when Q10 is only experiment garnish", async () => {
     const answers: Record<string, unknown> = {
       ...originAnswers,
-      "Q1.1": `${String(originAnswers["Q1.1"] ?? "")} IMAGE_STARVED_PEEL`,
     };
     const result = await executeAnalysis({
       assessmentId: "origin",
       answers,
       completedStages: [],
-      llm: mockLlmAdapter,
+      llm: llmForFixture("image-starved-peel"),
       persistRun() {},
       persistCaseState() {},
     });
@@ -133,13 +157,12 @@ describe("negative and positive mock fixtures", () => {
   it("fails projection-starved-peel when figures are omitted", async () => {
     const answers: Record<string, unknown> = {
       ...originAnswers,
-      "Q1.1": `${String(originAnswers["Q1.1"] ?? "")} PROJECTION_STARVED_PEEL`,
     };
     const result = await executeAnalysis({
       assessmentId: "origin",
       answers,
       completedStages: [],
-      llm: mockLlmAdapter,
+      llm: llmForFixture("projection-starved-peel"),
       persistRun() {},
       persistCaseState() {},
     });
@@ -151,13 +174,12 @@ describe("negative and positive mock fixtures", () => {
   it("fails money-starved-peel when money Tier-A is omitted", async () => {
     const answers: Record<string, unknown> = {
       ...originAnswers,
-      "Q1.1": `${String(originAnswers["Q1.1"] ?? "")} MONEY_STARVED_PEEL`,
     };
     const result = await executeAnalysis({
       assessmentId: "origin",
       answers,
       completedStages: [],
-      llm: mockLlmAdapter,
+      llm: llmForFixture("money-starved-peel"),
       persistRun() {},
       persistCaseState() {},
     });
@@ -169,13 +191,12 @@ describe("negative and positive mock fixtures", () => {
   it("fails clinical-voice-peel on third-person analyst diction", async () => {
     const answers: Record<string, unknown> = {
       ...originAnswers,
-      "Q1.1": `${String(originAnswers["Q1.1"] ?? "")} CLINICAL_VOICE_PEEL`,
     };
     const result = await executeAnalysis({
       assessmentId: "origin",
       answers,
       completedStages: [],
-      llm: mockLlmAdapter,
+      llm: llmForFixture("clinical-voice-peel"),
       persistRun() {},
       persistCaseState() {},
     });
@@ -185,7 +206,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("sanitizes Q11.3-as-hidden and completes", async () => {
-    const result = await runFixture("Q113_AS_HIDDEN", {
+    const result = await runFixture("q113-as-hidden", {
       "Q1.1": "I stall",
       "Q11.3": "I hope it shows me some sharp angles that I can't unsee",
     });
@@ -194,43 +215,68 @@ describe("negative and positive mock fixtures", () => {
     expect(result.caseState.gateRemediations?.some((item) => /Q11\.3/i.test(item))).toBe(true);
   });
 
-  it("origin-gold passes rubric and framework fidelity", async () => {
-    const answers: Record<string, unknown> = {
-      ...originAnswers,
-      "Q1.1": `${String(originAnswers["Q1.1"] ?? "")} ORIGIN_GOLD`,
-    };
-    const result = await executeAnalysis({
-      assessmentId: "origin",
-      answers,
-      completedStages: [],
-      llm: mockLlmAdapter,
-      fixture: "origin-gold",
-      persistRun() {},
-      persistCaseState() {},
-    });
-    expect(result.status).toBe("completed");
-    expect(result.report).toBeDefined();
-    const peel = result.report!.sections.map((section) => section.body).join("\n");
-    expect(peel).toMatch(/protect|keeps|bargain/i);
-    expect(peel).toMatch(/aim|aliveness|structure in service/i);
-    expect(peel).toMatch(/image|scene|voice|ask/i);
-    expect(peel).not.toMatch(/romance of eternal becoming/i);
-    const rubric = evaluateReport({
-      report: result.report!,
-      caseState: result.caseState,
-      requestedInsight: String(answers["Q11.3"] ?? ""),
-    });
-    expect(rubric.passed).toBe(true);
-    const fidelity = evaluateFrameworkFidelity({
-      answers,
-      caseState: result.caseState,
-      report: result.report!,
-    });
-    expect(fidelity.hardPassed).toBe(true);
-  });
+  it(
+    "origin-gold passes rubric and framework fidelity",
+    async () => {
+      const answers: Record<string, unknown> = {
+        ...originAnswers,
+      };
+  
+      const result = await executeAnalysis({
+        assessmentId: "origin",
+        answers,
+        completedStages: [],
+        llm: llmForFixture("origin-gold"),
+  
+        persistRun() {},
+        persistCaseState() {},
+      });
+  
+      expect(result.status).toBe("completed");
+      expect(result.report).toBeDefined();
+  
+      const peel = result.report!.sections
+        .map((section) => section.body)
+        .join("\n");
+  
+      expect(peel).toMatch(
+        /protect|keeps|bargain/i,
+      );
+  
+      expect(peel).toMatch(
+        /aim|aliveness|structure in service/i,
+      );
+  
+      expect(peel).toMatch(
+        /image|scene|voice|ask/i,
+      );
+  
+      expect(peel).not.toMatch(
+        /romance of eternal becoming/i,
+      );
+  
+      const rubric = evaluateReport({
+        report: result.report!,
+        caseState: result.caseState,
+        requestedInsight: String(
+          answers["Q11.3"] ?? "",
+        ),
+      });
+  
+      expect(rubric.passed).toBe(true);
+  
+      const fidelity = evaluateFrameworkFidelity({
+        answers,
+        caseState: result.caseState,
+        report: result.report!,
+      });
+  
+      expect(fidelity.hardPassed).toBe(true);
+    },
+  );
 
   it("fails aim-missing-peel when CaseState has aim but peel only names protection", async () => {
-    const result = await runFixture("AIM_MISSING_PEEL", {
+    const result = await runFixture("aim-missing-peel", {
       "Q1.1": "I stall",
       "Q1.3": "I lack confidence",
       "Q2.2": "I rewrote the site",
@@ -242,7 +288,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("fails speech-without-imaginal when obstacleSpeech lacks dialogue or imaginal", async () => {
-    const result = await runFixture("SPEECH_WITHOUT_IMAGINAL", {
+    const result = await runFixture("speech-without-imaginal", {
       "Q1.1": "I stall at exposure",
       "Q1.3": "I lack confidence",
       "Q2.2": "I rewrote the site",
@@ -257,7 +303,7 @@ describe("negative and positive mock fixtures", () => {
   });
 
   it("fails becoming-inflation-peel on romance of eternal becoming", async () => {
-    const result = await runFixture("BECOMING_INFLATION_PEEL", {
+    const result = await runFixture("becoming-inflation-peel", {
       "Q1.1": "I stall",
       "Q1.3": "I lack confidence",
       "Q2.2": "I rewrote the site",
@@ -270,7 +316,7 @@ describe("negative and positive mock fixtures", () => {
 
   it("non-origin soft mini passes soft-depth gates without pipe coupling", async () => {
     const answers: Record<string, unknown> = {
-      "Q1.1": "I freeze before claiming space NON_ORIGIN_SOFT_MINI",
+      "Q1.1": "I freeze before claiming space",
       "Q1.3": "I wait for permission",
       "Q2.2": "I circled the same draft for months",
       "Q0.5": "Focus drifts without a co-working block",
@@ -288,7 +334,7 @@ describe("negative and positive mock fixtures", () => {
       assessmentId: "soft-mini",
       answers,
       completedStages: [],
-      llm: mockLlmAdapter,
+      llm: llmForFixture("non-origin-soft-mini"),
       persistRun() {},
       persistCaseState() {},
     });
