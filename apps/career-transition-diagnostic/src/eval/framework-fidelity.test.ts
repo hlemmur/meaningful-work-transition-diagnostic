@@ -120,6 +120,9 @@ describe("evaluateFrameworkFidelity", () => {
           recurrence: 0.9,
           explanatoryImportance: 0.9,
           charge: 0.8,
+          crossDomainReach: 0,
+          noveltyOfConnection: 0,
+          consciousAwarenessPenalty: 0,
         },
       },
     ];
@@ -208,7 +211,10 @@ describe("evaluateFrameworkFidelity", () => {
         resultSupportingHypothesis: "Output rises with stakes",
         resultWeakeningHypothesis: "No change",
         riskLevel: "low",
-        practicalRequirements: ["partner"],
+        practicalRequirements: ["partner"], 
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
       },
     ];
     caseState.openForks = ["container_loss_vs_capacity"];
@@ -238,6 +244,9 @@ describe("evaluateFrameworkFidelity", () => {
           recurrence: 0.5,
           explanatoryImportance: 0.9,
           charge: 0.5,
+          crossDomainReach: 0,
+          noveltyOfConnection: 0,
+          consciousAwarenessPenalty: 0,
         },
       },
     ];
@@ -266,6 +275,9 @@ describe("evaluateFrameworkFidelity", () => {
         resultWeakeningHypothesis: "generic",
         riskLevel: "low",
         practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
       },
     ];
     caseState.openForks = ["container_loss_vs_capacity"];
@@ -359,7 +371,10 @@ describe("evaluateFrameworkFidelity", () => {
         resultSupportingHypothesis: "motion",
         resultWeakeningHypothesis: "stall",
         riskLevel: "low",
-        practicalRequirements: [],
+        practicalRequirements: [],  
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
       },
     ];
     caseState.openForks = ["rational_caution_vs_hidden_bargain"];

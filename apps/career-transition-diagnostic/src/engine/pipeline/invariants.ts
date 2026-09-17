@@ -108,9 +108,30 @@ export function applyResolution(
   critiques: z.infer<typeof pass4OutputSchema>["critiques"],
 ) {
   const requested = state.userFinalReflection.requestedInsight?.trim();
-  const criticAndConstraintsWin =
-    state.practicalContext.constraints.length > 0 &&
-    critiques.some((item) => item.hypothesisId === "hyp-depth" && !item.survives);
+  
+  const selectedHypothesis =
+  state.hypotheses.find(
+    (item) =>
+      item.id ===
+      output.selectedHypothesisId,
+  );
+
+const selectedCritique =
+  critiques.find(
+    (item) =>
+      item.hypothesisId ===
+      output.selectedHypothesisId,
+  );
+
+const selectedRejected =
+  selectedCritique?.rankAdjustment ===
+  "reject";
+
+const selectedIsPractical =
+  selectedHypothesis &&
+  PRACTICAL_CATEGORIES.has(
+    selectedHypothesis.category,
+  );
 
   const paraphrasesInsight =
     Boolean(requested) &&
@@ -124,7 +145,12 @@ export function applyResolution(
     ];
   }
 
-  if (!output.hiddenPosition || criticAndConstraintsWin || paraphrasesInsight) {
+  if (
+    !output.hiddenPosition ||
+    selectedRejected ||
+    selectedIsPractical ||
+    paraphrasesInsight
+  ) {
     state.hiddenPosition = undefined;
     return state;
   }

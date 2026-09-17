@@ -15,6 +15,39 @@ const lens = {
   confidence: "tentative" as const,
 };
 
+const pass6Base = {
+  selectedHypothesisId: "hyp-depth",
+
+  forkResolutions: [
+    {
+      forkId: "history_vs_stated_cause" as const,
+      status: "leans_a" as const,
+      interpretation:
+        "The evidence currently leans toward the depth hypothesis.",
+      evidenceRefs: ["a1:Q1.1"],
+      importance: "high" as const,
+      reportWorthiness: true,
+    },
+  ],
+
+  finalFormulation: {
+    selectedHypothesisId: "hyp-depth",
+    centralFormulation:
+      "The stall may involve more than a practical constraint.",
+    whyItFits: [
+      "The pattern recurs alongside the stated desire.",
+    ],
+    whatItDoesNotExplain: [
+      "Practical constraints remain relevant.",
+    ],
+    strongestAlternative:
+      "Constraints may suffice",
+    unresolvedForks: [],
+  },
+
+  alternative: "Constraints may suffice",
+};
+
 const hiddenBase = {
   consciousPosition: "I need confidence",
   observedPattern: "Freeze at exposure",
@@ -56,32 +89,59 @@ describe("pass7OutputSchema", () => {
 });
 
 describe("pass6OutputSchema / hiddenPosition aim", () => {
-  it("rejects hiddenPosition without possibleCompensatoryAim (live miss shape)", () => {
-    const parsed = pass6OutputSchema.safeParse({
-      hiddenPosition: hiddenBase,
-      alternative: "Constraints may suffice",
-    });
-    expect(parsed.success).toBe(false);
-  });
+  it(
+    "rejects hiddenPosition without possibleCompensatoryAim (live miss shape)",
+    () => {
+      const parsed =
+        pass6OutputSchema.safeParse({
+          ...pass6Base,
 
-  it("accepts hiddenPosition with possibleCompensatoryAim", () => {
-    const parsed = pass6OutputSchema.safeParse({
-      hiddenPosition: {
-        ...hiddenBase,
-        possibleCompensatoryAim: "Structure in service of aliveness",
-      },
-      alternative: "Constraints may suffice",
-    });
-    expect(parsed.success).toBe(true);
-  });
+          hiddenPosition:
+            hiddenBase,
+        });
 
-  it("still allows null hiddenPosition", () => {
-    const parsed = pass6OutputSchema.safeParse({
-      hiddenPosition: null,
-      alternative: "Constraints may suffice",
-    });
-    expect(parsed.success).toBe(true);
-  });
+      expect(
+        parsed.success,
+      ).toBe(false);
+    },
+  );
+
+  it(
+    "accepts hiddenPosition with possibleCompensatoryAim",
+    () => {
+      const parsed =
+        pass6OutputSchema.safeParse({
+          ...pass6Base,
+
+          hiddenPosition: {
+            ...hiddenBase,
+
+            possibleCompensatoryAim:
+              "Structure in service of aliveness",
+          },
+        });
+
+      expect(
+        parsed.success,
+      ).toBe(true);
+    },
+  );
+
+  it(
+    "still allows null hiddenPosition",
+    () => {
+      const parsed =
+        pass6OutputSchema.safeParse({
+          ...pass6Base,
+
+          hiddenPosition: null,
+        });
+
+      expect(
+        parsed.success,
+      ).toBe(true);
+    },
+  );
 });
 
 describe("pass9OutputSchema", () => {
