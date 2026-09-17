@@ -152,8 +152,14 @@ expectMentions(promptRegistry.pass8.text, [
       "alternative",
       "experiment",
       "caseSnapshot",
+      "finalFormulation",
+      "centralFormulation",
+      "whatItDoesNotExplain",
+      "strongestAlternative",
+      "unresolvedForks",
       "distinct question",
       "Q11.3",
+      "requestedInsight",
       "image",
       "projection",
       "money",
@@ -168,32 +174,66 @@ expectMentions(promptRegistry.pass8.text, [
       "obstacleSpeech",
       "wantedQuality",
       "claim→cite",
-      "romance-of-eternal-becoming",
+      "body location",
+      "symbol",
+      "hypothesis",
     ]);
+    
+    expect(promptRegistry.pass9.text).toMatch(
+      /never generate.*reply|second turn of dialogue|new speech/i,
+    );
+    expect(promptRegistry.pass9.text).toMatch(
+      /body location only if|mention a body location only if/i,
+    );
+    expect(promptRegistry.pass9.text).toMatch(
+      /you are a puer\/senex|archetypal identity/i,
+    )
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v8");
+    
+    expect(promptRegistry.pass9.version).toBe("pass-9.v9");
+    
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
       "regeneratedSections",
       "Q11.3",
-      "peel",
-      "one-sentence",
-      "distinct question",
-      "draftReport",
-      "evidenceAllowlist",
       "requestedInsight",
-      "Tier-A",
-      "inflation",
+      "draftReport",
+      "caseSnapshot",
+      "finalFormulation",
+      "whatItDoesNotExplain",
+      "unresolvedForks",
+      "evidenceRefs",
+      "requiredTitles",
+      "one-sentence",
       "the client",
       "second-person",
-      "requiredCitations",
-      "requiredTitles",
-      "possibleCompensatoryAim",
-      "obstacleSpeech",
-      "eternal becoming",
+      "body location",
+      "imaginal",
+      "dialogue",
+      "symbol",
+      "hypothesis",
+      "constraints",
+      "experiment",
     ]);
-    expect(promptRegistry.pass10.version).toBe("pass-10.v8");
+    
+    expect(promptRegistry.pass10.text).toMatch(
+      /invent.*body|body location/i,
+    );
+    
+    expect(promptRegistry.pass10.text).toMatch(
+      /second turn of dialogue|new imaginal speech|writes speech/i,
+    );
+    
+    expect(promptRegistry.pass10.text).toMatch(
+      /turns? a hypothesis into a fact|hypothesis.*fact/i,
+    );
+    
+    expect(promptRegistry.pass10.text).toMatch(
+      /you are a puer\/senex|archetypal identity/i,
+    );
+    
+    expect(promptRegistry.pass10.version).toBe("pass-10.v9");
     expect(promptRegistry.pass8.version).toBe("pass-8.v5");
   });
 });
