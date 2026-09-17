@@ -176,14 +176,37 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     expect(practical.length).toBeGreaterThan(0);
   });
 
-  it("drops rank when the image vote weakens the favorite", async () => {
+  it("re-ranks hypotheses when image votes weaken one and support another", async () => {
     const { assessmentId } = await submittedAssessment({
       "Q1.1": "I feel stuck",
       "Q10.1": "An empty landscape with no path.",
     });
     const result = await runAnalysisPipeline(assessmentId, { llm: llmForFixture("image-weakens") });
     expect(result.caseState.hypotheses[0]?.id).toBe("hyp-practical");
-    expect(result.caseState.imageVote?.verdict).toBe("weakens");
+    expect(
+      result.caseState.imageVotes.find(
+        (vote) =>
+          vote.hypothesisId === "hyp-depth",
+      )?.verdict,
+    ).toBe("weakens");
+    expect(
+      result.caseState.hypotheses[0]?.id,
+    ).toBe("hyp-practical");
+    
+    expect(
+      result.caseState.imageVotes.find(
+        (vote) =>
+          vote.hypothesisId === "hyp-depth",
+      )?.verdict,
+    ).toBe("weakens");
+    
+    expect(
+      result.caseState.imageVotes.find(
+        (vote) =>
+          vote.hypothesisId ===
+          "hyp-practical",
+      )?.verdict,
+    ).toBe("supports");
   });
 
   it("keeps critic+constraints resolution when a later stage is resumed", async () => {
