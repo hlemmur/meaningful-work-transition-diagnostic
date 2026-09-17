@@ -1,6 +1,6 @@
 import type { CaseState } from "../schemas/case-state";
 import type { Hypothesis, ReportSection } from "../schemas/analysis";
-import type { pass4OutputSchema, pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
+import type { pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
 import {
   CANONICAL_PEEL_TITLES,
   hasRichImageAssociations,
@@ -105,11 +105,13 @@ export function applyImageVotes(
 
 export function applyResolution(
   state: CaseState,
-  output: z.infer<typeof pass6OutputSchema>,
-  critiques: z.infer<typeof pass4OutputSchema>["critiques"],
+  output: z.infer<
+    typeof pass6OutputSchema
+  >,
 ) {
   state.forkResolutions = output.forkResolutions;
   state.finalFormulation = output.finalFormulation;
+  const critiques = state.hypothesisCritiques ?? [];
   const requested = state.userFinalReflection.requestedInsight?.trim();
   
   const selectedHypothesis =

@@ -22,7 +22,6 @@ import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from
 import { passOutputSchemas } from "./stage-schemas";
 import { buildStageLlmInput } from "./stage-input";
 import { runStructuredStage, StructuredStageError } from "./structured";
-import type { z } from "zod";
 
 export type AnalysisRunRecord = {
   assessmentId: string;
@@ -110,7 +109,6 @@ export async function executeAnalysis(input: {
     };
   }
 
-  let critiques = hydrateCritiques(input.priorRuns);
   let report =
     input.existingReport ??
     hydrateReport(input.priorRuns, caseState, input.assessmentId);
@@ -141,10 +139,8 @@ export async function executeAnalysis(input: {
       });
       stageOutput = result.output;
 
-      caseState = applyStage(stage, caseState, result.output, critiques);
-      if (stage === "pass4") {
-        critiques = passOutputSchemas.pass4.parse(result.output).critiques;
-      }
+      caseState = applyStage(stage, caseState, result.output);
+      
       if (stage === "pass9") {
         const sections = sanitizeReportSections(
           passOutputSchemas.pass9.parse(result.output).sections,
@@ -216,14 +212,6 @@ export async function executeAnalysis(input: {
   return { status: "completed", caseState, report };
 }
 
-function hydrateCritiques(runs: AnalysisRunRecord[] | undefined) {
-  const pass4 = [...(runs ?? [])]
-    .reverse()
-    .find((run) => run.stage === "pass4" && run.status === "success");
-  const parsed = passOutputSchemas.pass4.safeParse(pass4?.output);
-  return parsed.success ? parsed.data.critiques : [];
-}
-
 function hydrateReport(
   runs: AnalysisRunRecord[] | undefined,
   caseState: CaseState,
@@ -290,7 +278,6 @@ function applyStage(
   stage: AnalysisStage,
   state: CaseState,
   output: unknown,
-  critiques: z.infer<(typeof passOutputSchemas)["pass4"]>["critiques"],
 ): CaseState {
   const next = structuredClone(state);
   switch (stage) {
@@ -315,28 +302,35 @@ function applyStage(
     case "pass3":
       next.hypotheses = passOutputSchemas.pass3.parse(output).hypotheses;
       return ensurePracticalRival(next);
-    case "pass4": {
-      const parsed =
-        passOutputSchemas.pass4.parse(output);
-    
-      const critiqueGate =
-        critiquesNonEmpty(
-          parsed.critiques,
-        );
-    
-      if (!critiqueGate.passed) {
-        throwGate(critiqueGate);
+      case "pass4": {
+        const parsed =
+          passOutputSchemas.pass4.parse(
+            output,
+          );
+      
+        const critiqueGate =
+          critiquesNonEmpty(
+            parsed.critiques,
+          );
+      
+        if (!critiqueGate.passed) {
+          throwGate(critiqueGate);
+        }
+      
+        next.hypothesisCritiques =
+          parsed.critiques;
+      
+        return next;
       }
-    
-      next.hypothesisCritiques =
-        parsed.critiques;
-    
-      return next;
-    }
     case "pass5":
       return applyImageVotes(next, passOutputSchemas.pass5.parse(output));
-    case "pass6":
-      return applyResolution(next, passOutputSchemas.pass6.parse(output), critiques);
+      case "pass6":
+        return applyResolution(
+          next,
+          passOutputSchemas.pass6.parse(
+            output,
+          ),
+        );
     case "pass7": {
       const parsed = passOutputSchemas.pass7.parse(output);
       next.jungianLenses = parsed.jungianLenses;
