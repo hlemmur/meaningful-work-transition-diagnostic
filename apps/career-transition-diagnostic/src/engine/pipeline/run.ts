@@ -5,6 +5,7 @@ import type { Report } from "../schemas/analysis";
 import type { LlmAdapter } from "@/server/adapters/types";
 import { firstEvidenceId } from "./evidence-ids";
 import {
+  applyCritiques,
   applyImageVotes,
   applyResolution,
   ensurePracticalRival,
@@ -317,10 +318,10 @@ function applyStage(
           throwGate(critiqueGate);
         }
       
-        next.hypothesisCritiques =
-          parsed.critiques;
-      
-        return next;
+        return applyCritiques(
+          next,
+          parsed.critiques,
+        );
       }
     case "pass5":
       return applyImageVotes(next, passOutputSchemas.pass5.parse(output));

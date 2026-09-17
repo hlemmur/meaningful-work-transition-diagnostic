@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2026-09-17T19:56:38.552Z",
+    "savedAt": "2026-09-17T20:04:15.737Z",
     "assessmentId": "sample-origin",
     "label": "origin-gold-mock",
     "models": [
@@ -1104,6 +1104,9 @@
     ],
     "unresolvedQuestions": [],
     "safetyFlags": [],
+    "gateRemediations": [
+      "Symbolic material split across multiple hypotheses; Pass 6 must preserve or explicitly resolve the competing centers."
+    ],
     "imageVote": {
       "hypothesisId": "hyp-depth",
       "verdict": "supports",
