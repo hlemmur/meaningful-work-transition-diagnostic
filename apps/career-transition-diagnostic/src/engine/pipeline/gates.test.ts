@@ -19,6 +19,7 @@ import {
   antiInflationDiagnosis,
   experimentBoundToHypothesis,
   imageVoteAdequate,
+  senexScoldOnly,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -928,5 +929,27 @@ describe("image vote adequacy gate", () => {
     expect(
       imageVoteAdequate(state).passed,
     ).toBe(false);
+  });
+  
+  it("senexScoldOnly fails grind-only framing", () => {
+    const finding = senexScoldOnly(
+      "You just need more discipline. Stop seeking insight and force yourself through the work.",
+    );
+  
+    expect(finding.passed).toBe(false);
+  });
+  it("senexScoldOnly allows discipline inside a genuine polarity", () => {
+    const finding = senexScoldOnly(
+      "More discipline may matter, but the tension between structure and autonomy needs both poles rather than one replacing the other.",
+    );
+  
+    expect(finding.passed).toBe(true);
+  });
+  it("senexScoldOnly does not require aliveness or possibility language", () => {
+    const finding = senexScoldOnly(
+      "The developmental tension may be between consistency and responsiveness; integrating both matters more than simply working harder.",
+    );
+  
+    expect(finding.passed).toBe(true);
   });
 });

@@ -636,18 +636,29 @@ export function clientVoiceGates(sections: ReportSection[]): GateFinding[] {
   return [secondPersonVoice(sections), plainTitles(sections), noAnalystOpeners(sections)];
 }
 
-export function senexScoldOnly(text: string): GateFinding {
-  const grind = /grow up|just (need )?(more )?discipline|stop seeking (insight|revelation)|unglamorous discomfort of daily execution/i.test(
-    text,
-  );
-  const aliveness = /structure in service|aliveness|possibility|play|fascination|both poles/i.test(text);
+export function senexScoldOnly(
+  text: string,
+): GateFinding {
+  const grindOnlyLanguage =
+    /grow up|just (?:need )?(?:more )?discipline|stop seeking (?:insight|revelation)|unglamorous discomfort of daily execution|just work harder|force yourself|only harder work/i.test(
+      text,
+    );
+
+  const balancingLanguage =
+    /polarity|both (?:sides|poles)|tension between|balance|integrat|compensat|while also|without losing|alongside|at the same time|one pole|other pole/i.test(
+      text,
+    );
+
+  const failed =
+    grindOnlyLanguage &&
+    !balancingLanguage;
+
   return {
     id: "senex-scold",
-    passed: !(grind && !aliveness),
-    detail:
-      grind && !aliveness
-        ? "Developmental frame collapses to senex-scold / grind-only."
-        : "Developmental frame is not grind-only.",
+    passed: !failed,
+    detail: failed
+      ? "Developmental framing collapses to discipline/grind as the only valid pole."
+      : "Developmental framing does not collapse to grind-only.",
   };
 }
 
