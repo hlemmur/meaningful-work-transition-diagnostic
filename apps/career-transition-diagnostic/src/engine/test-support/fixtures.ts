@@ -229,9 +229,19 @@ function contradiction(
 
 function groundedReportSections(
   fixture: AnalysisFixture,
-  ctx: { assessmentId: string; evidenceRef: string },
+  ctx: {
+    assessmentId: string;
+    evidenceRef: string;
+    evidenceAllowlist?: string[];
+  },
 ): ReportSection[] {
-  const q = (questionId: string) => `${ctx.assessmentId}:${questionId}`;
+  const allowed = new Set(ctx.evidenceAllowlist ?? []);
+  const q = (questionId: string) => {
+    const ref = `${ctx.assessmentId}:${questionId}`;
+    return allowed.size === 0 || allowed.has(ref)
+      ? ref
+      : ctx.evidenceRef;
+  };
 
   if (fixture === "starved-case-report") {
     return [
@@ -935,6 +945,7 @@ export function passOutputFor(
       openForkIds: string[];
       preferredHypothesisId?: string;
     };
+    evidenceAllowlist?: string[];
   },
 ) {
   if (fixture === "schema-fail" && stage === "pass3") {
@@ -984,17 +995,7 @@ export function passOutputFor(
     ctx.evidenceRef,
   );
 
-  const includePractical =
-    fixture === "practical-rival" ||
-    fixture === "critic-constraints-win" ||
-    fixture === "image-weakens" ||
-    fixture === "origin-gold" ||
-    fixture === "empty-jungian" ||
-    fixture === "non-origin-soft-mini" ||
-    fixture === "speech-without-imaginal";
-  const hypotheses = includePractical
-    ? [depth, practical, identity]
-    : [depth, identity, hyp("hyp-env", "environmental", "The current container may be missing.", ctx.evidenceRef)];
+  const hypotheses = [depth, practical, identity];
 
   switch (stage) {
     case "pass1":

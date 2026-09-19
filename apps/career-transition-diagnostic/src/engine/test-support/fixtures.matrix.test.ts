@@ -41,7 +41,18 @@ async function runFixture(
 ) {
   return executeAnalysis({
     assessmentId: "fx-1",
-    answers,
+    answers: {
+      "Q0.4": 5,
+      "Q0.5": "A fictional participant needs stable income during the transition.",
+      "Q1.1": "A fictional participant stalls while testing a meaningful career change.",
+      "Q1.3": "Visible experiments still feel risky.",
+      "Q2.1": "The need for change became clear during a synthetic project.",
+      "Q2.2": "They tried small portfolio experiments.",
+      "Q4.4": ["clear_expectations"],
+      "Q9.2": "Staying preserves a familiar fictional routine.",
+      "Q10.1": "A fictional traveler stands at a gate.",
+      ...answers,
+    },
     completedStages: [],
     llm: llmForFixture(fixture),
 

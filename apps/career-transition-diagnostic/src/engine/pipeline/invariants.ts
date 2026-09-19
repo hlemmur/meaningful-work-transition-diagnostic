@@ -4,7 +4,6 @@ import type { pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
 import { collectEvidenceIds } from "./evidence-ids";
 import {
   CANONICAL_PEEL_TITLES,
-  hasRichImageAssociations,
   imageVoteAdequate,
   isParaphraseOf,
   throwGate,
@@ -17,8 +16,8 @@ const IMAGE_FIELD_TO_QUESTION: Array<{
 }> = [
   { field: "scene", questionId: "Q10.1" },
   { field: "surroundings", questionId: "Q10.2" },
-  { field: "ahead", questionId: "Q10.3" },
-  { field: "obstacle", questionId: "Q10.4" },
+  { field: "obstacle", questionId: "Q10.3" },
+  { field: "ahead", questionId: "Q10.4" },
   { field: "figures", questionId: "Q10.5" },
   { field: "obstacleSpeech", questionId: "Q10.6" },
   { field: "obstacleWant", questionId: "Q10.7" },
@@ -275,6 +274,18 @@ export function applyImageVotes(
     ),
   );
 
+  const invalidVote = output.votes.find(
+    (vote) => !byId.has(vote.hypothesisId),
+  );
+  if (invalidVote) {
+    throwGate({
+      id: "image-vote-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 5 image vote ${invalidVote.hypothesisId} does not reference a live hypothesis.`,
+    });
+  }
+
   for (const vote of output.votes) {
     const hypothesis = byId.get(
       vote.hypothesisId,
@@ -362,31 +373,18 @@ if (splitVotes.length > 0) {
     favoriteVote ??
     output.votes[0];
 
-  const voteForGate =
-    favoriteVote ??
-    output.votes[0];
-
   const imageGate =
     imageVoteAdequate(
       state,
     );
 
   if (!imageGate.passed) {
-    if (
-      hasRichImageAssociations(
-        state,
-      ) &&
-      voteForGate?.verdict ===
-        "insufficient"
-    ) {
-      state.gateRemediations = [
-        ...(state.gateRemediations ??
-          []),
-        imageGate.detail,
-      ];
+    state.gateRemediations = [
+      ...(state.gateRemediations ?? []),
+      imageGate.detail,
+    ];
 
-      throwGate(imageGate);
-    }
+    throwGate(imageGate);
   }
 
   return state;
@@ -398,10 +396,11 @@ export function applyResolution(
     typeof pass6OutputSchema
   >,
 ) {
-  state.forkResolutions = output.forkResolutions;
-  state.finalFormulation = output.finalFormulation;
   const critiques = state.hypothesisCritiques ?? [];
   const requested = state.userFinalReflection.requestedInsight?.trim();
+  const liveHypothesisIds = new Set(
+    state.hypotheses.map((item) => item.id),
+  );
   
   const selectedHypothesis =
   state.hypotheses.find(
@@ -409,6 +408,59 @@ export function applyResolution(
       item.id ===
       output.selectedHypothesisId,
   );
+
+  if (!selectedHypothesis) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 selected hypothesis ${output.selectedHypothesisId}, which is not a live hypothesis.`,
+    });
+  }
+
+  const invalidCritique = critiques.find(
+    (item) => !liveHypothesisIds.has(item.hypothesisId),
+  );
+  if (invalidCritique) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 critique ${invalidCritique.hypothesisId} does not reference a live hypothesis.`,
+    });
+  }
+
+  const invalidImageVote = (state.imageVotes ?? []).find(
+    (item) => !liveHypothesisIds.has(item.hypothesisId),
+  );
+  if (invalidImageVote) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 image vote ${invalidImageVote.hypothesisId} does not reference a live hypothesis.`,
+    });
+  }
+
+  const openForks = new Set([
+    ...state.openForks,
+    ...state.contradictions.flatMap((item) => item.originForks),
+    ...state.hypotheses.flatMap((item) => item.originForks),
+  ]);
+  const invalidForkResolution = output.forkResolutions.find(
+    (item) => !openForks.has(item.forkId),
+  );
+  if (invalidForkResolution) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 fork ${invalidForkResolution.forkId} is not open in the current case.`,
+    });
+  }
+
+  state.forkResolutions = output.forkResolutions;
+  state.finalFormulation = output.finalFormulation;
 
 const selectedCritique =
   critiques.find(
@@ -480,13 +532,6 @@ export function sanitizeReportSections(
     ...syntheticEvidenceIds(state),
   ]);
   
-  const fallback =
-    state.consciousNarrative.statedProblem[0]?.id ??
-    state.practicalContext.constraints[0]?.id ??
-    state.behavior.actionsTaken[0]?.id ??
-    [...known][0];
-  
-
   return sections
     .filter((section) => {
       if ((section.id === "jungian" || /jungian/i.test(section.title)) && state.jungianLenses.length === 0) {
@@ -501,17 +546,20 @@ export function sanitizeReportSections(
       const refs = section.evidenceRefs.filter(
         (ref) => known.has(ref),
       );
+      if (refs.length === 0) {
+        throwGate({
+          id: "report-evidence-provenance",
+          passed: false,
+          detail:
+            `Report section ${section.id} has no supported evidence refs after provenance validation.`,
+        });
+      }
       const canonical = CANONICAL_PEEL_TITLES[section.id];
       return {
         ...section,
         // Peel titles are structural labels — normalize so voice gates don't thrash live drafts.
         title: canonical ?? section.title,
-        evidenceRefs:
-          refs.length > 0
-            ? refs
-            : fallback
-              ? [fallback]
-              : [],
+        evidenceRefs: refs,
       };
     });
 }

@@ -1,13 +1,190 @@
 import { describe, expect, it } from "vitest";
 import { emptyCaseState } from "@/engine/checkpoints/empty-case-state";
 import { extractCaseStateFull } from "@/engine/checkpoints/extract";
-import { reportSectionSchema } from "@/engine/schemas/analysis";
+import {
+  hypothesisCritiqueSchema,
+  hypothesisSchema,
+  imageVoteSchema,
+  reportSectionSchema,
+  type ForkId,
+} from "@/engine/schemas/analysis";
 import { CANONICAL_PEEL_TITLES } from "./gates";
-import { sanitizeReportSections } from "./invariants";
+import { applyImageVotes, applyResolution, sanitizeReportSections } from "./invariants";
+import { pass6OutputSchema } from "./stage-schemas";
+
+function hypothesis(id: string) {
+  return hypothesisSchema.parse({
+    id,
+    title: `Hypothesis ${id}`,
+    category: "identity",
+    observedPattern: "A synthetic pattern for invariant testing.",
+    evidenceFor: ["a1:Q1.1"],
+    evidenceAgainst: [],
+    contradictionsExplained: [],
+    contradictionsNotExplained: [],
+    simplerAlternatives: [],
+    missingInformation: [],
+    originForks: ["history_vs_stated_cause"],
+    scoring: {
+      evidenceCoverage: 0.5,
+      crossContextRecurrence: 0.5,
+      contradictionResolution: 0.5,
+      personSpecificity: 0.5,
+      developmentalFit: 0.5,
+      imageConstraintFit: 0.5,
+      counterEvidencePenalty: 0,
+      simplerAlternativePenalty: 0,
+    },
+    confidence: "tentative",
+  });
+}
+
+function resolutionOutput(
+  selectedHypothesisId: string,
+  forkId: ForkId = "history_vs_stated_cause",
+) {
+  return pass6OutputSchema.parse({
+    selectedHypothesisId,
+    forkResolutions: [
+      {
+        forkId,
+        status: "leans_a",
+        interpretation: "Synthetic resolution.",
+        evidenceRefs: ["a1:Q1.1"],
+        importance: "high",
+        reportWorthiness: true,
+      },
+    ],
+    finalFormulation: {
+      selectedHypothesisId,
+      centralFormulation: "Synthetic formulation.",
+      whyItFits: ["Synthetic reason."],
+      whatItDoesNotExplain: ["Synthetic limitation."],
+      strongestAlternative: "Synthetic alternative.",
+      unresolvedForks: [],
+    },
+    hiddenPosition: null,
+    alternative: "Synthetic alternative.",
+  });
+}
+
+describe("applyImageVotes", () => {
+  it("rejects votes for hypotheses that are not in the current case", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [
+          {
+            hypothesisId: "hyp-invented",
+            verdict: "insufficient",
+            evidenceRefs: ["a1:Q1.1"],
+            exactClientMaterialUsed: [],
+          },
+        ],
+        overallNote: "Synthetic invalid vote.",
+      }),
+    ).toThrow(/image vote.*live hypothesis/i);
+  });
+
+  it("rejects rich-image votes that do not target a live leading hypothesis", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A locked gate blocks a vivid path.",
+      "Q10.2": "The scene feels cold and exposed.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [
+          {
+            hypothesisId: "hyp-invented",
+            verdict: "supports",
+            interpretation: "The image supports an invented candidate.",
+            evidenceRefs: ["a1:Q10.1"],
+            exactClientMaterialUsed: ["a1:Q10.1"],
+          },
+        ],
+        overallNote: "Synthetic invalid vote.",
+      }),
+    ).toThrow(/image vote.*live hypothesis/i);
+  });
+});
+
+describe("applyResolution", () => {
+  it("rejects a final formulation that selects a nonexistent hypothesis", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+    state.openForks = ["history_vs_stated_cause"];
+
+    expect(() =>
+      applyResolution(state, resolutionOutput("hyp-invented")),
+    ).toThrow(/selected hypothesis.*live/i);
+  });
+
+  it("rejects stale critique references before resolving the case", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+    state.openForks = ["history_vs_stated_cause"];
+    state.hypothesisCritiques = [
+      hypothesisCritiqueSchema.parse({
+        hypothesisId: "hyp-invented",
+        strongestMundaneAlternative: "Synthetic alternative.",
+        counterEvidenceRefs: [],
+        missingEvidence: [],
+        confirmationBiasRisk: "Synthetic risk.",
+        overPsychologizingRisk: "Synthetic risk.",
+        evidenceActuallyUniqueToHypothesis: [],
+        rankAdjustment: "keep",
+        reason: "Synthetic critique.",
+      }),
+    ];
+
+    expect(() =>
+      applyResolution(state, resolutionOutput("hyp-live")),
+    ).toThrow(/critique.*live hypothesis/i);
+  });
+
+  it("rejects stale image-vote references before resolving the case", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+    state.openForks = ["history_vs_stated_cause"];
+    state.imageVotes = [
+      imageVoteSchema.parse({
+        hypothesisId: "hyp-invented",
+        verdict: "supports",
+        evidenceRefs: ["a1:Q10.1"],
+        exactClientMaterialUsed: ["a1:Q10.1"],
+      }),
+    ];
+
+    expect(() =>
+      applyResolution(state, resolutionOutput("hyp-live")),
+    ).toThrow(/image vote.*live hypothesis/i);
+  });
+
+  it("rejects resolutions for forks that are not open in the case", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+    state.openForks = ["history_vs_stated_cause"];
+
+    expect(() =>
+      applyResolution(
+        state,
+        resolutionOutput("hyp-live", "legitimacy_loop"),
+      ),
+    ).toThrow(/fork.*not open/i);
+  });
+});
 
 describe("sanitizeReportSections", () => {
   it("normalizes near-miss peel titles to canonical labels by section id", () => {
-    const state = emptyCaseState("a1");
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q2.1": "I want work that feels alive.",
+    });
     state.hiddenPosition = {
       consciousPosition: "I lack confidence",
       observedPattern: "freeze at outreach",
@@ -92,7 +269,25 @@ describe("sanitizeReportSections", () => {
       sanitized[0]?.evidenceRefs,
     ).toEqual(["a1:Q10.1"]);
   });
-  it("uses a real CaseState evidence ref as fallback when all supplied refs are invalid", () => {
+
+  it("preserves the obstacle and ahead question provenance", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.3": "A synthetic stone wall blocks the path.",
+    });
+    const section = reportSectionSchema.parse({
+      id: "reality",
+      title: "What reality says",
+      body: "You describe a concrete obstacle in the scene.",
+      evidenceRefs: ["a1:Q10.3"],
+    });
+
+    expect(
+      sanitizeReportSections([section], state)[0]?.evidenceRefs,
+    ).toEqual(["a1:Q10.3"]);
+  });
+
+  it("fails closed when every supplied evidence ref is invented", () => {
     const state = extractCaseStateFull("a1", {
       "Q1.1": "I keep stalling.",
     });
@@ -109,14 +304,11 @@ describe("sanitizeReportSections", () => {
       }),
     ];
   
-    const sanitized =
+    expect(() =>
       sanitizeReportSections(
         sections,
         state,
-      );
-  
-    expect(
-      sanitized[0]?.evidenceRefs,
-    ).toEqual(["a1:Q1.1"]);
+      ),
+    ).toThrow(/no supported evidence refs/i);
   });
 });

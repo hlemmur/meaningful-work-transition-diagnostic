@@ -95,6 +95,7 @@ export const mockLlmAdapter: LlmAdapter = {
       const assessmentId = String(input.assessmentId ?? "assess-1");
       const caseSnapshot = input.caseSnapshot as
         | {
+            evidenceAllowlist?: string[];
             experimentBindings?: {
               hypothesisIds: string[];
               openForkIds: string[];
@@ -121,6 +122,7 @@ export const mockLlmAdapter: LlmAdapter = {
             typeof input.requestedInsight === "string" ? input.requestedInsight : undefined,
           draftReport,
           experimentBindings: caseSnapshot?.experimentBindings,
+          evidenceAllowlist: caseSnapshot?.evidenceAllowlist,
         }),
         model,
         usage: {
