@@ -17,6 +17,7 @@ import {
   protectionAndAimInPeel,
   imaginalWhenSpeech,
   antiInflationDiagnosis,
+  experimentBoundToHypothesis
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -69,6 +70,257 @@ describe("pipeline gates", () => {
   it("requires non-empty critiques", () => {
     expect(critiquesNonEmpty([]).passed).toBe(false);
     expect(critiquesNonEmpty([{ hypothesisId: "h1" }]).passed).toBe(true);
+  });
+});
+
+describe("experiment binding gate", () => {
+  function experimentState() {
+    const state = extractCaseStateFull("exp", {
+      "Q1.1": "I keep stalling.",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-structure",
+        title: "Missing structure",
+        category: "structural",
+      
+        observedPattern:
+          "Action drops when external structure disappears.",
+      
+        evidenceFor: ["exp:Q1.1"],
+        evidenceAgainst: [],
+      
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+      
+        simplerAlternatives: [
+          "The stall may mainly reflect missing business skill.",
+        ],
+      
+        missingInformation: [],
+      
+        originForks: [
+          "container_loss_vs_capacity",
+        ],
+      
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.8,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+      
+        confidence: "moderate",
+      },
+      {
+        id: "hyp-skill",
+        title: "Skill gap",
+        category: "practical",
+      
+        observedPattern:
+          "The person has limited experience with this task.",
+      
+        evidenceFor: ["exp:Q1.1"],
+        evidenceAgainst: [],
+      
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+      
+        simplerAlternatives: [],
+      
+        missingInformation: [],
+      
+        originForks: [
+          "container_loss_vs_capacity",
+        ],
+      
+        scoring: {
+          evidenceCoverage: 0.6,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.6,
+          personSpecificity: 0.5,
+          developmentalFit: 0.3,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0,
+        },
+      
+        confidence: "moderate",
+      },
+    ];
+
+    state.openForks = [
+      "container_loss_vs_capacity",
+    ];
+
+    return state;
+  }
+
+  it("allows recognizable legacy prose binding for persisted experiments", () => {
+    const state = experimentState();
+  
+    const legacyExperiments = [
+      {
+        kind: "behavioral",
+        title: "Legacy structure test",
+        hypothesisTested:
+          "Missing structure may explain the stall",
+        action:
+          "Add external accountability.",
+        duration: "1 week",
+        whatToObserve: [
+          "Whether execution changes.",
+        ],
+        resultSupportingHypothesis:
+          "Execution improves.",
+        resultWeakeningHypothesis:
+          "Execution stays unchanged.",
+        riskLevel: "low",
+        practicalRequirements: [],
+      },
+    ];
+    
+    expect(
+      experimentBoundToHypothesis(
+        state,
+        legacyExperiments,
+      ).passed,
+    ).toBe(true);
+
+  });
+  it("passes when hypothesisTested exactly matches a live hypothesis id", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Structure test",
+        hypothesisTested: "hyp-structure",
+        action:
+          "Add external accountability while leaving the task unchanged.",
+        duration: "2 weeks",
+        whatToObserve:
+          ["Whether execution changes under added structure."],
+        resultSupportingHypothesis:
+          "Execution improves materially.",
+        resultWeakeningHypothesis:
+          "Execution remains unchanged.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: ["hyp-skill"],
+        manipulatedVariable: "external accountability",
+        heldConstant: ["task", "offer"],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    expect(
+      experimentBoundToHypothesis(state).passed,
+    ).toBe(true);
+  });
+
+  it("passes when hypothesisTested exactly matches an open fork id", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Fork test",
+        hypothesisTested:
+          "container_loss_vs_capacity",
+        action:
+          "Change external structure while holding task difficulty stable.",
+        duration: "2 weeks",
+        whatToObserve:
+          ["Whether structure changes execution."],
+        resultSupportingHypothesis:
+          "Execution improves.",
+        resultWeakeningHypothesis:
+          "Execution does not improve.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        manipulatedVariable: "external structure",
+        heldConstant: ["task difficulty"],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    expect(
+      experimentBoundToHypothesis(state).passed,
+    ).toBe(true);
+  });
+
+  it("fails free-form hypothesisTested prose", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Loose test",
+        hypothesisTested:
+          "Maybe missing structure is the real issue",
+        action: "Try more accountability.",
+        duration: "1 week",
+        whatToObserve: ["Whether action changes."],
+        resultSupportingHypothesis:
+          "More action.",
+        resultWeakeningHypothesis:
+          "No change.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    const finding =
+      experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /exactly match/i,
+    );
+  });
+
+  it("fails unknown competing hypothesis ids", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Bad rival",
+        hypothesisTested: "hyp-structure",
+        action: "Try more accountability.",
+        duration: "1 week",
+        whatToObserve: ["Whether action changes."],
+        resultSupportingHypothesis:
+          "More action.",
+        resultWeakeningHypothesis:
+          "No change.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [
+          "hyp-does-not-exist",
+        ],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    const finding =
+      experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /unknown competingHypothesisIds/i,
+    );
   });
 });
 

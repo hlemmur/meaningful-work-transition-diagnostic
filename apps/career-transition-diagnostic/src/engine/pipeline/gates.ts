@@ -1,5 +1,5 @@
 import type { CaseState } from "../schemas/case-state";
-import type { Experiment, ReportSection } from "../schemas/analysis";
+import type { ReportSection } from "../schemas/analysis";
 
 export type GateFinding = {
   id: string;
@@ -184,8 +184,10 @@ export function imageVoteAdequate(
     };
   }
   const citesImage =
-    vote.evidenceRefs.some((ref) => /:Q10\./.test(ref)) ||
-    /scene|association|image|obstacle|speech/i.test(vote.note);
+  vote.evidenceRefs.some((ref) => /:Q10\./.test(ref)) ||
+  /scene|association|image|obstacle|speech/i.test(
+    vote.interpretation ?? vote.note ?? "",
+  );
   const failed = vote.verdict === "insufficient" && !citesImage;
   return {
     id: "image-adequacy",
@@ -209,7 +211,7 @@ export function critiquesNonEmpty(critiques: unknown[]): GateFinding {
 
 export function experimentBoundToHypothesis(
   state: CaseState,
-  experiments: Experiment[] = state.experiments,
+  experiments: readonly unknown[] = state.experiments,
 ): GateFinding {
   if (!experiments.length) {
     return {
@@ -218,45 +220,114 @@ export function experimentBoundToHypothesis(
       detail: "No experiments to bind yet.",
     };
   }
-  const hypIds = state.hypotheses.map((item) => item.id);
-  const hypTitles = state.hypotheses.map((item) => normalize(item.title));
-  const forks = state.openForks.map((fork) => normalize(fork.replace(/_/g, " ")));
-  const favorite = state.hypotheses[0];
-  const openContainer =
-    state.openForks.includes("container_loss_vs_capacity") ||
-    state.openForks.includes("legitimacy_loop");
 
-  let passed = false;
-  for (const experiment of experiments) {
-    const tested = normalize(experiment.hypothesisTested);
-    const action = normalize(experiment.action);
-    const bindsId = hypIds.some((id) => tested.includes(normalize(id)) || tested.includes(id.toLowerCase()));
-    const bindsTitle = hypTitles.some((title) => title && (tested.includes(title) || paraphraseOverlap(tested, title) >= 0.35));
-    const bindsFork = forks.some((fork) => fork && tested.includes(fork));
-    const magicianCritique =
-      /mentor|critique|blind spot|failure point|three reasons/i.test(experiment.action) ||
-      /mentor|critique|blind spot/i.test(experiment.hypothesisTested);
-    if (openContainer && magicianCritique && favorite && /container|structure|authoriz|legitimacy/i.test(favorite.title + favorite.observedPattern)) {
-      return {
-        id: "experiment-bind",
-        passed: false,
-        detail: "Experiment is unbound Magician-critique while container/legitimacy fork is open.",
-      };
+  const hypothesisIds = new Set(
+    state.hypotheses.map((item) => item.id),
+  );
+
+  const forkIds = new Set(state.openForks);
+
+  const validTestIds = new Set<string>([
+    ...hypothesisIds,
+    ...forkIds,
+  ]);
+
+  const failures: string[] = [];
+
+  for (const rawExperiment of experiments) {
+    if (
+      !rawExperiment ||
+      typeof rawExperiment !== "object"
+    ) {
+      failures.push(
+        "Experiment is not a valid object.",
+      );
+      continue;
     }
-    if (bindsId || bindsTitle || bindsFork || (favorite && paraphraseOverlap(tested, favorite.observedPattern) >= 0.3)) {
-      passed = true;
+
+    const experiment = rawExperiment as {
+      kind?: unknown;
+      title?: unknown;
+      hypothesisTested?: unknown;
+      action?: unknown;
+      competingHypothesisIds?: unknown;
+    };
+
+    const title =
+      typeof experiment.title === "string"
+        ? experiment.title
+        : "Untitled experiment";
+
+    const hypothesisTested =
+      typeof experiment.hypothesisTested === "string"
+        ? experiment.hypothesisTested
+        : "";
+
+    const kind =
+      typeof experiment.kind === "string"
+        ? experiment.kind
+        : "";
+
+        const rawCompetingHypothesisIds =
+        experiment.competingHypothesisIds;
+      
+      const hasNewBindingField =
+        Array.isArray(rawCompetingHypothesisIds);
+      
+      const competingHypothesisIds: string[] =
+        Array.isArray(rawCompetingHypothesisIds)
+          ? rawCompetingHypothesisIds.filter(
+              (id): id is string =>
+                typeof id === "string",
+            )
+          : [];
+
+    const exactBinding =
+      validTestIds.has(hypothesisTested);
+
+    if (!hypothesisTested) {
+      failures.push(
+        `${title}: missing hypothesisTested`,
+      );
+      continue;
     }
-    // also accept explicit hyp id in title/action
-    if (hypIds.some((id) => action.includes(id.toLowerCase()))) {
-      passed = true;
+
+    if (!exactBinding && hasNewBindingField) {
+      failures.push(
+        `${title}: hypothesisTested must exactly match a live hypothesis or open fork id`,
+      );
+    }
+
+    const invalidCompetingIds =
+      competingHypothesisIds.filter(
+        (id) => !hypothesisIds.has(id),
+      );
+
+    if (invalidCompetingIds.length) {
+      failures.push(
+        `${title}: unknown competingHypothesisIds ${invalidCompetingIds.join(", ")}`,
+      );
+    }
+
+    if (
+      kind === "behavioral" &&
+      competingHypothesisIds.includes(
+        hypothesisTested,
+      )
+    ) {
+      failures.push(
+        `${title}: hypothesisTested must not also be listed as a competing hypothesis`,
+      );
     }
   }
+
   return {
     id: "experiment-bind",
-    passed,
-    detail: passed
-      ? "Experiment bound to winning hypothesis or open fork."
-      : "Experiment hypothesisTested is not bound to a surviving hypothesis or open fork.",
+    passed: failures.length === 0,
+    detail:
+      failures.length === 0
+        ? "All experiments are bound to live hypotheses or open forks."
+        : failures.join("; "),
   };
 }
 

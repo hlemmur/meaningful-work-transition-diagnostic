@@ -46,7 +46,13 @@ describe("soft checklist (CAR-78)", () => {
       report: never;
     };
     const fidelity = evaluateFrameworkFidelity(artifact);
-    expect(fidelity.hardPassed).toBe(true);
+    
+    const failingHardScores = fidelity.scores.filter(
+      (item) => item.hard && !item.passed,
+    );
+    
+    expect(failingHardScores).toEqual([]);
+
     const notes = draftSoftChecklistFromArtifact(artifact, fidelity.softChecklistTemplate);
     expect(notes.map((item) => item.id)).toEqual(requiredSoftChecklistIds());
     expect(notes.find((item) => item.id === "aim_sibling")?.rating).toMatch(/strong|adequate/);
