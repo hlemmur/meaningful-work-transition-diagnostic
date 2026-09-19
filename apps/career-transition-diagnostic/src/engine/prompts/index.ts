@@ -225,73 +225,61 @@ export const promptRegistry = {
   },
   pass9: {
     version: "pass-9.v9",
-    text: `Compose the full client report in peel order from caseSnapshot evidence and caseSnapshot.finalFormulation — not from requestedInsight/Q11.3.
+    text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
   
-  Treat finalFormulation as the working analytical spine:
-  - centralFormulation = the main hypothesis
-  - whyItFits = the strongest supporting reasons
-  - whatItDoesNotExplain = explicit limits
-  - strongestAlternative = a live rival, not a straw man
-  - unresolvedForks = uncertainties that must remain visible when report-worthy
-  
-  Voice:
-  - second person only (You/Your)
-  - never call the person "the client"
-  - intelligent, concrete, warm but unsentimental
-  - hypothesis language, not diagnosis
-  - prefer short claim→cite→interpretation beats over abstract theory
-  
-  Titles MUST equal caseSnapshot.requiredTitles[id]. Do not create thesis-style subtitles.
+  Voice and stance:
+  - Write in second person (You/Your); never refer to the person as “the client.”
+  - Use hypothesis language. Interpretations are provisional, not diagnoses or verdicts.
+  - Never turn an interpretive hypothesis into a fact.
+  - Ban clinical/essay openers such as “presents a compelling”, “examining the deeper”, “evocative imagery”, “sophisticated psychological bargain”, and “from a process-oriented”.
+  - Never name the person as an archetype. Never say “you are a puer/senex” or otherwise turn Jungian language into archetypal identity.
+  - Never treat eternal youth, eternal becoming, or similar Jungian language as the person's identity.
+  - Jungian language should illuminate a pattern, polarity, or process rather than define the person.
   
   Evidence provenance:
-  - use only material present in caseSnapshot.evidenceAllowlist, signals, tierA, answersByQuestionId, contradictions, hypotheses, critiques, imageVotes, forkResolutions, finalFormulation, hiddenPosition, realityCheck, and experiments
-  - when caseSnapshot.requiredCitations contains non-null requirements, include those exact evidenceRefs in the required report sections
-  - use the supplied citeRefs / evidenceRefs exactly as provenance pointers; requiredCitations constrain citation placement but do not force a psychological interpretation or predetermined narrative
-  - never invent experiences, motives, bodily sensations, dialogue, memories, imagery, or symbolic associations
-  - never invent evidenceRefs
-  - Q11.3/requestedInsight is the person's wish for the report, not evidence and not the report spine
-    
-  Symbolic/imaginal material:
-  - personal associations outrank generic symbol dictionaries
-  - use only image content the person actually supplied
-  - supplied obstacleSpeech may be quoted or paraphrased as supplied material
-  - NEVER generate the image's reply, a second turn of dialogue, or new speech for a figure
-  - if an experiment asks a new imaginal question, leave the answer open
-  - do not claim the image "means" something; say what it may support, weaken, split, or leave unresolved
+  - Every substantive claim must be grounded in evidenceRefs from caseSnapshot.evidenceAllowlist.
+  - Never invent evidence refs.
+  - Prefer concrete client material from caseSnapshot.answersByQuestionId and CaseState over generic theory.
+  - Across the report, cite at least 3 distinct question ids when that evidence exists.
+  - Never use Q11.3 / requestedInsight as the narrative spine or substitute it for evidence.
+  - Tier-A image, projection, and money material should be used when psychologically relevant, but there is no fixed section choreography. If used interpretively, cite the corresponding supplied refs.
+  - Do not invent body sensations, emotions, image details, image speech, dialogue, associations, or other client material.
+  - Mention a body location only if corresponding supplied somatic evidence exists.
+  - If supplied image speech is quoted or explicitly attributed to the image/obstacle, reproduce only the person's supplied speech. Never generate a reply, a second turn of dialogue, new speech, or a scripted exchange.
   
-  Body/affect:
-  - mention a body location only if the supplied evidence explicitly contains that location
-  - otherwise describe only the supplied emotion, charge, reaction, or intensity
-  - never manufacture somatic specificity to make the report feel deeper
+  Analytical shape:
+  - Use caseSnapshot.finalFormulation as the resolved analytical spine when present. Preserve finalFormulation.selectedHypothesisId, finalFormulation.centralFormulation, finalFormulation.whyItFits, finalFormulation.whatItDoesNotExplain, finalFormulation.strongestAlternative, and finalFormulation.unresolvedForks. Do not replace that resolution with a newly invented formulation.
+  - Distinguish conscious explanation from enacted reality.
+  - Make the central contradiction genuinely explanatory, not merely a restatement.
+  - Preserve a plausible mundane/practical rival.
+  - When caseSnapshot.hiddenPosition survived, preserve both hiddenPosition.protectiveFunction and hiddenPosition.possibleCompensatoryAim in the hidden section. Treat them as sibling hypotheses: what the pattern may protect, and what development may be asking for.
+  - Do not collapse development into discipline/grind as the only valid pole.
+  - Projection may be framed as a quality the person could potentially reclaim; never claim that the admired/rejected figure “is” the person's unconscious truth.
+  - Keep any hidden bargain interpretation provisional rather than presenting it as motive-reading.
+  - Jungian section should stay thin and only appear when jungianLenses survived.
   
-  Projection:
-  - admired/rejected figures may suggest qualities seeking ownership or differentiation
-  - when supplied, wantedQuality and judgedQuality are evidence about the person's own associations, not proof of an archetypal interpretation
-  - frame projection as a hypothesis
-  - never say "you are the Shadow" or treat projection as proven
-
-  Hidden bargain:
-  - when caseSnapshot.signals.hiddenBargain contains evidence, consider what staying stuck may preserve, protect, postpone, or allow the person to avoid giving up
-  - frame any bargain as a hypothesis grounded in supplied evidence, never as a hidden motive you claim to know
-  - distinguish protective function from developmental possibility
-  - do not force a bargain interpretation when practical constraints explain the pattern sufficiently
+  Required report order:
+  1. problem
+  2. reality
+  3. contradiction
+  4. hidden — only when a hiddenPosition survived
+  5. alternative
+  6. experiment
+  7. jungian — only when jungianLenses survived
+  8. questions
+  9. close
   
-  Money/work structure:
-  - distinguish vocation or meaningful work from a specific job shape, business model, or delivery format when evidence supports that distinction
-  - distinguish personal capacity from infrastructure previously supplied by employment, institutions, customers, pricing, accountability, or distribution
-  - do not assume that difficulty proves psychological resistance
+  Titles MUST equal caseSnapshot.requiredTitles[id].
   
-  Hidden position:
-  - include the hidden section only when hiddenPosition survived
-  - name protective function and possibleCompensatoryAim as sibling possibilities
-  - do not turn protection into pathology
-  - do not use requestedInsight as possibleHiddenPosition
+  Questions:
+  - Include exactly 3 personalized unresolved questions.
+  - Each question must address the person directly using you/your.
+  - Each question should genuinely arise from this person's evidence.
+  - Do not answer those questions for the person.
   
-  Jungian language:
-  - thin and optional
-  - concepts illuminate patterns; they do not define the person
-  - when relevant, frame Jungian dynamics as a polarity or tension between capacities/positions rather than as a type label
-  - ban "you are a puer/senex", eternal-youth diagnosis, inflation diagnosis, and archetypal identity claims
+  Close:
+  - End with a short working formulation.
+  - Explicitly frame it as provisional and testable, not settled truth.
   
   Return JSON {
     sections: array of {
@@ -302,98 +290,68 @@ export const promptRegistry = {
     }
   }.
   
-  Required section ids in order:
-  problem,
-  reality,
-  contradiction,
-  hidden (conditional),
-  alternative,
-  experiment,
-  jungian (conditional),
-  questions,
-  close
-  
-  Every included section should contain substantive evidence-grounded interpretation rather than filler. Across the report, use evidence from at least 3 distinct question ids when available; do not repeatedly cite one question as support for the whole formulation. 
-  End with:
-  - questions: exactly 3 personalized unresolved questions, each genuinely opened by this case. Do not answer them in the report.
-  - close: a short working formulation, explicitly provisional rather than a verdict or diagnosis.${EMPTY_ARRAYS}`,
-  
+  Required ids are problem, reality, contradiction, alternative, experiment, questions, close.
+  hidden and jungian are conditional.
+  Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
     version: "pass-10.v9",
-    text: `Act as a strict provenance and reasoning critic for draftReport.sections against caseSnapshot.
+    text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
   
-  A section fails if it does any of the following:
+  Fail a section when it:
+  - uses Q11.3 / requestedInsight as the narrative spine;
+  - uses third-person “the client”, violates second-person voice, uses clinical essay diction, or uses a title that differs from caseSnapshot.requiredTitles[id];
+  - contains substantive claims without valid evidenceRefs from caseSnapshot.evidenceAllowlist;
+  - invents evidence refs or Tier-A placeholder refs;
+  - invents body sensations, emotions, body locations, image details, associations, or other client material;
+  - makes a somatic claim without corresponding supplied somatic evidence;
+  - invents image dialogue, writes speech that was not supplied, creates new imaginal speech, or generates a second turn of dialogue;
+  - changes supplied image speech rather than preserving the person's actual words;
+  - turns a hypothesis into a fact or otherwise presents an interpretation as established psychological truth;
+  - uses archetypal identity framing such as “you are a puer/senex/shadow”;
+  - treats eternal becoming, eternal youth, or similar Jungian language as the person's identity;
+  - treats discipline/grind as the only developmental answer;
+  - when caseSnapshot.hiddenPosition exists, omits hiddenPosition.protectiveFunction or hiddenPosition.possibleCompensatoryAim from the hidden section;
+  - contradicts, silently replaces, or materially drifts from caseSnapshot.finalFormulation, including finalFormulation.centralFormulation, finalFormulation.strongestAlternative, finalFormulation.whatItDoesNotExplain, or finalFormulation.unresolvedForks;
+  - ignores a materially relevant practical rival or constraint;
+  - contains theory without concrete facts from caseSnapshot.answersByQuestionId;
+  - is generic, one-sentence, or merely restates the person's stated problem;
+  - leaves the report with fewer than 3 distinct question ids when sufficient case evidence exists.
   
-  1. Narrative grounding
-  - paraphrases requestedInsight/Q11.3 as the report spine
-  - contradicts caseSnapshot.finalFormulation without explicitly presenting a rival interpretation
-  - ignores important whatItDoesNotExplain or unresolvedForks when they materially qualify the formulation
+  For Tier-A image, projection, and money material:
+  - require interpretive use when it materially constrains the formulation;
+  - do not require those refs in predetermined sections;
+  - if a section interprets that material, it must cite corresponding refs from evidenceAllowlist.
   
-  2. Unsupported claims
-  - invents motives, memories, history, actions, relationships, emotions, bodily sensations, body locations, imagery, symbolic associations, or circumstances
-  - turns a hypothesis into a fact
-  - invents evidenceRefs
-  - relies on material not present in caseSnapshot
+  Questions section:
+  - must contain exactly 3 personalized unresolved questions;
+  - each question must address the person directly using you/your;
+  - do not answer those questions for the person.
   
-  3. Imaginal provenance
-  - writes speech for an image or figure that the person did not supply
-  - creates a second turn of dialogue after supplied obstacleSpeech
-  - answers a newly posed imaginal question on the client's behalf
-  - presents generic symbol-dictionary meaning as if it were personal evidence
+  Close section:
+  - must contain a short provisional working formulation;
+  - fail it if it presents the formulation as diagnosis, settled truth, or verdict.
   
-  4. Somatic provenance
-  - names a body location that was not explicitly supplied
-  - converts general charge/emotion into invented bodily specificity
+  Required ids:
+  problem, reality, contradiction, alternative, experiment, questions, close.
   
-  5. Psychological overreach
-  - diagnoses the person
-  - uses "you are a puer/senex", eternal-youth identity, inflation diagnosis, archetypal identity claims, or similar categorical Jungian labeling
-  - presents projection, shadow, compensatory function, or hidden bargain as proven rather than hypothetical
+  hidden is conditional on a surviving hiddenPosition.
+  jungian is conditional on surviving jungianLenses.
   
-  6. Weak alternatives
-  - makes the practical or mundane alternative obviously weaker than the preferred hypothesis without evidence
-  - ignores supplied constraints
-  - treats difficulty itself as proof of resistance
-  
-  7. Voice and structure
-  - uses third-person "the client"
-  - uses clinical essay diction
-  - ignores caseSnapshot.requiredTitles
-  - produces thin or one-sentence core sections
-  - omits required peel ids: problem, reality, contradiction, alternative, experiment
-  - includes hidden when no hiddenPosition survived
-  - includes Jungian interpretation when no jungianLenses survived
-  
-  8. Experiment integrity
-  - reports an experiment that is not actually present in caseSnapshot.experiments
-  - changes what variable is being tested
-  - presents an imaginal experiment as if its result were already known
-  
-  Regenerate only failing sections. Preserve valid sections unchanged.
-  
-  For regenerated sections:
-  - use second-person voice throughout
-  - ground claims in supplied evidence
-  - preserve uncertainty
-  - cite only evidenceRefs available in caseSnapshot
-  - use finalFormulation as the working spine while retaining its limits and strongest alternative
-  - never generate new imaginal speech or somatic detail
+  Regenerate only failing sections. Preserve valid sections and section ids.
   
   Return JSON {
     failingSectionIds: string[],
-    regeneratedSections: [{
-      id,
-      title,
-      body,
-      evidenceRefs
-    }]
+    regeneratedSections: [
+      {
+        id,
+        title,
+        body,
+        evidenceRefs
+      }
+    ]
   }.
   
-  If the draft is already grounded and provenance-safe, return empty arrays. 
-
-  Fail the questions section if it contains anything other than exactly 3 personalized unresolved questions, or if the report answers those questions for the person.
-
-Fail the close if it presents the formulation as settled truth, diagnosis, or verdict rather than a provisional working formulation.${EMPTY_ARRAYS}`,
+  If the draft already satisfies the contract, return empty arrays. ${EMPTY_ARRAYS}`,
   },
 } satisfies Record<string, PromptStub>;

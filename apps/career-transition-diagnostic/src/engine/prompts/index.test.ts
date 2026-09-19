@@ -142,6 +142,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass8.text).toMatch(/exactly one|exact id|exactly matching/i);
     expect(promptRegistry.pass8.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass8.text).not.toMatch(/\bprovider\b/i);
+    
     expectMentions(promptRegistry.pass9.text, [
       "sections",
       "peel",
@@ -151,33 +152,41 @@ expectMentions(promptRegistry.pass8.text, [
       "contradiction",
       "alternative",
       "experiment",
+      "questions",
+      "close",
       "caseSnapshot",
-      "finalFormulation",
-      "centralFormulation",
-      "whatItDoesNotExplain",
-      "strongestAlternative",
-      "unresolvedForks",
+      "evidenceAllowlist",
+      "answersByQuestionId",
       "distinct question",
       "Q11.3",
       "requestedInsight",
       "image",
       "projection",
       "money",
-      "bargain",
+      "Tier-A",
       "polarity",
       "second person",
       "the client",
-      "requiredCitations",
-      "citeRefs",
       "requiredTitles",
       "possibleCompensatoryAim",
-      "obstacleSpeech",
-      "wantedQuality",
-      "claim→cite",
-      "body location",
-      "symbol",
-      "hypothesis",
+      "finalFormulation",
+      "selectedHypothesisId",
+      "centralFormulation",
+      "whyItFits",
+      "whatItDoesNotExplain",
+      "strongestAlternative",
+      "unresolvedForks",
+      "somatic",
+      "dialogue",
+      "exactly 3",
+      "working formulation",
+      "provisional",
     ]);
+    
+    expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
+    expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
+    expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
+    expect(promptRegistry.pass9.version).toBe("pass-9.v9");
     
     expect(promptRegistry.pass9.text).toMatch(
       /never generate.*reply|second turn of dialogue|new speech/i,
@@ -188,10 +197,6 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).toMatch(
       /you are a puer\/senex|archetypal identity/i,
     )
-    expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
-    expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
-    
-    expect(promptRegistry.pass9.version).toBe("pass-9.v9");
     
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
@@ -199,23 +204,26 @@ expectMentions(promptRegistry.pass8.text, [
       "Q11.3",
       "requestedInsight",
       "draftReport",
-      "caseSnapshot",
+      "evidenceAllowlist",
+      "distinct question",
+      "Tier-A",
+      "the client",
+      "requiredTitles",
+      "possibleCompensatoryAim",
       "finalFormulation",
+      "centralFormulation",
+      "strongestAlternative",
       "whatItDoesNotExplain",
       "unresolvedForks",
-      "evidenceRefs",
-      "requiredTitles",
-      "one-sentence",
-      "the client",
-      "second-person",
-      "body location",
-      "imaginal",
+      "somatic",
       "dialogue",
-      "symbol",
-      "hypothesis",
-      "constraints",
-      "experiment",
+      "questions",
+      "exactly 3",
+      "close",
+      "provisional",
     ]);
+    
+    expect(promptRegistry.pass10.text).not.toMatch(/\bmustCiteIn\b/i);
     
     expect(promptRegistry.pass10.text).toMatch(
       /invent.*body|body location/i,
