@@ -38,6 +38,25 @@ function peelSections(assessmentId = "a1") {
       body: "For two weeks, run your outreach under external deadlines and watch charge.",
       evidenceRefs: [q("Q1.1")],
     },
+    {
+      id: "questions",
+      title: "Three questions to stay with",
+      body:
+        "What would make you question this explanation? What changes when you test structure directly? What still feels unexplained to you?",
+      evidenceRefs: [
+        q("Q1.1"),
+        q("Q1.3"),
+      ],
+    },
+    {
+      id: "close",
+      title: "A working formulation",
+      body:
+        "You can treat this as a working formulation rather than a verdict.",
+      evidenceRefs: [
+        q("Q1.1"),
+      ],
+    },
   ];
 }
 

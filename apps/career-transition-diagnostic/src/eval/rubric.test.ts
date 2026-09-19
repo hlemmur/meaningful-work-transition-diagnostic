@@ -20,9 +20,30 @@ function chargeCase(chargeIntensity: number, emotion: string) {
 }
 
 describe("evaluateReport evidence grounding", () => {
-  const section = (id: string, body: string, evidenceRefs: string[]) => ({
+  const section = (
+    id: string,
+    body: string,
+    evidenceRefs: string[],
+  ) => ({
     id: id as (typeof REQUIRED_PEEL_SECTION_IDS)[number],
-    title: id === "problem" ? "The problem as you see it" : id === "reality" ? "What reality says" : id === "contradiction" ? "The contradiction at the center" : id === "alternative" ? "Another plausible interpretation" : id === "experiment" ? "Your experiment" : id === "jungian" ? "A Jungian lens" : id,
+    title:
+      id === "problem"
+        ? "The problem as you see it"
+        : id === "reality"
+          ? "What reality says"
+          : id === "contradiction"
+            ? "The contradiction at the center"
+            : id === "alternative"
+              ? "Another plausible interpretation"
+              : id === "experiment"
+                ? "Your experiment"
+                : id === "jungian"
+                  ? "A Jungian lens"
+                  : id === "questions"
+                    ? "Three questions to stay with"
+                    : id === "close"
+                      ? "A working formulation"
+                      : id,
     body,
     evidenceRefs,
   });
@@ -68,6 +89,16 @@ describe("evaluateReport evidence grounding", () => {
           section("experiment", "Two weeks of external deadlines tests whether your structure restores motion.", [
             "a1:Q1.1",
           ]),
+          section(
+            "questions",
+            "What would make you question this explanation? What changes when you test structure directly? What still feels unexplained to you?",
+            ["a1:Q1.1", "a1:Q1.3"],
+          ),
+          section(
+            "close",
+            "You can treat this as a working formulation rather than a verdict.",
+            ["a1:Q1.1"],
+          ),
         ],
       },
       requestedInsight: "sharp angles that I can't unsee",
@@ -135,6 +166,16 @@ describe("evaluateReport evidence grounding", () => {
           section(
             "experiment",
             "Two weeks of stakes tests whether your body charge shifts with accountability.",
+            ["a1:Q1.1"],
+          ),
+          section(
+            "questions",
+            "What would make you question this polarity reading? What changes for you under real accountability? What still feels unexplained to you?",
+            ["a1:Q1.1", "a1:Q1.3"],
+          ),
+          section(
+            "close",
+            "You can treat this as a working formulation rather than a verdict.",
             ["a1:Q1.1"],
           ),
         ],

@@ -445,6 +445,8 @@ export const CANONICAL_PEEL_TITLES: Record<string, string> = {
   alternative: "Another plausible interpretation",
   experiment: "Your experiment",
   jungian: "A Jungian lens",
+  questions: "Three questions to stay with",
+  close: "A working formulation",
 };
 
 /**
@@ -459,6 +461,8 @@ const PLAIN_TITLE_BY_ID: Record<string, RegExp> = {
   alternative: /^(the |another )?(plausible )?interpretation$|^(the )?alternative$/i,
   experiment: /^(the |your )?experiment$/i,
   jungian: /^(the |a )?jungian lens$/i,
+  questions: /^(three )?questions( to stay with)?$/i,
+  close: /^(a )?working formulation$|^(the )?close$/i,
 };
 
 function sectionById(sections: ReportSection[], id: string) {
@@ -662,6 +666,55 @@ export function senexScoldOnly(
   };
 }
 
+export function questionsAndCloseAdequate(
+  sections: ReportSection[],
+): GateFinding {
+  const questions = sections.find(
+    (section) => section.id === "questions",
+  );
+
+  const close = sections.find(
+    (section) => section.id === "close",
+  );
+
+  if (!questions || !close) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        "Report must include questions and close sections.",
+    };
+  }
+
+  const questionCount =
+    questions.body.match(/\?/g)?.length ?? 0;
+
+  if (questionCount !== 3) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        `Questions section must contain exactly 3 questions; found ${questionCount}.`,
+    };
+  }
+
+  if (!close.body.trim()) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        "Close section must contain a working formulation.",
+    };
+  }
+
+  return {
+    id: "questions-close",
+    passed: true,
+    detail:
+      "Report ends with exactly three questions and a working formulation.",
+  };
+}
+
 const PROTECTION_PEEL = /protect|protective|keeps|shield|bargain|benefit of staying/i;
 const AIM_PEEL = /aim|develop|structure in service|aliveness|compensatory|asking you to/i;
 const INFLATION_DIAGNOSIS =
@@ -841,6 +894,12 @@ export function assertPeelHardGates(sections: ReportSection[], state: CaseState)
   if (!somatic.passed) {
     throwGate(somatic);
   }
+  const questionsClose =
+  questionsAndCloseAdequate(sections);
+
+if (!questionsClose.passed) {
+  throwGate(questionsClose);
+}
   const inflation = antiInflationDiagnosis(body);
   if (!inflation.passed) {
     throwGate(inflation);

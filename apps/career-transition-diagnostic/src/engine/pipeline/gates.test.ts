@@ -21,6 +21,7 @@ import {
   imageVoteAdequate,
   senexScoldOnly,
   somaticProvenance,
+  questionsAndCloseAdequate,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -1090,5 +1091,48 @@ describe("somatic provenance gate", () => {
     expect(
       somaticProvenance(sections, state).passed,
     ).toBe(true);
+  });
+});
+describe("questions and close gate", () => {
+  it("passes exactly three questions and a close", () => {
+    const sections = [
+      section(
+        "questions",
+        "1. What happens when you test this? 2. What would weaken the hypothesis? 3. What remains unexplained?",
+        ["a1:Q1.1"],
+      ),
+      section(
+        "close",
+        "You can treat this as a working formulation rather than a verdict.",
+        ["a1:Q1.1"],
+      ),
+    ];
+
+    expect(
+      questionsAndCloseAdequate(
+        sections,
+      ).passed,
+    ).toBe(true);
+  });
+
+  it("fails when the questions section has fewer than three questions", () => {
+    const sections = [
+      section(
+        "questions",
+        "What would you test? What remains unexplained?",
+        ["a1:Q1.1"],
+      ),
+      section(
+        "close",
+        "You can treat this as a working formulation.",
+        ["a1:Q1.1"],
+      ),
+    ];
+
+    expect(
+      questionsAndCloseAdequate(
+        sections,
+      ).passed,
+    ).toBe(false);
   });
 });

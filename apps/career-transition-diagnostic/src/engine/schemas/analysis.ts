@@ -259,7 +259,11 @@ export const REQUIRED_PEEL_SECTION_IDS = [
   "contradiction",
   "alternative",
   "experiment",
-] as const satisfies ReadonlyArray<z.infer<typeof reportSectionIdSchema>>;
+  "questions",
+  "close",
+] as const satisfies ReadonlyArray<
+  z.infer<typeof reportSectionIdSchema>
+>;
 
 export const reportSectionSchema = z.object({
   id: reportSectionIdSchema,

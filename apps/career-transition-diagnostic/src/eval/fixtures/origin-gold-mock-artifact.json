@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2026-09-19T12:27:13.085Z",
+    "savedAt": "2026-09-19T18:19:39.758Z",
     "assessmentId": "sample-origin",
     "label": "origin-gold-mock",
     "models": [
@@ -1232,6 +1232,24 @@
         "body": "A puer–senex polarity may illuminate possibility preferred over incarnation, without diagnosing you as an archetype. Limits: ADHD and job-shape mismatch may still suffice.",
         "evidenceRefs": [
           "sample-origin:Q9.2"
+        ]
+      },
+      {
+        "id": "questions",
+        "title": "Three questions to stay with",
+        "body": "1. What changes when you treat the stall as information rather than proof that you cannot do the work?\n\n2. Which explanation would you most want to disprove through action?\n\n3. What would you learn if the next step became smaller and more observable?",
+        "evidenceRefs": [
+          "sample-origin:Q1.1",
+          "sample-origin:Q1.3",
+          "sample-origin:Q2.2"
+        ]
+      },
+      {
+        "id": "close",
+        "title": "A working formulation",
+        "body": "You do not need to treat this interpretation as a verdict. Use it as a working formulation: something to test against your experience and revise when reality gives you better evidence.",
+        "evidenceRefs": [
+          "sample-origin:Q0.4b"
         ]
       }
     ]

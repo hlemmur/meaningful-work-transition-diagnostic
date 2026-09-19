@@ -306,12 +306,18 @@ export const promptRegistry = {
   problem,
   reality,
   contradiction,
-  hidden (omit only if no hiddenPosition survived),
+  hidden (conditional),
   alternative,
   experiment,
-  jungian (omit only if no jungian lenses).
+  jungian (conditional),
+  questions,
+  close
   
-  Every included section should contain substantive evidence-grounded interpretation rather than filler. Across the report, use evidence from at least 3 distinct question ids when available; do not repeatedly cite one question as support for the whole formulation. ${EMPTY_ARRAYS}`,
+  Every included section should contain substantive evidence-grounded interpretation rather than filler. Across the report, use evidence from at least 3 distinct question ids when available; do not repeatedly cite one question as support for the whole formulation. 
+  End with:
+  - questions: exactly 3 personalized unresolved questions, each genuinely opened by this case. Do not answer them in the report.
+  - close: a short working formulation, explicitly provisional rather than a verdict or diagnosis.${EMPTY_ARRAYS}`,
+  
   },
   pass10: {
     version: "pass-10.v9",
@@ -384,6 +390,10 @@ export const promptRegistry = {
     }]
   }.
   
-  If the draft is already grounded and provenance-safe, return empty arrays. ${EMPTY_ARRAYS}`,
+  If the draft is already grounded and provenance-safe, return empty arrays. 
+
+  Fail the questions section if it contains anything other than exactly 3 personalized unresolved questions, or if the report answers those questions for the person.
+
+Fail the close if it presents the formulation as settled truth, diagnosis, or verdict rather than a provisional working formulation.${EMPTY_ARRAYS}`,
   },
 } satisfies Record<string, PromptStub>;

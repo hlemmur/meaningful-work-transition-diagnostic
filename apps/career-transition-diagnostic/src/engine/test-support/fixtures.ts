@@ -115,6 +115,59 @@ function hyp(
   });
 }
 
+function ensureQuestionsAndClose(
+  sections: ReportSection[],
+  ctx: {
+    assessmentId: string;
+    evidenceRef: string;
+  },
+): ReportSection[] {
+  const q = (questionId: string) =>
+    `${ctx.assessmentId}:${questionId}`;
+
+  const next = [...sections];
+
+  if (
+    !next.some(
+      (section) => section.id === "questions",
+    )
+  ) {
+    next.push(
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "Three questions to stay with",
+        body:
+          "1. What changes when you treat the stall as information rather than proof that you cannot do the work?\n\n2. Which explanation would you most want to disprove through action?\n\n3. What would you learn if the next step became smaller and more observable?",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
+      }),
+    );
+  }
+
+  if (
+    !next.some(
+      (section) => section.id === "close",
+    )
+  ) {
+    next.push(
+      reportSectionSchema.parse({
+        id: "close",
+        title: "A working formulation",
+        body:
+          "You do not need to treat this interpretation as a verdict. Use it as a working formulation: something to test against your experience and revise when reality gives you better evidence.",
+        evidenceRefs: [
+          ctx.evidenceRef,
+        ],
+      }),
+    );
+  }
+
+  return next;
+}
+
 function contradiction(
   assessmentId: string,
   evidenceRef: string,
@@ -1328,7 +1381,15 @@ export function passOutputFor(
       };
     }
     case "pass9":
-      return { sections: groundedReportSections(fixture, ctx) };
+      return {
+        sections: ensureQuestionsAndClose(
+          groundedReportSections(
+            fixture,
+            ctx,
+          ),
+          ctx,
+        ),
+      };
     case "pass10": {
       const draft = ctx.draftReport?.sections ?? [];
       const failingSectionIds = failingReportSectionIds({
@@ -1338,10 +1399,16 @@ export function passOutputFor(
       if (!failingSectionIds.length) {
         return { failingSectionIds: [], regeneratedSections: [] };
       }
-      const grounded = groundedReportSections(
-        fixture === "starved-case-report" ? "default" : fixture,
-        ctx,
-      );
+      const grounded =
+  ensureQuestionsAndClose(
+    groundedReportSections(
+      fixture === "starved-case-report"
+        ? "default"
+        : fixture,
+      ctx,
+    ),
+    ctx,
+  );
       return {
         failingSectionIds,
         regeneratedSections: grounded.filter((section) => failingSectionIds.includes(section.id)),
