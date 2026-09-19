@@ -310,7 +310,6 @@ if (splitVotes.length > 0) {
   const imageGate =
     imageVoteAdequate(
       state,
-      voteForGate,
     );
 
   if (!imageGate.passed) {

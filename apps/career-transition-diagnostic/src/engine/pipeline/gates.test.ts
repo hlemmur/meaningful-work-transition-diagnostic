@@ -17,7 +17,8 @@ import {
   protectionAndAimInPeel,
   imaginalWhenSpeech,
   antiInflationDiagnosis,
-  experimentBoundToHypothesis
+  experimentBoundToHypothesis,
+  imageVoteAdequate,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -660,5 +661,171 @@ describe("soft-depth conditional peel gates", () => {
         "One hypothesis: possibility preferred over incarnation, without diagnosing you as an archetype.",
       ).passed,
     ).toBe(true);
+  });
+});
+
+describe("image vote adequacy gate", () => {
+  it("passes when there is no rich symbolic material", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+    });
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(true);
+  });
+
+  it("fails when rich symbolic material has no persisted votes", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked door",
+      "Q10.2": "A dark corridor",
+      "Q10.6": "Do not go further",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Exposure hypothesis",
+        category: "psychological",
+        observedPattern:
+          "Action stops near visible exposure.",
+        evidenceFor: ["img:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.7,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+        confidence: "moderate",
+      },
+    ];
+
+    state.imageVotes = [];
+    state.imageVote = undefined;
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(false);
+  });
+
+  it("passes when a leading hypothesis receives a grounded image vote", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked door",
+      "Q10.2": "A dark corridor",
+      "Q10.6": "Do not go further",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Exposure hypothesis",
+        category: "psychological",
+        observedPattern:
+          "Action stops near visible exposure.",
+        evidenceFor: ["img:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.7,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+        confidence: "moderate",
+      },
+    ];
+
+    state.imageVotes = [
+      {
+        hypothesisId: "hyp-a",
+        verdict: "supports",
+        interpretation:
+          "The blocked threshold is consistent with the exposure hypothesis.",
+        evidenceRefs: [
+          "img:Q10.1",
+          "img:Q10.6",
+        ],
+        exactClientMaterialUsed: [
+          "A locked door",
+          "Do not go further",
+        ],
+      },
+    ];
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(true);
+  });
+
+  it("fails an ungrounded insufficient vote on rich symbolic material", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked door",
+      "Q10.2": "A dark corridor",
+      "Q10.6": "Do not go further",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Exposure hypothesis",
+        category: "psychological",
+        observedPattern:
+          "Action stops near visible exposure.",
+        evidenceFor: ["img:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.7,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+        confidence: "moderate",
+      },
+    ];
+
+    state.imageVotes = [
+      {
+        hypothesisId: "hyp-a",
+        verdict: "insufficient",
+        interpretation:
+          "Not enough information.",
+        evidenceRefs: [],
+        exactClientMaterialUsed: [],
+      },
+    ];
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(false);
   });
 });

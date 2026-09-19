@@ -174,27 +174,84 @@ export function hasRichImageAssociations(state: CaseState) {
 
 export function imageVoteAdequate(
   state: CaseState,
-  vote?: CaseState["imageVote"],
 ): GateFinding {
-  if (!hasRichImageAssociations(state) || !vote) {
+  if (!hasRichImageAssociations(state)) {
     return {
       id: "image-adequacy",
       passed: true,
-      detail: "No rich image associations requiring a substantive vote.",
+      detail:
+        "No rich image associations requiring substantive image votes.",
     };
   }
-  const citesImage =
-  vote.evidenceRefs.some((ref) => /:Q10\./.test(ref)) ||
-  /scene|association|image|obstacle|speech/i.test(
-    vote.interpretation ?? vote.note ?? "",
+
+  const votes =
+    state.imageVotes?.length
+      ? state.imageVotes
+      : state.imageVote
+        ? [state.imageVote]
+        : [];
+
+  if (!votes.length) {
+    return {
+      id: "image-adequacy",
+      passed: false,
+      detail:
+        "Rich symbolic material exists but no image votes were persisted.",
+    };
+  }
+
+  const relevantHypothesisIds = new Set(
+    state.hypotheses
+      .slice(0, Math.min(3, state.hypotheses.length))
+      .map((hypothesis) => hypothesis.id),
   );
-  const failed = vote.verdict === "insufficient" && !citesImage;
+
+  const relevantVotes = votes.filter((vote) =>
+    relevantHypothesisIds.has(vote.hypothesisId),
+  );
+
+  if (!relevantVotes.length) {
+    return {
+      id: "image-adequacy",
+      passed: false,
+      detail:
+        "Rich symbolic material exists but no leading hypothesis received an image vote.",
+    };
+  }
+
+  const unsupportedInsufficientVotes =
+    relevantVotes.filter((vote) => {
+      if (vote.verdict !== "insufficient") {
+        return false;
+      }
+
+      const citesImage =
+        vote.evidenceRefs.some((ref) =>
+          /:Q10\./.test(ref),
+        ) ||
+        /scene|association|image|obstacle|speech/i.test(
+          vote.interpretation ??
+            vote.note ??
+            "",
+        );
+
+      return !citesImage;
+    });
+
+  if (unsupportedInsufficientVotes.length) {
+    return {
+      id: "image-adequacy",
+      passed: false,
+      detail:
+        "An image vote marked rich symbolic material insufficient without citing or interpreting the supplied image associations.",
+    };
+  }
+
   return {
     id: "image-adequacy",
-    passed: !failed,
-    detail: failed
-      ? "Rich Q10 associations present but image vote was insufficient without citing them."
-      : "Image vote respects available associations.",
+    passed: true,
+    detail:
+      "Leading hypotheses received substantive image votes grounded in supplied symbolic material.",
   };
 }
 
