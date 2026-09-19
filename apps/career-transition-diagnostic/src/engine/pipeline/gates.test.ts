@@ -765,6 +765,77 @@ describe("soft-depth conditional peel gates", () => {
       ).passed,
     ).toBe(true);
   });
+  it("allows exact supplied image speech", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked gate.",
+      "Q10.6":
+        "Turn back until the ground is yours.",
+    });
+  
+    const sections = [
+      section(
+        "reality",
+        'The obstacle says, "Turn back until the ground is yours." You can treat that as material rather than a verdict.',
+        ["img:Q10.6"],
+      ),
+    ];
+  
+    expect(
+      imaginalWhenSpeech(
+        sections,
+        state,
+      ).passed,
+    ).toBe(true);
+  });
+  it("fails invented attributed image speech", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked gate.",
+      "Q10.6":
+        "Turn back until the ground is yours.",
+    });
+  
+    const sections = [
+      section(
+        "reality",
+        'The obstacle says, "You are not ready yet."',
+        ["img:Q10.6"],
+      ),
+    ];
+  
+    const finding =
+      imaginalWhenSpeech(
+        sections,
+        state,
+      );
+  
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /does not match|imaginal speech/i,
+    );
+  });
+  it("fails attributed image speech when none was supplied", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked gate.",
+    });
+  
+    const sections = [
+      section(
+        "reality",
+        'The gate says, "Wait here."',
+        ["img:Q10.1"],
+      ),
+    ];
+  
+    expect(
+      imaginalWhenSpeech(
+        sections,
+        state,
+      ).passed,
+    ).toBe(false);
+  });
 });
 
 describe("image vote adequacy gate", () => {

@@ -701,6 +701,24 @@ export function protectionAndAimInPeel(
       : "Hidden CaseState has aim/protection fields but peel text lacks both.",
   };
 }
+function attributedImageSpeech(
+  text: string,
+): string[] {
+  const matches: string[] = [];
+
+  const pattern =
+    /\b(?:image|figure|obstacle|scene|gate)\s+(?:says?|said|whispers?|replies?|responds?|answers?)\s*,?\s*["“]([^"”]+)["”]/gi;
+
+  for (const match of text.matchAll(pattern)) {
+    const speech = match[1]?.trim();
+
+    if (speech) {
+      matches.push(speech);
+    }
+  }
+
+  return matches;
+}
 
 export function imaginalWhenSpeech(
   sections: ReportSection[],
@@ -723,10 +741,7 @@ export function imaginalWhenSpeech(
       text,
     );
 
-  const failed =
-    generatedSecondTurn || scriptedExchange;
-
-  if (failed) {
+  if (generatedSecondTurn || scriptedExchange) {
     return {
       id: "imaginal-when-speech",
       passed: false,
@@ -735,20 +750,45 @@ export function imaginalWhenSpeech(
     };
   }
 
-  if (!suppliedSpeech) {
-    return {
-      id: "imaginal-when-speech",
-      passed: true,
-      detail:
-        "No supplied obstacle speech; no generated imaginal dialogue detected.",
-    };
+  const attributedSpeech =
+    attributedImageSpeech(text);
+
+  if (attributedSpeech.length > 0) {
+    if (!suppliedSpeech) {
+      return {
+        id: "imaginal-when-speech",
+        passed: false,
+        detail:
+          "Report attributes speech to an image or obstacle although no image speech was supplied.",
+      };
+    }
+
+    const suppliedNormalized =
+      normalize(suppliedSpeech);
+
+    const inventedSpeech =
+      attributedSpeech.filter(
+        (speech) =>
+          normalize(speech) !==
+          suppliedNormalized,
+      );
+
+    if (inventedSpeech.length > 0) {
+      return {
+        id: "imaginal-when-speech",
+        passed: false,
+        detail:
+          "Report attributes imaginal speech that does not match the person's supplied image speech.",
+      };
+    }
   }
 
   return {
     id: "imaginal-when-speech",
     passed: true,
-    detail:
-      "Supplied image speech may be used, but no additional imaginal dialogue was generated.",
+    detail: suppliedSpeech
+      ? "Supplied image speech may be used, but no additional imaginal dialogue was generated."
+      : "No supplied image speech and no invented imaginal dialogue detected.",
   };
 }
 
