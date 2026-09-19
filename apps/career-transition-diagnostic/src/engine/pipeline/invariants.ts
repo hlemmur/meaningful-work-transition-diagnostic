@@ -1,6 +1,7 @@
 import type { CaseState } from "../schemas/case-state";
 import type { Hypothesis, HypothesisCritique, ReportSection } from "../schemas/analysis";
 import type { pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
+import { collectEvidenceIds } from "./evidence-ids";
 import {
   CANONICAL_PEEL_TITLES,
   hasRichImageAssociations,
@@ -9,6 +10,64 @@ import {
   throwGate,
 } from "./gates";
 import type { z } from "zod";
+
+const IMAGE_FIELD_TO_QUESTION: Array<{
+  field: keyof CaseState["symbolicMaterial"];
+  questionId: string;
+}> = [
+  { field: "scene", questionId: "Q10.1" },
+  { field: "surroundings", questionId: "Q10.2" },
+  { field: "ahead", questionId: "Q10.3" },
+  { field: "obstacle", questionId: "Q10.4" },
+  { field: "figures", questionId: "Q10.5" },
+  { field: "obstacleSpeech", questionId: "Q10.6" },
+  { field: "obstacleWant", questionId: "Q10.7" },
+  { field: "ifNotRemoved", questionId: "Q10.8" },
+];
+
+function syntheticEvidenceIds(
+  state: CaseState,
+) {
+  const ids = new Set<string>();
+
+  for (const {
+    field,
+    questionId,
+  } of IMAGE_FIELD_TO_QUESTION) {
+    const value =
+      state.symbolicMaterial[field];
+
+    const present =
+      Array.isArray(value)
+        ? value.length > 0
+        : Boolean(value);
+
+    if (present) {
+      ids.add(
+        `${state.assessmentId}:${questionId}`,
+      );
+    }
+  }
+
+  for (const figure of [
+    ...state.projections.admiredFigures,
+    ...state.projections.rejectedFigures,
+  ]) {
+    for (const ref of figure.evidenceRefs) {
+      ids.add(ref);
+    }
+  }
+
+  for (const items of Object.values(
+    state.money,
+  )) {
+    for (const item of items) {
+      ids.add(item.id);
+    }
+  }
+
+  return ids;
+}
 
 const PRACTICAL_CATEGORIES = new Set(["practical", "economic", "occupational"]);
 
@@ -416,15 +475,17 @@ export function sanitizeReportSections(
   sections: ReportSection[],
   state: CaseState,
 ) {
-  const fallback = `${state.assessmentId}:Q1.1`;
-  const known = new Set(
-    [
-      ...state.consciousNarrative.statedProblem.map((item) => item.id),
-      ...state.practicalContext.constraints.map((item) => item.id),
-      ...state.behavior.actionsTaken.map((item) => item.id),
-      fallback,
-    ].filter(Boolean),
-  );
+  const known = new Set([
+    ...collectEvidenceIds(state),
+    ...syntheticEvidenceIds(state),
+  ]);
+  
+  const fallback =
+    state.consciousNarrative.statedProblem[0]?.id ??
+    state.practicalContext.constraints[0]?.id ??
+    state.behavior.actionsTaken[0]?.id ??
+    [...known][0];
+  
 
   return sections
     .filter((section) => {
@@ -437,13 +498,20 @@ export function sanitizeReportSections(
       return true;
     })
     .map((section) => {
-      const refs = section.evidenceRefs.filter((ref) => known.has(ref) || ref.startsWith(`${state.assessmentId}:`));
+      const refs = section.evidenceRefs.filter(
+        (ref) => known.has(ref),
+      );
       const canonical = CANONICAL_PEEL_TITLES[section.id];
       return {
         ...section,
         // Peel titles are structural labels — normalize so voice gates don't thrash live drafts.
         title: canonical ?? section.title,
-        evidenceRefs: refs.length ? refs : [fallback],
+        evidenceRefs:
+          refs.length > 0
+            ? refs
+            : fallback
+              ? [fallback]
+              : [],
       };
     });
 }

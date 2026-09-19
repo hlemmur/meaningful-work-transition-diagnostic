@@ -86,7 +86,18 @@ describe("five benchmark fixtures", () => {
         report: draft!.generated,
         caseState,
       });
-      expect(rubric.passed, `${benchmark.id}: ${JSON.stringify(rubric.findings)}`).toBe(true);
+      const reportRefs = draft!.generated.sections.map((section) => ({
+        id: section.id,
+        refs: section.evidenceRefs,
+      }));
+      
+      expect(
+        rubric.passed,
+        `${benchmark.id}: ${JSON.stringify({
+          findings: rubric.findings,
+          reportRefs,
+        })}`,
+      ).toBe(true);
       await resetMockTracerStore();
     }
   });

@@ -232,8 +232,13 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "You want the work and are not taking the next step.",
-        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+        body:
+          "You want the work, yet your own account shows action stopping before the next concrete step.",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
       }),
       reportSectionSchema.parse({
         id: "hidden",
@@ -549,8 +554,13 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "You want the work and are not taking the next step.",
-        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+        body:
+          "You want the work, yet your own account shows action stopping before the next concrete step.",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
       }),
       reportSectionSchema.parse({
         id: "hidden",
@@ -643,8 +653,13 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "You want the work and are not taking the next step.",
-        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+        body:
+          "You want the work, yet your own account shows action stopping before the next concrete step.",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
       }),
       reportSectionSchema.parse({
         id: "hidden",
@@ -736,8 +751,13 @@ function groundedReportSections(
     reportSectionSchema.parse({
       id: "contradiction",
       title: "The contradiction at the center",
-      body: "You want the work and are not taking the next step.",
-      evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      body:
+        "You want the work, yet your own account shows action stopping before the next concrete step.",
+      evidenceRefs: [
+        q("Q1.1"),
+        q("Q1.3"),
+        q("Q2.2"),
+      ],
     }),
     reportSectionSchema.parse({
       id: "alternative",
