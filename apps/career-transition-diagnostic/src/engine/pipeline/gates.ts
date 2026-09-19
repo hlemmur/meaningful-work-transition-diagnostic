@@ -621,7 +621,6 @@ export function senexScoldOnly(text: string): GateFinding {
 
 const PROTECTION_PEEL = /protect|protective|keeps|shield|bargain|benefit of staying/i;
 const AIM_PEEL = /aim|develop|structure in service|aliveness|compensatory|asking you to/i;
-const DIALOGUE_PEEL = /ask|speak|say|said|voice|image|scene|obstacle|dialogue|reply|replies|whisper/i;
 const INFLATION_DIAGNOSIS =
   /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)|you are (an? )?(puer|senex)\b|romance of eternal becoming|romance-of-eternal-becoming|you live in (an? )?(endless|eternal) becoming/i;
 
@@ -660,32 +659,53 @@ export function protectionAndAimInPeel(
   };
 }
 
-/** When obstacleSpeech exists, require imaginal experiment or dialogue engagement in reality/hidden. */
 export function imaginalWhenSpeech(
   sections: ReportSection[],
   state: CaseState,
 ): GateFinding {
-  const speech = state.symbolicMaterial.obstacleSpeech?.trim();
-  if (!speech) {
+  const suppliedSpeech =
+    state.symbolicMaterial.obstacleSpeech?.trim();
+
+  const text = sections
+    .map((section) => section.body)
+    .join("\n");
+
+  const generatedSecondTurn =
+    /\b(?:you|the image|the figure|the obstacle)\s+(?:reply|replies|respond|responds|answer|answers|whisper|whispers)\b/i.test(
+      text,
+    );
+
+  const scriptedExchange =
+    /\byou ask\b[\s\S]{0,180}\b(?:it|the image|the figure|the obstacle)\s+(?:says|replies|responds|answers)\b/i.test(
+      text,
+    );
+
+  const failed =
+    generatedSecondTurn || scriptedExchange;
+
+  if (failed) {
+    return {
+      id: "imaginal-when-speech",
+      passed: false,
+      detail:
+        "Report appears to generate an imaginal reply or second turn of dialogue that was not supplied by the person.",
+    };
+  }
+
+  if (!suppliedSpeech) {
     return {
       id: "imaginal-when-speech",
       passed: true,
-      detail: "No obstacleSpeech; imaginal engagement check skipped.",
+      detail:
+        "No supplied obstacle speech; no generated imaginal dialogue detected.",
     };
   }
-  const hasImaginalExperiment = state.experiments.some((item) => item.kind === "imaginal");
-  const depthBodies = sections
-    .filter((section) => section.id === "reality" || section.id === "hidden")
-    .map((section) => section.body)
-    .join("\n");
-  const hasDialogue = DIALOGUE_PEEL.test(depthBodies);
-  const ok = hasImaginalExperiment || hasDialogue;
+
   return {
     id: "imaginal-when-speech",
-    passed: ok,
-    detail: ok
-      ? "Image speech engaged via imaginal experiment or reality/hidden dialogue."
-      : "obstacleSpeech present but peel lacks imaginal experiment or image dialogue.",
+    passed: true,
+    detail:
+      "Supplied image speech may be used, but no additional imaginal dialogue was generated.",
   };
 }
 

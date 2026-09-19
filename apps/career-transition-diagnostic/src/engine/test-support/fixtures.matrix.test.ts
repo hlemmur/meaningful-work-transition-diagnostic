@@ -11,7 +11,7 @@ import { inferAnalysisFixture, type AnalysisFixture } from "./fixtures";
 import { pass8OutputSchema } from "@/engine/pipeline/stage-schemas";
 
 const originAnswers = JSON.parse(
-  readFileSync(join(__dirname, "fixtures/origin-case-answers.json"), "utf8"),
+  readFileSync(join(__dirname, "../test-support/fixtures/origin-case-answers.json"), "utf8"),
 ) as Record<string, unknown>;
 
 function llmForFixture(
@@ -287,7 +287,7 @@ describe("negative and positive mock fixtures", () => {
     expect(result.error).toMatch(/aim\/protection|lacks both/i);
   });
 
-  it("fails speech-without-imaginal when obstacleSpeech lacks dialogue or imaginal", async () => {
+  it("allows supplied obstacleSpeech without requiring dialogue or imaginal work", async () => {
     const result = await runFixture("speech-without-imaginal", {
       "Q1.1": "I stall at exposure",
       "Q1.3": "I lack confidence",
@@ -297,9 +297,7 @@ describe("negative and positive mock fixtures", () => {
       "Q10.7": "Moss holds the latch shut",
       "Q11.3": "sharp angles",
     });
-    expect(result.status).toBe("failed");
-    expect(result.failedStage).toBe("pass9");
-    expect(result.error).toMatch(/imaginal|dialogue|obstacleSpeech/i);
+    expect(result.status).toBe("completed");
   });
 
   it("fails becoming-inflation-peel on romance of eternal becoming", async () => {

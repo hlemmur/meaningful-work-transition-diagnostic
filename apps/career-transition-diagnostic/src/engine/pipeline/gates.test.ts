@@ -620,35 +620,91 @@ describe("soft-depth conditional peel gates", () => {
     expect(protectionAndAimInPeel(sections, state).passed).toBe(true);
   });
 
-  it("imaginalWhenSpeech skips without obstacleSpeech", () => {
-    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
-    expect(
-      imaginalWhenSpeech([section("reality", "Practical notes only.", ["g1:Q1.1"])], state).passed,
-    ).toBe(true);
-  });
-
-  it("imaginalWhenSpeech fails when speech exists without imaginal or dialogue", () => {
-    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
-    state.symbolicMaterial.obstacleSpeech = "Turn back before you are seen.";
-    const sections = [
-      section("reality", "Money pressure is real and ADHD constraints matter.", ["g1:Q1.1"]),
-      section("hidden", "One hypothesis about authority outside.", ["g1:Q1.1"]),
-    ];
-    expect(imaginalWhenSpeech(sections, state).passed).toBe(false);
-  });
-
-  it("imaginalWhenSpeech passes with generic dialogue engagement (no origin tokens)", () => {
-    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
-    state.symbolicMaterial.obstacleSpeech = "Turn back before you are seen.";
+  it("imaginalWhenSpeech passes without obstacleSpeech when no dialogue is invented", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+  
     const sections = [
       section(
         "reality",
-        "You ask the image what it wants; its voice says you are unequipped at the threshold.",
+        "You face practical uncertainty.",
         ["g1:Q1.1"],
       ),
     ];
-    expect(imaginalWhenSpeech(sections, state).passed).toBe(true);
+  
+    expect(
+      imaginalWhenSpeech(sections, state).passed,
+    ).toBe(true);
   });
+  
+  it("imaginalWhenSpeech does not require dialogue when supplied speech exists", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+  
+    state.symbolicMaterial.obstacleSpeech =
+      "Turn back before you are seen.";
+  
+    const sections = [
+      section(
+        "reality",
+        "You described a threshold image alongside practical uncertainty.",
+        ["g1:Q1.1", "g1:Q10.6"],
+      ),
+    ];
+  
+    expect(
+      imaginalWhenSpeech(sections, state).passed,
+    ).toBe(true);
+  });
+  
+  it("imaginalWhenSpeech allows supplied speech without inventing a reply", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+  
+    state.symbolicMaterial.obstacleSpeech =
+      "Turn back before you are seen.";
+  
+    const sections = [
+      section(
+        "reality",
+        'The obstacle says, "Turn back before you are seen." You can treat that as material to explore rather than as a verdict.',
+        ["g1:Q10.6"],
+      ),
+    ];
+  
+    expect(
+      imaginalWhenSpeech(sections, state).passed,
+    ).toBe(true);
+  });
+  
+  it("imaginalWhenSpeech fails generated second-turn dialogue", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+  
+    state.symbolicMaterial.obstacleSpeech =
+      "Turn back before you are seen.";
+  
+    const sections = [
+      section(
+        "hidden",
+        'The obstacle says, "Turn back before you are seen." You reply that you are ready now.',
+        ["g1:Q10.6"],
+      ),
+    ];
+  
+    const finding =
+      imaginalWhenSpeech(sections, state);
+  
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /second turn|imaginal reply/i,
+    );
+  });
+
 
   it("antiInflationDiagnosis fails on romance of eternal becoming", () => {
     expect(
