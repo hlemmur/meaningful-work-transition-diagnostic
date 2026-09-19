@@ -77,7 +77,7 @@ function betaShapedReport(assessmentId: string) {
       {
         id: "contradiction" as const,
         title: "Contradiction",
-        body: "You want sharp angles you cannot unsee while also wanting confirmation of your path.",
+        body: "You want to distinguish practical constraints from fear of visible experimentation while also wanting confirmation of your path.",
         evidenceRefs: [q("Q0.5")],
       },
       {
@@ -232,7 +232,7 @@ describe("evaluateFrameworkFidelity", () => {
     caseState.contradictions = [
       {
         id: "c1",
-        statementA: "I want sharp angles I cannot unsee",
+        statementA: "I want to distinguish practical constraints from fear of visible experimentation",
         statementB: "I want confirmation of my path",
         evidenceA: ["beta:Q11.3"],
         evidenceB: ["beta:Q11.3"],
@@ -251,10 +251,10 @@ describe("evaluateFrameworkFidelity", () => {
       },
     ];
     caseState.hiddenPosition = {
-      consciousPosition: "sharp angles",
+      consciousPosition: "distinguish practical constraints from fear",
       observedPattern: "insight hunger",
       possibleHiddenPosition:
-        "I hope it shows me some sharp angles that I can't unsee and will help me to shift my perspective",
+        "The fictional participant hopes the report distinguishes practical constraints from fear of visible experimentation.",
       protectiveFunction: ["Seeker identity"],
       threatenedByChange: ["Unglamorous work"],
       developmentalTension: { poleA: "insight", poleB: "execution" },

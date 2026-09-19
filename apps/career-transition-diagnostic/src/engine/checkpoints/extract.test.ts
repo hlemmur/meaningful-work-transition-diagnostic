@@ -46,12 +46,12 @@ describe("extractCaseStateFull", () => {
     expect(state.money.invisibleMachinery.length).toBeGreaterThan(0);
     expect(state.hiddenBargain.benefitsOfStaying.length).toBeGreaterThan(0);
     expect(state.hiddenBargain.protectAndThreaten.length).toBeGreaterThan(0);
-    expect(state.symbolicMaterial.scene).toMatch(/pipe/i);
+    expect(state.symbolicMaterial.scene).toMatch(/forest gate/i);
     expect(state.symbolicMaterial.obstacleSpeech).toBeTruthy();
-    expect(state.userFinalReflection.requestedInsight).toMatch(/sharp angles/i);
+    expect(state.userFinalReflection.requestedInsight).toMatch(/practical constraints/i);
     expect(state.affect.chargeIntensity).toBeGreaterThan(0);
     expect(state.history.supportiveStructures.length).toBeGreaterThan(0);
-    expect(state.practicalContext.constraints[0]?.rawQuote).toMatch(/ADHD/i);
+    expect(state.practicalContext.constraints[0]?.rawQuote).toMatch(/stable income/i);
   });
 
   it("leaves Tier-A buckets empty when answers are blank", () => {
