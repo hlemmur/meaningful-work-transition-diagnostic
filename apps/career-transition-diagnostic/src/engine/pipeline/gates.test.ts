@@ -20,6 +20,7 @@ import {
   experimentBoundToHypothesis,
   imageVoteAdequate,
   senexScoldOnly,
+  somaticProvenance,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -951,5 +952,72 @@ describe("image vote adequacy gate", () => {
     );
   
     expect(finding.passed).toBe(true);
+  });
+});
+
+describe("somatic provenance gate", () => {
+  it("passes when report makes no explicit body claim", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        "You describe hesitation before exposure.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    expect(
+      somaticProvenance(
+        sections,
+        state,
+      ).passed,
+    ).toBe(true);
+  });
+
+  it("fails when report invents a body location", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        "You feel the conflict as tightness in your chest.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    const finding =
+      somaticProvenance(
+        sections,
+        state,
+      );
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /body|somatic|sensory/i,
+    );
+  });
+
+  it("does not mistake practical pressure for a somatic claim", () => {
+    const state = extractCaseStateFull("som", {
+      "Q0.5": "Financial pressure is real.",
+      "Q1.1": "I keep stalling.",
+    });
+  
+    const sections = [
+      section(
+        "reality",
+        "You are under real financial pressure.",
+        ["som:Q0.5"],
+      ),
+    ];
+  
+    expect(
+      somaticProvenance(sections, state).passed,
+    ).toBe(true);
   });
 });

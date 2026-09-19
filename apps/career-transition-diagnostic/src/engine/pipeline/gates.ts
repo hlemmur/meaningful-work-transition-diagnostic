@@ -795,6 +795,12 @@ export function assertPeelHardGates(sections: ReportSection[], state: CaseState)
   if (!imaginal.passed) {
     throwGate(imaginal);
   }
+  const somatic =
+  somaticProvenance(sections, state);
+
+  if (!somatic.passed) {
+    throwGate(somatic);
+  }
   const inflation = antiInflationDiagnosis(body);
   if (!inflation.passed) {
     throwGate(inflation);
@@ -817,4 +823,60 @@ export function throwGate(finding: GateFinding): never {
   error.gateId = finding.id;
   error.findings = [finding];
   throw error;
+}
+
+const SOMATIC_CLAIM =
+  /\b(?:in|through|across|around|inside|at)\s+(?:your\s+)?(?:chest|throat|stomach|belly|gut|heart|shoulders?|neck|jaw|head|back|arms?|legs?|hands?|feet)\b|\b(?:bodily|somatic|physical)\s+(?:tightness|pressure|heaviness|heat|cold|tingling|numbness|constriction|ache|pain|tension)\b/i;
+
+function hasSuppliedSomaticMaterial(
+  state: CaseState,
+) {
+  return (
+    state.affect.bodyResponses.length > 0
+  );
+}
+
+export function somaticProvenance(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const bodyClaims = sections.filter((section) =>
+    SOMATIC_CLAIM.test(section.body),
+  );
+
+  if (!bodyClaims.length) {
+    return {
+      id: "somatic-provenance",
+      passed: true,
+      detail:
+        "No explicit somatic claims require provenance.",
+    };
+  }
+
+  if (!hasSuppliedSomaticMaterial(state)) {
+    return {
+      id: "somatic-provenance",
+      passed: false,
+      detail:
+        `Report introduces explicit body/sensory claims without supplied body-response evidence in: ${bodyClaims
+          .map((section) => section.id)
+          .join(", ")}`,
+    };
+  }
+
+  const hasBodyEvidenceRef = bodyClaims.every(
+    (section) =>
+      section.evidenceRefs.some(
+        (ref) =>
+          /:Q3\.3S$/.test(ref),
+      ),
+  );
+
+  return {
+    id: "somatic-provenance",
+    passed: hasBodyEvidenceRef,
+    detail: hasBodyEvidenceRef
+      ? "Explicit somatic claims are grounded in supplied body-response evidence."
+      : "Explicit somatic claims must cite the supplied body-response evidence.",
+  };
 }
