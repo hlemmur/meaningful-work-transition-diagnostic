@@ -328,15 +328,37 @@ describe("experiment binding gate", () => {
 describe("Tier-A citation gates", () => {
   const origin = extractCaseStateFull("o1", originAnswers);
 
-  it("image_cited fails when rich associations exist but reality/hidden omit image", () => {
+  it("image_cited passes when rich associations are cited in any interpretive section", () => {
     const sections = [
-      section("reality", "Practical constraints dominate.", ["o1:Q0.5"]),
-      section("hidden", "One hypothesis about structure.", ["o1:Q9.2"]),
-      section("experiment", "Imagine the pipe across a threshold.", ["o1:Q1.1"]),
+      section(
+        "alternative",
+        "The image may point toward a different explanation of the stall.",
+        ["o1:Q10.1"],
+      ),
     ];
-    const finding = imageCited(sections, origin);
-    expect(finding.passed).toBe(false);
-    expect(finding.id).toBe("image_cited");
+  
+    expect(
+      imageCited(sections, origin).passed,
+    ).toBe(true);
+  });
+
+  it("image_cited fails when rich associations exist but no Q10 evidence appears", () => {
+    const sections = [
+      section(
+        "reality",
+        "Practical constraints dominate.",
+        ["o1:Q0.5"],
+      ),
+      section(
+        "hidden",
+        "One hypothesis about structure.",
+        ["o1:Q9.2"],
+      ),
+    ];
+  
+    expect(
+      imageCited(sections, origin).passed,
+    ).toBe(false);
   });
 
   it("image_cited passes when reality cites Q10", () => {
@@ -355,6 +377,25 @@ describe("Tier-A citation gates", () => {
     const thin = extractCaseStateFull("o1", { "Q1.1": "I stall" });
     const sections = [section("reality", "No image work.", ["o1:Q1.1"])];
     expect(imageCited(sections, thin).passed).toBe(true);
+  });
+
+  it("image_cited fails when Q10 appears only as experiment garnish", () => {
+    const sections = [
+      section(
+        "reality",
+        "Practical constraints dominate.",
+        ["o1:Q0.5"],
+      ),
+      section(
+        "experiment",
+        "Use the image during the exercise.",
+        ["o1:Q10.1"],
+      ),
+    ];
+  
+    expect(
+      imageCited(sections, origin).passed,
+    ).toBe(false);
   });
 
   it("projection_cited fails when figures exist but contradiction/hidden omit them", () => {
@@ -380,16 +421,18 @@ describe("Tier-A citation gates", () => {
     expect(projectionCited(sections, origin).passed).toBe(false);
   });
 
-  it("projection_cited passes with Q5 refs on contradiction", () => {
+  it("projection_cited passes when projection evidence appears anywhere", () => {
     const sections = [
       section(
-        "contradiction",
-        "Admiration for grounded mentors marks a hooked quality of claiming space.",
-        ["o1:Q1.2", "o1:Q5.1"],
+        "alternative",
+        "Your admiration may point toward a quality you value.",
+        ["o1:Q5.1"],
       ),
-      section("hidden", "Protection keeps lightness.", ["o1:Q9.2"]),
     ];
-    expect(projectionCited(sections, origin).passed).toBe(true);
+  
+    expect(
+      projectionCited(sections, origin).passed,
+    ).toBe(true);
   });
 
   it("money_cited fails when money buckets exist but reality/alternative omit them", () => {
@@ -403,16 +446,18 @@ describe("Tier-A citation gates", () => {
     expect(finding.id).toBe("money_cited");
   });
 
-  it("money_cited passes with Q8 refs on reality", () => {
+  it("money_cited passes when money evidence appears anywhere", () => {
     const sections = [
       section(
-        "reality",
-        "Industry machinery once delivered income.",
-        ["o1:Q8.4", "o1:Q0.5"],
+        "hidden",
+        "Your relationship to ease may depend partly on how work used to deliver income.",
+        ["o1:Q8.4"],
       ),
-      section("alternative", "Skill gap may suffice.", ["o1:Q0.5"]),
     ];
-    expect(moneyCited(sections, origin).passed).toBe(true);
+  
+    expect(
+      moneyCited(sections, origin).passed,
+    ).toBe(true);
   });
 
   it("reportLayerCoverage fails when indicated layers are missing", () => {

@@ -186,19 +186,21 @@ export function buildRequiredCitations(state: CaseState) {
   return {
     image: hasRichImageAssociations(state)
       ? {
-          mustCiteIn: ["reality", "hidden"] as const,
+          mustAppearInReport: true,
           refs: imageCiteRefs(state),
         }
       : null,
+  
     projection: hasProjectionFigures(state)
       ? {
-          mustCiteIn: ["contradiction", "hidden"] as const,
+          mustAppearInReport: true,
           refs: projectionCiteRefs(state),
         }
       : null,
+  
     money: hasMoneyTierA(state)
       ? {
-          mustCiteIn: ["reality", "alternative"] as const,
+          mustAppearInReport: true,
           refs: moneyCiteRefs(state),
         }
       : null,
@@ -235,9 +237,10 @@ export function buildCaseSnapshot(input: {
     evidence,
     answersByQuestionId: answersByQuestionId(answers),
     /**
-     * Hard-gate citation targets. Pass9/10 must copy these ref strings into evidenceRefs
-     * on the named sections — do not invent tierA-* placeholder ids.
-     */
+       * Report-wide evidence coverage requirements.
+       * Pass9/10 may place relevant material in whichever section best serves
+       * the resolved formulation, but evidenceRefs must come from these refs.
+    */
     requiredCitations,
     /** Exact peel titles the report must use (also enforced by sanitize). */
     requiredTitles: { ...CANONICAL_PEEL_TITLES },
@@ -669,7 +672,7 @@ export function buildCaseSnapshot(input: {
       evidenceHint: item.whatToObserve.slice(0, 3),
     })),
     requestedInsightNote:
-      "requestedInsight (Q11.3) is the client's wish for the report — not the report spine. Ground claims in evidenceAllowlist, tierA, requiredCitations, and answersByQuestionId. Never invent tierA-* placeholder evidenceRefs.",
+  "requestedInsight (Q11.3) is the client's wish for the report — not the report spine. Ground claims in evidenceAllowlist and the available case material. requiredCitations indicate material that should appear somewhere in the report when present; they do not prescribe section placement.",
   };
 }
 

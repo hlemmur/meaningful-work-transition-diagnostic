@@ -469,6 +469,23 @@ function refsOn(sections: ReportSection[]) {
   return sections.flatMap((section) => section.evidenceRefs);
 }
 
+const INTERPRETIVE_SECTION_IDS = new Set([
+  "problem",
+  "reality",
+  "contradiction",
+  "hidden",
+  "alternative",
+  "jungian",
+]);
+
+function interpretiveSections(
+  sections: ReportSection[],
+) {
+  return sections.filter((section) =>
+    INTERPRETIVE_SECTION_IDS.has(section.id),
+  );
+}
+
 export function hasProjectionFigures(state: CaseState) {
   return (
     state.projections.admiredFigures.length + state.projections.rejectedFigures.length > 0
@@ -480,68 +497,83 @@ export function hasMoneyTierA(state: CaseState) {
 }
 
 /** When rich Q10 associations exist, reality or hidden must cite :Q10. (cues alone insufficient). */
-export function imageCited(sections: ReportSection[], state: CaseState): GateFinding {
+export function imageCited(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
   if (!hasRichImageAssociations(state)) {
     return {
       id: "image_cited",
       passed: true,
-      detail: "No rich image associations requiring citation.",
+      detail:
+        "No rich image associations requiring citation.",
     };
   }
-  const core = [sectionById(sections, "reality"), sectionById(sections, "hidden")].filter(
-    Boolean,
-  ) as ReportSection[];
-  const hasRef = refsOn(core).some((ref) => /:Q10\./.test(ref));
+
+  const hasRef = refsOn(
+    interpretiveSections(sections),
+  ).some((ref) => /:Q10\./.test(ref));
+
   return {
     id: "image_cited",
     passed: hasRef,
     detail: hasRef
-      ? "Image associations cited via :Q10. in reality or hidden."
-      : "Rich Q10 associations present but reality/hidden lack :Q10. evidenceRefs.",
+    ? "Rich symbolic material is represented in an interpretive section."
+    : "Rich symbolic material exists but no interpretive section contains a Q10 evidenceRef.",
   };
 }
 
 /** When admired/rejected figures exist, contradiction or hidden must cite :Q5. or :Q6. */
-export function projectionCited(sections: ReportSection[], state: CaseState): GateFinding {
+export function projectionCited(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
   if (!hasProjectionFigures(state)) {
     return {
       id: "projection_cited",
       passed: true,
-      detail: "No projection figures requiring citation.",
+      detail:
+        "No projection figures requiring citation.",
     };
   }
-  const target = [sectionById(sections, "contradiction"), sectionById(sections, "hidden")].filter(
-    Boolean,
-  ) as ReportSection[];
-  const hasRefs = refsOn(target).some((ref) => /:Q5\.|:Q6\./.test(ref));
+
+  const hasRef = refsOn(
+    interpretiveSections(sections),
+  ).some((ref) => /:Q5\.|:Q6\./.test(ref));
+
   return {
     id: "projection_cited",
-    passed: hasRefs,
-    detail: hasRefs
-      ? "Projection figures cited via :Q5./:Q6. in contradiction or hidden."
-      : "Admired/rejected figures present but contradiction/hidden lack :Q5./:Q6. evidenceRefs.",
+    passed: hasRef,
+    detail: hasRef
+      ? "Projection material is represented in the report."
+      : "Projection material exists but the report contains no Q5/Q6 evidenceRef.",
   };
 }
 
 /** When money Tier-A buckets exist, reality or alternative must cite :Q8. */
-export function moneyCited(sections: ReportSection[], state: CaseState): GateFinding {
+export function moneyCited(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
   if (!hasMoneyTierA(state)) {
     return {
       id: "money_cited",
       passed: true,
-      detail: "No money Tier-A buckets requiring citation.",
+      detail:
+        "No money material requiring citation.",
     };
   }
-  const target = [sectionById(sections, "reality"), sectionById(sections, "alternative")].filter(
-    Boolean,
-  ) as ReportSection[];
-  const hasRefs = refsOn(target).some((ref) => /:Q8\./.test(ref));
+
+  const hasRef = refsOn(
+    interpretiveSections(sections),
+  ).some((ref) => /:Q8\./.test(ref));
+
   return {
     id: "money_cited",
-    passed: hasRefs,
-    detail: hasRefs
-      ? "Money Tier-A cited via :Q8. in reality or alternative."
-      : "Money Tier-A present but reality/alternative lack :Q8. evidenceRefs.",
+    passed: hasRef,
+    detail: hasRef
+      ? "Money material is represented in the report."
+      : "Money material exists but the report contains no Q8 evidenceRef.",
   };
 }
 
