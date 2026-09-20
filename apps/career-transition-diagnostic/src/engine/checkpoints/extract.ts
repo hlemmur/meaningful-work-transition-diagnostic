@@ -256,10 +256,6 @@ export function extractCaseStateFull(
     next.affect.emotions,
     evidence(assessmentId, "Q3.3", answers["Q3.3"], "emotion"),
   );
-  next.affect.bodyResponses = upsertEvidence(
-    next.affect.bodyResponses,
-    evidence(assessmentId, "Q3.3S", answers["Q3.3S"], "emotion"),
-  );
   next.affect.firstThought = upsertEvidence(
     next.affect.firstThought,
     evidence(assessmentId, "Q3.4", answers["Q3.4"], "self_interpretation"),
@@ -276,12 +272,12 @@ export function extractCaseStateFull(
     next.affect.impulseAfterFearedOutcome,
     evidence(assessmentId, "Q3.10", answers["Q3.10"], "behavior"),
   );
-  const intensity = Math.max(
-    asScale(answers["Q3.2"]) ?? 0,
-    asScale(answers["Q3.3"]) ?? 0,
-  );
+  const intensity =
+  asScale(answers["Q3.2"]) ?? 0;
+
   if (intensity > 0) {
-    next.affect.chargeIntensity = intensity;
+    next.affect.chargeIntensity =
+      intensity;
   }
 
   const watchers = projectionsFromAnswer(assessmentId, "Q3.5", answers["Q3.5"]);
@@ -293,14 +289,39 @@ export function extractCaseStateFull(
     evidence(assessmentId, "Q3.6", answers["Q3.6"], "projection"),
   );
 
-  next.history.identityConclusionRecurrence = upsertEvidence(
+  next.history.earlierOccurrences =
+  upsertEvidence(
+    next.history.earlierOccurrences,
+    evidence(
+      assessmentId,
+      "Q4.1",
+      answers["Q4.1"],
+      "history",
+    ),
+  );
+
+next.history.identityConclusionRecurrence =
+  upsertEvidence(
     next.history.identityConclusionRecurrence,
-    evidence(assessmentId, "Q4.1", answers["Q4.1"], "history"),
+    evidence(
+      assessmentId,
+      "Q4.2",
+      answers["Q4.2"],
+      "history",
+    ),
   );
-  next.history.evidenceAbsorption = upsertEvidence(
+
+next.history.evidenceAbsorption =
+  upsertEvidence(
     next.history.evidenceAbsorption,
-    evidence(assessmentId, "Q4.2b", answers["Q4.2b"], "history"),
+    evidence(
+      assessmentId,
+      "Q4.2b",
+      answers["Q4.2b"],
+      "history",
+    ),
   );
+
   next.history.bestFunctioningPeriods = upsertEvidence(
     next.history.bestFunctioningPeriods,
     evidence(assessmentId, "Q4.3", answers["Q4.3"], "history"),
@@ -326,9 +347,22 @@ export function extractCaseStateFull(
     evidence(assessmentId, "Q4.8", answers["Q4.8"], "behavior"),
   );
   next.history.legitimacyLoop = upsertEvidence(
-    next.history.legitimacyLoop,
-    evidence(assessmentId, "QB.1", answers["QB.1"], "self_interpretation"),
-  );
+  next.history.legitimacyLoop,
+  [
+    ...evidence(
+      assessmentId,
+      "Q4.9",
+      answers["Q4.9"],
+      "self_interpretation",
+    ),
+    ...evidence(
+      assessmentId,
+      "QB.1",
+      answers["QB.1"],
+      "self_interpretation",
+    ),
+  ],
+);
 
   const admired = projectionsFromAnswer(assessmentId, "Q5.1", answers["Q5.1"]);
   if (admired.length) {
@@ -378,6 +412,16 @@ export function extractCaseStateFull(
     next.futureFantasy.identityWithoutWork,
     evidence(assessmentId, "Q7.5", answers["Q7.5"], "fantasy"),
   );
+  next.futureFantasy.workWithoutIdentity =
+  upsertEvidence(
+    next.futureFantasy.workWithoutIdentity,
+    evidence(
+      assessmentId,
+      "Q7.6",
+      answers["Q7.6"],
+      "fantasy",
+    ),
+  );
   next.futureFantasy.continueDespiteDifficulty = upsertEvidence(
     next.futureFantasy.continueDespiteDifficulty,
     evidence(assessmentId, "Q7.7", answers["Q7.7"], "fantasy"),
@@ -411,10 +455,28 @@ export function extractCaseStateFull(
     next.money.hardMoneyHistory,
     evidence(assessmentId, "Q8.5", answers["Q8.5"], "history"),
   );
-  next.money.backgroundIncome = upsertEvidence(
-    next.money.backgroundIncome,
-    evidence(assessmentId, "Q8.6", answers["Q8.6"], "practical_constraint"),
+  next.money.easyVsHardDifference =
+  upsertEvidence(
+    next.money.easyVsHardDifference,
+    evidence(
+      assessmentId,
+      "Q8.6",
+      answers["Q8.6"],
+      "self_interpretation",
+    ),
   );
+
+next.money.backgroundIncome =
+  upsertEvidence(
+    next.money.backgroundIncome,
+    evidence(
+      assessmentId,
+      "Q8.10",
+      answers["Q8.10"],
+      "self_interpretation",
+    ),
+  );
+
   next.money.effortFairness = upsertEvidence(
     next.money.effortFairness,
     evidence(assessmentId, "Q8.7", answers["Q8.7"], "self_interpretation"),
@@ -460,8 +522,8 @@ export function extractCaseStateFull(
   next.symbolicMaterial = {
     scene: asText(answers["Q10.1"]) || next.symbolicMaterial.scene,
     surroundings: asText(answers["Q10.2"]) || next.symbolicMaterial.surroundings,
-    ahead: asText(answers["Q10.3"]) || next.symbolicMaterial.ahead,
-    obstacle: asText(answers["Q10.4"]) || next.symbolicMaterial.obstacle,
+    obstacle: asText(answers["Q10.3"]) || next.symbolicMaterial.obstacle,
+    ahead: asText(answers["Q10.4"]) || next.symbolicMaterial.ahead,
     figures: asText(answers["Q10.5"])
       ? [asText(answers["Q10.5"])]
       : next.symbolicMaterial.figures,

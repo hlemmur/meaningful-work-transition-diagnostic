@@ -4,7 +4,7 @@ import {
   inferAnalysisFixture,
   passOutputFor,
   type AnalysisFixture,
-} from "@/engine/pipeline/fixtures";
+} from "@/engine/test-support/fixtures";
 import { costForModel, type AnalysisStage } from "@/engine/pipeline/models";
 import { forkIdSchema, reportSectionSchema, type ForkId } from "@/engine/schemas/analysis";
 
@@ -95,6 +95,13 @@ export const mockLlmAdapter: LlmAdapter = {
       const assessmentId = String(input.assessmentId ?? "assess-1");
       const caseSnapshot = input.caseSnapshot as
         | {
+            evidenceAllowlist?: string[];
+            requiredCitations?: {
+              image?: {
+                mustAppearInReport?: boolean;
+                refs?: string[];
+              } | null;
+            };
             experimentBindings?: {
               hypothesisIds: string[];
               openForkIds: string[];
@@ -121,6 +128,13 @@ export const mockLlmAdapter: LlmAdapter = {
             typeof input.requestedInsight === "string" ? input.requestedInsight : undefined,
           draftReport,
           experimentBindings: caseSnapshot?.experimentBindings,
+          evidenceAllowlist: caseSnapshot?.evidenceAllowlist,
+          imageEvidenceRefs:
+            caseSnapshot?.requiredCitations?.image?.mustAppearInReport === true
+              ? (caseSnapshot.requiredCitations.image.refs ?? []).filter((ref) =>
+                  caseSnapshot.evidenceAllowlist?.includes(ref),
+                )
+              : [],
         }),
         model,
         usage: {

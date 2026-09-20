@@ -1,9 +1,9 @@
 import type { CaseState } from "../schemas/case-state";
-import type { Hypothesis, ReportSection } from "../schemas/analysis";
-import type { pass4OutputSchema, pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
+import type { Hypothesis, HypothesisCritique, ReportSection } from "../schemas/analysis";
+import type { pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
+import { collectCanonicalEvidenceIds } from "./evidence-ids";
 import {
   CANONICAL_PEEL_TITLES,
-  hasRichImageAssociations,
   imageVoteAdequate,
   isParaphraseOf,
   throwGate,
@@ -11,6 +11,13 @@ import {
 import type { z } from "zod";
 
 const PRACTICAL_CATEGORIES = new Set(["practical", "economic", "occupational"]);
+
+function clamp01(value: number) {
+  return Math.max(
+    0,
+    Math.min(1, value),
+  );
+}
 
 export function hypothesisScore(hypothesis: Hypothesis) {
   const scoring = hypothesis.scoring;
@@ -24,6 +31,138 @@ export function hypothesisScore(hypothesis: Hypothesis) {
     scoring.counterEvidencePenalty * 0.1 -
     scoring.simplerAlternativePenalty * 0.1
   );
+}
+
+export function contradictionScore(
+  contradiction: CaseState["contradictions"][number],
+) {
+  const scores = contradiction.scores;
+
+  return (
+    scores.evidenceStrength * 0.15 +
+    scores.recurrence * 0.15 +
+    scores.explanatoryImportance * 0.2 +
+    scores.charge * 0.1 +
+    scores.crossDomainReach * 0.2 +
+    scores.noveltyOfConnection * 0.2 -
+    scores.consciousAwarenessPenalty * 0.2
+  );
+}
+
+export function rankContradictions(
+  state: CaseState,
+) {
+  state.contradictions = [
+    ...state.contradictions,
+  ].sort(
+    (left, right) =>
+      contradictionScore(right) -
+      contradictionScore(left),
+  );
+
+  return state;
+}
+
+export function applyCritiques(
+  state: CaseState,
+  critiques: HypothesisCritique[],
+) {
+  const byId = new Map(
+    state.hypotheses.map(
+      (item) => [item.id, item],
+    ),
+  );
+
+  for (const critique of critiques) {
+    const hypothesis = byId.get(
+      critique.hypothesisId,
+    );
+
+    if (!hypothesis) {
+      continue;
+    }
+
+    for (
+      const ref
+      of critique.counterEvidenceRefs
+    ) {
+      if (
+        !hypothesis.evidenceAgainst.includes(
+          ref,
+        )
+      ) {
+        hypothesis.evidenceAgainst.push(
+          ref,
+        );
+      }
+    }
+
+    switch (
+      critique.rankAdjustment
+    ) {
+      case "raise":
+        hypothesis.scoring.evidenceCoverage =
+          clamp01(
+            hypothesis.scoring
+              .evidenceCoverage +
+              0.05,
+          );
+
+        hypothesis.scoring
+          .simplerAlternativePenalty =
+          clamp01(
+            hypothesis.scoring
+              .simplerAlternativePenalty -
+              0.1,
+          );
+
+        break;
+
+      case "lower":
+        hypothesis.scoring
+          .counterEvidencePenalty =
+          Math.max(
+            hypothesis.scoring
+              .counterEvidencePenalty,
+            0.5,
+          );
+
+        hypothesis.scoring
+          .simplerAlternativePenalty =
+          Math.max(
+            hypothesis.scoring
+              .simplerAlternativePenalty,
+            0.5,
+          );
+
+        break;
+
+      case "reject":
+        hypothesis.scoring
+          .counterEvidencePenalty = 1;
+
+        hypothesis.scoring
+          .simplerAlternativePenalty = 1;
+
+        break;
+
+      case "keep":
+        break;
+    }
+  }
+
+  state.hypothesisCritiques =
+    critiques;
+
+  state.hypotheses = [
+    ...state.hypotheses,
+  ].sort(
+    (left, right) =>
+      hypothesisScore(right) -
+      hypothesisScore(left),
+  );
+
+  return state;
 }
 
 export function ensurePracticalRival(state: CaseState) {
@@ -67,50 +206,220 @@ export function ensurePracticalRival(state: CaseState) {
 
 export function applyImageVotes(
   state: CaseState,
-  output: z.infer<typeof pass5OutputSchema>,
+  output: z.infer<
+    typeof pass5OutputSchema
+  >,
 ) {
-  const byId = new Map(state.hypotheses.map((item) => [item.id, item]));
+  const byId = new Map(
+    state.hypotheses.map(
+      (item) => [item.id, item],
+    ),
+  );
+
+  const invalidVote = output.votes.find(
+    (vote) => !byId.has(vote.hypothesisId),
+  );
+  if (invalidVote) {
+    throwGate({
+      id: "image-vote-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 5 image vote ${invalidVote.hypothesisId} does not reference a live hypothesis.`,
+    });
+  }
+
   for (const vote of output.votes) {
-    const hypothesis = byId.get(vote.hypothesisId);
+    const hypothesis = byId.get(
+      vote.hypothesisId,
+    );
+
     if (!hypothesis) {
       continue;
     }
-    if (vote.verdict === "weakens") {
-      hypothesis.scoring.imageConstraintFit = 0;
-      hypothesis.scoring.counterEvidencePenalty = Math.max(
-        hypothesis.scoring.counterEvidencePenalty,
-        0.9,
-      );
-    }
-    if (vote.verdict === "supports") {
-      hypothesis.scoring.imageConstraintFit = 1;
+
+    switch (vote.verdict) {
+      case "supports":
+        hypothesis.scoring
+          .imageConstraintFit = 1;
+        break;
+
+      case "weakens":
+        hypothesis.scoring
+          .imageConstraintFit = 0;
+
+        hypothesis.scoring
+          .counterEvidencePenalty =
+          Math.max(
+            hypothesis.scoring
+              .counterEvidencePenalty,
+            0.9,
+          );
+        break;
+
+      case "splits":
+        // Image genuinely supports more than
+        // one center. Do not force a winner.
+        hypothesis.scoring
+          .imageConstraintFit =
+          Math.min(
+            hypothesis.scoring
+              .imageConstraintFit,
+            0.5,
+          );
+        break;
+
+      case "insufficient":
+        // No evidential update.
+        break;
     }
   }
-  state.hypotheses = [...state.hypotheses].sort(
-    (left, right) => hypothesisScore(right) - hypothesisScore(left),
+
+  state.imageVotes =
+    output.votes;
+
+  state.hypotheses = [
+    ...state.hypotheses,
+  ].sort(
+    (left, right) =>
+      hypothesisScore(right) -
+      hypothesisScore(left),
   );
-  const favoriteVote = output.votes.find((vote) => vote.hypothesisId === "hyp-depth") ?? output.votes[0];
-  state.imageVote = favoriteVote;
-  const imageGate = imageVoteAdequate(state, favoriteVote);
+
+  const splitVotes =
+  output.votes.filter(
+    (vote) =>
+      vote.verdict === "splits",
+  );
+
+if (splitVotes.length > 0) {
+  state.gateRemediations = [
+    ...(state.gateRemediations ?? []),
+
+    "Symbolic material split across multiple hypotheses; Pass 6 must preserve or explicitly resolve the competing centers.",
+  ];
+}
+  const currentFavorite =
+    state.hypotheses[0];
+
+  const favoriteVote =
+    currentFavorite
+      ? output.votes.find(
+          (vote) =>
+            vote.hypothesisId ===
+            currentFavorite.id,
+        )
+      : undefined;
+
+  // Temporary compatibility field.
+  state.imageVote =
+    favoriteVote ??
+    output.votes[0];
+
+  const imageGate =
+    imageVoteAdequate(
+      state,
+    );
+
   if (!imageGate.passed) {
-    // Prefer a splits/supports remediation signal rather than accepting blind insufficient.
-    if (hasRichImageAssociations(state) && favoriteVote?.verdict === "insufficient") {
-      state.gateRemediations = [...(state.gateRemediations ?? []), imageGate.detail];
-      throwGate(imageGate);
-    }
+    state.gateRemediations = [
+      ...(state.gateRemediations ?? []),
+      imageGate.detail,
+    ];
+
+    throwGate(imageGate);
   }
+
   return state;
 }
 
 export function applyResolution(
   state: CaseState,
-  output: z.infer<typeof pass6OutputSchema>,
-  critiques: z.infer<typeof pass4OutputSchema>["critiques"],
+  output: z.infer<
+    typeof pass6OutputSchema
+  >,
 ) {
+  const critiques = state.hypothesisCritiques ?? [];
   const requested = state.userFinalReflection.requestedInsight?.trim();
-  const criticAndConstraintsWin =
-    state.practicalContext.constraints.length > 0 &&
-    critiques.some((item) => item.hypothesisId === "hyp-depth" && !item.survives);
+  const liveHypothesisIds = new Set(
+    state.hypotheses.map((item) => item.id),
+  );
+
+  const selectedHypothesis =
+  state.hypotheses.find(
+    (item) =>
+      item.id ===
+      output.selectedHypothesisId,
+  );
+
+  if (!selectedHypothesis) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 selected hypothesis ${output.selectedHypothesisId}, which is not a live hypothesis.`,
+    });
+  }
+
+  const invalidCritique = critiques.find(
+    (item) => !liveHypothesisIds.has(item.hypothesisId),
+  );
+  if (invalidCritique) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 critique ${invalidCritique.hypothesisId} does not reference a live hypothesis.`,
+    });
+  }
+
+  const invalidImageVote = (state.imageVotes ?? []).find(
+    (item) => !liveHypothesisIds.has(item.hypothesisId),
+  );
+  if (invalidImageVote) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 image vote ${invalidImageVote.hypothesisId} does not reference a live hypothesis.`,
+    });
+  }
+
+  const openForks = new Set([
+    ...state.openForks,
+    ...state.contradictions.flatMap((item) => item.originForks),
+    ...state.hypotheses.flatMap((item) => item.originForks),
+  ]);
+  const invalidForkResolution = output.forkResolutions.find(
+    (item) => !openForks.has(item.forkId),
+  );
+  if (invalidForkResolution) {
+    throwGate({
+      id: "resolution-referential-integrity",
+      passed: false,
+      detail:
+        `Pass 6 fork ${invalidForkResolution.forkId} is not open in the current case.`,
+    });
+  }
+
+  state.forkResolutions = output.forkResolutions;
+  state.finalFormulation = output.finalFormulation;
+
+const selectedCritique =
+  critiques.find(
+    (item) =>
+      item.hypothesisId ===
+      output.selectedHypothesisId,
+  );
+
+const selectedRejected =
+  selectedCritique?.rankAdjustment ===
+  "reject";
+
+const selectedIsPractical =
+  selectedHypothesis &&
+  PRACTICAL_CATEGORIES.has(
+    selectedHypothesis.category,
+  );
 
   const paraphrasesInsight =
     Boolean(requested) &&
@@ -124,7 +433,12 @@ export function applyResolution(
     ];
   }
 
-  if (!output.hiddenPosition || criticAndConstraintsWin || paraphrasesInsight) {
+  if (
+    !output.hiddenPosition ||
+    selectedRejected ||
+    selectedIsPractical ||
+    paraphrasesInsight
+  ) {
     state.hiddenPosition = undefined;
     return state;
   }
@@ -155,15 +469,7 @@ export function sanitizeReportSections(
   sections: ReportSection[],
   state: CaseState,
 ) {
-  const fallback = `${state.assessmentId}:Q1.1`;
-  const known = new Set(
-    [
-      ...state.consciousNarrative.statedProblem.map((item) => item.id),
-      ...state.practicalContext.constraints.map((item) => item.id),
-      ...state.behavior.actionsTaken.map((item) => item.id),
-      fallback,
-    ].filter(Boolean),
-  );
+  const known = new Set(collectCanonicalEvidenceIds(state));
 
   return sections
     .filter((section) => {
@@ -176,13 +482,23 @@ export function sanitizeReportSections(
       return true;
     })
     .map((section) => {
-      const refs = section.evidenceRefs.filter((ref) => known.has(ref) || ref.startsWith(`${state.assessmentId}:`));
+      const refs = section.evidenceRefs.filter(
+        (ref) => known.has(ref),
+      );
+      if (refs.length === 0) {
+        throwGate({
+          id: "report-evidence-provenance",
+          passed: false,
+          detail:
+            `Report section ${section.id} has no supported evidence refs after provenance validation.`,
+        });
+      }
       const canonical = CANONICAL_PEEL_TITLES[section.id];
       return {
         ...section,
         // Peel titles are structural labels — normalize so voice gates don't thrash live drafts.
         title: canonical ?? section.title,
-        evidenceRefs: refs.length ? refs : [fallback],
+        evidenceRefs: refs,
       };
     });
 }

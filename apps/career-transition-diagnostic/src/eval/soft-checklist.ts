@@ -12,10 +12,10 @@ export type SoftChecklistNote = {
 const REQUIRED_SOFT_IDS: SoftDimId[] = [
   "surprise",
   "image_alive",
-  "imaginal_sibling",
+  "imaginal_grounding",
   "aim_sibling",
   "projection_gold",
-  "cm_layer_feel",
+  "affect_grounding",
   "bridge_to_11",
 ];
 
@@ -52,26 +52,28 @@ export function draftSoftChecklistFromArtifact(
   const depth = `${reality}\n${hidden}\n${contradiction}`;
 
   const hasAim =
-    /aim|develop|structure in service|aliveness|compensatory/i.test(hidden);
+    /aim|develop|compensatory|growth|emerg/i.test(hidden);
   const hasProtect = /protect|protective|keeps|shield|bargain/i.test(hidden);
-  const hasDialogue =
-    /ask|speak|say|said|voice|image|scene|obstacle|dialogue|reply|whisper/i.test(
-      `${reality}\n${hidden}`,
-    );
   const hasImaginalExperiment = artifact.caseState.experiments.some(
     (item) => item.kind === "imaginal",
+  );
+  const hasSymbolicMaterial = Object.values(artifact.caseState.symbolicMaterial).some(
+    (value) => Array.isArray(value) ? value.length > 0 : Boolean(value?.trim()),
   );
   const hasImageAlive =
     /:Q10\./.test(
       [...sections.find((s) => s.id === "reality")?.evidenceRefs ?? [],
         ...sections.find((s) => s.id === "hidden")?.evidenceRefs ?? []].join(" "),
-    ) || /image|scene|association|pipe|gate|threshold/i.test(`${reality}\n${hidden}`);
+    );
   const hasProjectionGold =
-    /hooked|own (the |that )?|wanted quality|claim(ing)? (space|pace)|gold/i.test(
+    /hooked|own (the |that )?|wanted quality|gold/i.test(
       depth,
     ) || /admir|fascination|reject/i.test(contradiction);
-  const hasCharge = /shame|terror|freeze|chest|throat|body|charge|fear/i.test(peel);
-  const hasSpeech = Boolean(artifact.caseState.symbolicMaterial.obstacleSpeech?.trim());
+  const hasCharge = /shame|terror|freeze|fear|anxiety|emotion|chest|throat|body|charge/i.test(peel);
+  const affectIndicated =
+    (artifact.caseState.affect.chargeIntensity ?? 0) > 0 ||
+    artifact.caseState.affect.emotions.length > 0 ||
+    artifact.caseState.affect.bodyResponses.length > 0;
 
   const drafts: Record<SoftDimId, Pick<SoftChecklistNote, "rating" | "note">> = {
     surprise: {
@@ -81,20 +83,16 @@ export function draftSoftChecklistFromArtifact(
     image_alive: {
       rating: hasImageAlive ? "strong" : "thin",
       note: hasImageAlive
-        ? "Offline draft: image/associations appear as living material in reality/hidden."
-        : "Offline draft: image may still read as garnish — check Q10 presence in peel.",
+        ? "Offline draft: supplied symbolic material is cited in reality/hidden."
+        : "Offline draft: check whether supplied symbolic material constrains an interpretive section.",
     },
-    imaginal_sibling: {
-      rating: !hasSpeech
-        ? "n/a"
-        : hasDialogue || hasImaginalExperiment
-          ? "adequate"
-          : "missing",
-      note: !hasSpeech
-        ? "No obstacleSpeech in CaseState; imaginal sibling not required."
-        : hasDialogue || hasImaginalExperiment
-          ? "Offline draft: speech engaged via dialogue language and/or imaginal experiment."
-          : "Offline draft: speech present but peel lacks dialogue/imaginal engagement.",
+    imaginal_grounding: {
+      rating: !hasImaginalExperiment ? "n/a" : hasSymbolicMaterial ? "adequate" : "missing",
+      note: !hasImaginalExperiment
+        ? "No imaginal experiment was used or required."
+        : hasSymbolicMaterial
+          ? "Offline draft: imaginal experiment has supplied symbolic material; confirm it invents no reply."
+          : "Offline draft: imaginal experiment lacks supplied symbolic material.",
     },
     aim_sibling: {
       rating: hasProtect && hasAim ? "strong" : hasProtect || hasAim ? "thin" : "missing",
@@ -109,11 +107,13 @@ export function draftSoftChecklistFromArtifact(
         ? "Offline draft: projection figures/hooked quality appear; confirm gold-to-own as hypothesis."
         : "Offline draft: projection gold thin — wanted/judged quality may be omitted.",
     },
-    cm_layer_feel: {
-      rating: hasCharge ? "adequate" : "thin",
-      note: hasCharge
-        ? "Offline draft: charge/body language present; confirm it leads a depth beat before theory."
-        : "Offline draft: affect indicated path may lack body/charge lead.",
+    affect_grounding: {
+      rating: !affectIndicated ? "n/a" : hasCharge ? "adequate" : "thin",
+      note: !affectIndicated
+        ? "No affect language is required because the case supplies none."
+        : hasCharge
+          ? "Offline draft: supplied affect language appears; confirm any body location is evidence-backed."
+          : "Offline draft: supplied emotion or charge may be missing from the report.",
     },
     bridge_to_11: {
       rating: "adequate",

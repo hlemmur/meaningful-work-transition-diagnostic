@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { JournalShell } from "@/components/journal-shell";
 import { MARKETING_CONSENT_COPY, PRODUCT_CONSENT_COPY } from "@/server/consent/copy";
 
@@ -12,9 +13,9 @@ export default function PrivacyPage() {
       <main className="flex flex-col gap-6">
         <h1 className="font-display text-3xl font-semibold tracking-tight">Privacy for this diagnostic</h1>
         <p>
-          <a className="text-sm underline" href="/">
+          <Link className="text-sm underline" href="/">
             Back
-          </a>
+          </Link>
         </p>
         <p className="leading-7 text-muted">
           This notice is specific to the Meaningful Work Transition Diagnostic and does not replace

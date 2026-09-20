@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 type DeskShellProps = {
@@ -12,12 +13,12 @@ export function DeskShell({ children }: DeskShellProps) {
           aria-label="Operator"
           className="mx-auto flex max-w-4xl gap-5 px-6 py-3 text-sm"
         >
-          <a className="underline" href="/admin">
+          <Link className="underline" href="/admin">
             Queue
-          </a>
-          <a className="underline" href="/admin/export">
+          </Link>
+          <Link className="underline" href="/admin/export">
             Marketing export
-          </a>
+          </Link>
         </nav>
       </header>
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-8">{children}</div>

@@ -11,7 +11,7 @@ const answers = {
 
 const originCaseAnswers = JSON.parse(
   readFileSync(
-    join(__dirname, "../pipeline/fixtures/origin-case-answers.json"),
+    join(__dirname, "../test-support/fixtures/origin-case-answers.json"),
     "utf8",
   ),
 ) as Record<string, unknown>;
@@ -46,12 +46,12 @@ describe("extractCaseStateFull", () => {
     expect(state.money.invisibleMachinery.length).toBeGreaterThan(0);
     expect(state.hiddenBargain.benefitsOfStaying.length).toBeGreaterThan(0);
     expect(state.hiddenBargain.protectAndThreaten.length).toBeGreaterThan(0);
-    expect(state.symbolicMaterial.scene).toMatch(/pipe/i);
+    expect(state.symbolicMaterial.scene).toMatch(/forest gate/i);
     expect(state.symbolicMaterial.obstacleSpeech).toBeTruthy();
-    expect(state.userFinalReflection.requestedInsight).toMatch(/sharp angles/i);
+    expect(state.userFinalReflection.requestedInsight).toMatch(/practical constraints/i);
     expect(state.affect.chargeIntensity).toBeGreaterThan(0);
     expect(state.history.supportiveStructures.length).toBeGreaterThan(0);
-    expect(state.practicalContext.constraints[0]?.rawQuote).toMatch(/ADHD/i);
+    expect(state.practicalContext.constraints[0]?.rawQuote).toMatch(/stable income/i);
   });
 
   it("leaves Tier-A buckets empty when answers are blank", () => {
@@ -77,5 +77,137 @@ describe("extractCaseStateFull", () => {
     expect(state.userFinalReflection.requestedInsight).toBe("See what I cannot see");
     expect(state.money.easyMoneyHistory).toEqual([]);
     expect(state.hiddenBargain.costsOfStaying).toEqual([]);
+  });
+
+  it("maps history and evidence-absorption questions to the correct buckets", () => {
+    const state = extractCaseStateFull(
+      "a1",
+      {
+        "Q4.1": "yes",
+        "Q4.2": "yes",
+        "Q4.2b":
+          "I explain success away as luck",
+      },
+    );
+
+    expect(
+      state.history.earlierOccurrences[0]
+        ?.questionId,
+    ).toBe("Q4.1");
+
+    expect(
+      state.history
+        .identityConclusionRecurrence[0]
+        ?.questionId,
+    ).toBe("Q4.2");
+
+    expect(
+      state.history.evidenceAbsorption[0]
+        ?.questionId,
+    ).toBe("Q4.2b");
+  });
+
+  it("does not treat the section-3 skip control as a body response", () => {
+    const state = extractCaseStateFull(
+      "a1",
+      {
+        "Q3.3S": true,
+      },
+    );
+
+    expect(
+      state.affect.bodyResponses,
+    ).toEqual([]);
+  });
+
+  it("extracts fixed and adaptive legitimacy-loop evidence", () => {
+    const state = extractCaseStateFull(
+      "a1",
+      {
+        "Q4.9": 9,
+        "QB.1":
+          "I move when another person genuinely depends on me",
+      },
+    );
+
+    expect(
+      state.history.legitimacyLoop.map(
+        (item) => item.questionId,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        "Q4.9",
+        "QB.1",
+      ]),
+    );
+  });
+
+  it("extracts work without identity separately from identity without work", () => {
+    const state = extractCaseStateFull(
+      "a1",
+      {
+        "Q7.5":
+          "The identity would still appeal to me",
+        "Q7.6": 9,
+      },
+    );
+
+    expect(
+      state.futureFantasy
+        .identityWithoutWork[0]
+        ?.questionId,
+    ).toBe("Q7.5");
+
+    expect(
+      state.futureFantasy
+        .workWithoutIdentity[0]
+        ?.questionId,
+    ).toBe("Q7.6");
+  });
+
+  it("keeps money difference and background-income answers separate", () => {
+    const state = extractCaseStateFull(
+      "a1",
+      {
+        "Q8.6":
+          "In employment demand already existed",
+        "Q8.10":
+          "I would study, make art, and do nonprofit work",
+      },
+    );
+
+    expect(
+      state.money.easyVsHardDifference[0]
+        ?.questionId,
+    ).toBe("Q8.6");
+
+    expect(
+      state.money.backgroundIncome[0]
+        ?.questionId,
+    ).toBe("Q8.10");
+  });
+
+  it("maps symbolic obstacle and what lies ahead correctly", () => {
+    const state = extractCaseStateFull(
+      "a1",
+      {
+        "Q10.3":
+          "A rusty pipe blocks the path",
+        "Q10.4":
+          "There is daylight beyond it",
+      },
+    );
+
+    expect(
+      state.symbolicMaterial.obstacle,
+    ).toBe(
+      "A rusty pipe blocks the path",
+    );
+
+    expect(
+      state.symbolicMaterial.ahead,
+    ).toBe(
+      "There is daylight beyond it",
+    );
   });
 });

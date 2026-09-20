@@ -2,7 +2,10 @@ import { z } from "zod";
 import {
   contradictionSchema,
   experimentSchema,
+  finalFormulationSchema,
+  forkResolutionSchema,
   hiddenPositionLlmSchema,
+  hypothesisCritiqueSchema,
   hypothesisSchema,
   imageVoteSchema,
   jungianLensSchema,
@@ -10,6 +13,7 @@ import {
   reportSectionSchema,
   REQUIRED_PEEL_SECTION_IDS,
 } from "../schemas/analysis";
+
 import { hasDiverseEvidenceRefs, MIN_DISTINCT_EVIDENCE_QUESTION_IDS } from "./report-grounding";
 
 export { REQUIRED_PEEL_SECTION_IDS } from "../schemas/analysis";
@@ -33,13 +37,7 @@ export const pass3OutputSchema = z.object({
 
 export const pass4OutputSchema = z.object({
   critiques: z
-    .array(
-      z.object({
-        hypothesisId: z.string(),
-        mundaneAlternative: z.string(),
-        survives: z.boolean(),
-      }),
-    )
+    .array(hypothesisCritiqueSchema)
     .min(1),
 });
 
@@ -48,10 +46,70 @@ export const pass5OutputSchema = z.object({
   overallNote: z.string(),
 });
 
-export const pass6OutputSchema = z.object({
-  hiddenPosition: hiddenPositionLlmSchema.nullable(),
-  alternative: z.string(),
-});
+export const pass6OutputSchema = z
+  .object({
+    selectedHypothesisId: z.string(),
+
+    forkResolutions: z
+      .array(forkResolutionSchema)
+      .min(1),
+
+    finalFormulation:
+      finalFormulationSchema,
+
+    hiddenPosition:
+      hiddenPositionLlmSchema.nullable(),
+
+    alternative: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.finalFormulation
+        .selectedHypothesisId !==
+      value.selectedHypothesisId
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: [
+          "finalFormulation",
+          "selectedHypothesisId",
+        ],
+        message:
+          "finalFormulation.selectedHypothesisId must match selectedHypothesisId",
+      });
+    }
+
+    const unresolvedFromForks =
+      value.forkResolutions
+        .filter(
+          (fork) =>
+            fork.status === "unresolved" ||
+            fork.status === "both",
+        )
+        .map((fork) => fork.forkId);
+
+    for (
+      const forkId
+      of value.finalFormulation
+        .unresolvedForks
+    ) {
+      if (
+        !unresolvedFromForks.includes(
+          forkId,
+        )
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: [
+            "finalFormulation",
+            "unresolvedForks",
+          ],
+          message:
+            `Unresolved fork ${forkId} must have status unresolved or both in forkResolutions`,
+        });
+      }
+    }
+  });
 
 export const pass7OutputSchema = z
   .object({

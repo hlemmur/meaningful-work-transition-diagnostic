@@ -46,14 +46,14 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
     detail: "Report must not collapse development to senex-scold / grind-only.",
   },
   {
-    id: "magician-feed",
+    id: "authorizing-certainty",
     re: /this report (finally )?proves you (are|were) legitimate/i,
-    detail: "Report must not feed Magician hunger with authorizing certainty.",
+    detail: "Report must not replace inquiry with authorizing certainty.",
   },
 ];
 
 const POLARITY_LANGUAGE = /polarity|enantiodromia|\bboth\b|compensation/i;
-const CHARGE_LANGUAGE = /shame|terror|freeze|chest|throat|body|charge/i;
+const CHARGE_LANGUAGE = /shame|fear|terror|anxiety|freeze|emotion|chest|throat|body|charge/i;
 
 function finding(id: string, passed: boolean, detail: string): RubricFinding {
   return { id, passed, detail };
@@ -180,8 +180,8 @@ export function evaluateReport(input: {
         "charge-language",
         hasCharge,
         hasCharge
-          ? "Peel includes charge/body language where affect is indicated."
-          : "Affect is indicated in CaseState but peel lacks charge/body language.",
+          ? "Peel includes supplied emotion, charge, or somatic language where affect is indicated."
+          : "Affect is indicated in CaseState but the report lacks corresponding emotion or charge language.",
       ),
     );
   }

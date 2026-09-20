@@ -11,16 +11,33 @@ import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { mockLlmAdapter } from "@/server/adapters/openai/mock";
+import type { LlmAdapter } from "@/server/adapters/types";
 import { executeAnalysis } from "@/engine/pipeline/run";
 import { buildScoreableArtifact } from "./persist-artifact";
 import { evaluateFrameworkFidelity } from "./framework-fidelity";
 
 const originAnswers = JSON.parse(
   readFileSync(
-    join(__dirname, "../engine/pipeline/fixtures/origin-case-answers.json"),
+    join(__dirname, "../engine/test-support/fixtures/origin-case-answers.json"),
     "utf8",
   ),
 ) as Record<string, unknown>;
+
+function llmForFixture(
+  fixture: "origin-gold",
+): LlmAdapter {
+  return {
+    async completeStructured(request) {
+      return mockLlmAdapter.completeStructured({
+        ...request,
+        input: {
+          ...request.input,
+          fixture,
+        },
+      });
+    },
+  };
+}
 
 describe("generate sample eval artifact", () => {
   it("writes redacted origin-gold mock artifact for CI scorecard", async () => {
@@ -30,8 +47,7 @@ describe("generate sample eval artifact", () => {
       assessmentId: "sample-origin",
       answers,
       completedStages: [],
-      llm: mockLlmAdapter,
-      fixture: "origin-gold",
+      llm: llmForFixture("origin-gold"),
       persistRun() {},
       persistCaseState() {},
     });
