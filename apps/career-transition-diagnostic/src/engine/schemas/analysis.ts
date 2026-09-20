@@ -159,10 +159,48 @@ export const forkResolutionSchema = z.object({
   reportWorthiness: z.boolean(),
 });
 
-export const finalFormulationSchema = z.object({
+export const maintenanceMechanismSchema = z.object({
+  trigger: z.string().trim().min(1),
+  response: z.string().trim().min(1),
+  shortTermFunction: z.string().trim().min(1),
+  longTermCost: z.string().trim().min(1),
+  reinforcingConsequence: z.string().trim().min(1),
+});
+
+export const developmentalFormulationSchema = z
+  .object({
+    consciousPole: z.string().trim().min(1),
+    compensatingPole: z.string().trim().min(1),
+    coreOpposition: z.string().trim().min(1),
+    possibleDevelopmentalTask: z.string().trim().min(1),
+    possibleThird: z.string().trim().min(1).optional(),
+    uncertainty: z.string().trim().min(1),
+    evidenceRefs: z.array(z.string()).min(2),
+  })
+  .superRefine((value, ctx) => {
+    const domains = new Set(
+      value.evidenceRefs.flatMap((ref) => {
+        const match = ref.match(/:Q(\d+)(?:\.|$)/);
+        return match ? [match[1]] : [];
+      }),
+    );
+    if (domains.size < 2) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidenceRefs"],
+        message: "developmentalFormulation requires evidence from at least two questionnaire domains",
+      });
+    }
+  });
+
+export const currentFinalFormulationSchema = z.object({
   selectedHypothesisId: z.string(),
 
-  centralFormulation: z.string(),
+  maintenanceFormulation: z.string().trim().min(1),
+
+  maintenanceMechanism: maintenanceMechanismSchema,
+
+  developmentalFormulation: developmentalFormulationSchema.optional(),
 
   whyItFits: z.array(z.string()),
 
@@ -172,6 +210,34 @@ export const finalFormulationSchema = z.object({
 
   unresolvedForks: z.array(forkIdSchema),
 });
+
+const LEGACY_NOT_RECORDED = "Not recorded in the legacy formulation.";
+
+/** Accept persisted engine.v2 formulations and normalize them to the current shape. */
+export const finalFormulationSchema = z.preprocess((input) => {
+  if (!input || typeof input !== "object") {
+    return input;
+  }
+  const value = input as Record<string, unknown>;
+  if (typeof value.maintenanceFormulation === "string") {
+    return value;
+  }
+  if (typeof value.centralFormulation !== "string") {
+    return value;
+  }
+  return {
+    ...value,
+    maintenanceFormulation: value.centralFormulation,
+    maintenanceMechanism: {
+      trigger: LEGACY_NOT_RECORDED,
+      response: value.centralFormulation,
+      shortTermFunction: LEGACY_NOT_RECORDED,
+      longTermCost: LEGACY_NOT_RECORDED,
+      reinforcingConsequence: LEGACY_NOT_RECORDED,
+    },
+    centralFormulation: undefined,
+  };
+}, currentFinalFormulationSchema);
 
 /** Pass6 LLM contract: when hidden is present, aim is required. */
 export const hiddenPositionLlmSchema = hiddenPositionSchema.extend({
@@ -246,6 +312,7 @@ export const reportSectionIdSchema = z.enum([
   "reality",
   "contradiction",
   "hidden",
+  "developmental",
   "alternative",
   "experiment",
   "jungian",

@@ -21,7 +21,7 @@ function expectMentions(text: string, needles: string[]) {
 describe("promptRegistry contracts", () => {
   it("bumps every stub off v1 and names a JSON contract", () => {
     for (const [key, prompt] of Object.entries(promptRegistry)) {
-      expect(prompt.version, key).toMatch(/\.v[2-9]\d*$/);
+      expect(prompt.version, key).toMatch(/\.v(?:[2-9]|\d{2,})$/);
       expect(prompt.text.length, key).toBeGreaterThan(200);
       expect(prompt.text, key).toMatch(/empty arrays? are valid/i);
     }
@@ -114,7 +114,10 @@ expectMentions(promptRegistry.pass6.text, [
   "unresolved",
   "not_relevant",
   "finalFormulation",
-  "centralFormulation",
+  "maintenanceFormulation",
+  "maintenanceMechanism",
+  "developmentalFormulation",
+  "at least two",
   "whyItFits",
   "whatItDoesNotExplain",
   "strongestAlternative",
@@ -171,7 +174,9 @@ expectMentions(promptRegistry.pass8.text, [
       "possibleCompensatoryAim",
       "finalFormulation",
       "selectedHypothesisId",
-      "centralFormulation",
+      "maintenanceFormulation",
+      "developmentalFormulation",
+      "The developmental tension",
       "whyItFits",
       "whatItDoesNotExplain",
       "strongestAlternative",
@@ -186,7 +191,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v9");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v10");
 
     expect(promptRegistry.pass9.text).toMatch(
       /never generate.*reply|second turn of dialogue|new speech/i,
@@ -211,7 +216,9 @@ expectMentions(promptRegistry.pass8.text, [
       "requiredTitles",
       "possibleCompensatoryAim",
       "finalFormulation",
-      "centralFormulation",
+      "maintenanceFormulation",
+      "maintenanceMechanism",
+      "developmentalFormulation",
       "strongestAlternative",
       "whatItDoesNotExplain",
       "unresolvedForks",
@@ -241,7 +248,7 @@ expectMentions(promptRegistry.pass8.text, [
       /you are a puer\/senex|archetypal identity/i,
     );
 
-    expect(promptRegistry.pass10.version).toBe("pass-10.v9");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v10");
     expect(promptRegistry.pass8.version).toBe("pass-8.v5");
   });
 });

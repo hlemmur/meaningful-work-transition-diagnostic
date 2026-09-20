@@ -57,7 +57,14 @@ function resolutionOutput(
     ],
     finalFormulation: {
       selectedHypothesisId,
-      centralFormulation: "Synthetic formulation.",
+      maintenanceFormulation: "Synthetic formulation.",
+      maintenanceMechanism: {
+        trigger: "A next step becomes concrete.",
+        response: "Action is deferred.",
+        shortTermFunction: "Avoids premature commitment.",
+        longTermCost: "No new evidence accumulates.",
+        reinforcingConsequence: "Uncertainty therefore persists.",
+      },
       whyItFits: ["Synthetic reason."],
       whatItDoesNotExplain: ["Synthetic limitation."],
       strongestAlternative: "Synthetic alternative.",
@@ -114,6 +121,45 @@ describe("applyImageVotes", () => {
 });
 
 describe("applyResolution", () => {
+  it("drops developmental formulation when a practical hypothesis is selected", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [
+      hypothesisSchema.parse({
+        ...hypothesis("hyp-practical"),
+        category: "practical",
+      }),
+    ];
+    const output = resolutionOutput("hyp-practical");
+    output.finalFormulation.developmentalFormulation = {
+      consciousPole: "Freedom",
+      compensatingPole: "Commitment",
+      coreOpposition: "Freedom versus commitment",
+      possibleDevelopmentalTask: "Try chosen structure.",
+      uncertainty: "The practical explanation may be sufficient.",
+      evidenceRefs: ["a1:Q2.1", "a1:Q6.1"],
+    };
+
+    const resolved = applyResolution(state, output);
+
+    expect(resolved.finalFormulation?.developmentalFormulation).toBeUndefined();
+  });
+
+  it("rejects developmental evidence refs that are not present in the case", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+    state.openForks = ["history_vs_stated_cause"];
+    const output = resolutionOutput("hyp-live");
+    output.finalFormulation.developmentalFormulation = {
+      consciousPole: "Freedom",
+      compensatingPole: "Commitment",
+      coreOpposition: "Freedom versus commitment",
+      possibleDevelopmentalTask: "Try chosen structure.",
+      uncertainty: "A job-shape mismatch may suffice.",
+      evidenceRefs: ["a1:Q98.1", "a1:Q99.1"],
+    };
+
+    expect(() => applyResolution(state, output)).toThrow(/developmental.*evidence/i);
+  });
   it("rejects a final formulation that selects a nonexistent hypothesis", () => {
     const state = emptyCaseState("a1");
     state.hypotheses = [hypothesis("hyp-live")];

@@ -22,6 +22,7 @@ import {
   senexScoldOnly,
   somaticProvenance,
   questionsAndCloseAdequate,
+  developmentalSectionAdequate,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -42,6 +43,46 @@ function section(
 }
 
 describe("pipeline gates", () => {
+  it("requires a developmental report section only when a developmental formulation survived", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q2.1": "I want freedom.",
+      "Q6.1": "I admire people who commit.",
+    });
+    state.finalFormulation = {
+      selectedHypothesisId: "hyp-1",
+      maintenanceFormulation: "Waiting for certainty sustains delay.",
+      maintenanceMechanism: {
+        trigger: "A choice becomes concrete.",
+        response: "Commitment is deferred.",
+        shortTermFunction: "Preserves options.",
+        longTermCost: "Evidence does not accumulate.",
+        reinforcingConsequence: "Uncertainty persists.",
+      },
+      developmentalFormulation: {
+        consciousPole: "Freedom",
+        compensatingPole: "Commitment",
+        coreOpposition: "Freedom versus commitment",
+        possibleDevelopmentalTask: "Try chosen structure.",
+        uncertainty: "A job-shape mismatch may suffice.",
+        evidenceRefs: ["a1:Q2.1", "a1:Q6.1"],
+      },
+      whyItFits: ["a1:Q2.1", "a1:Q6.1"],
+      whatItDoesNotExplain: [],
+      strongestAlternative: "Job-shape mismatch.",
+      unresolvedForks: [],
+    };
+
+    expect(developmentalSectionAdequate([], state).passed).toBe(false);
+    expect(
+      developmentalSectionAdequate(
+        [section("developmental", "A possible tension.", ["a1:Q2.1", "a1:Q6.1"])],
+        state,
+      ).passed,
+    ).toBe(true);
+
+    state.finalFormulation.developmentalFormulation = undefined;
+    expect(developmentalSectionAdequate([], state).passed).toBe(true);
+  });
   it("detects Q11.3 paraphrases", () => {
     const insight = "I hope it shows me some sharp angles that I can't unsee";
     expect(

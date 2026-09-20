@@ -905,10 +905,22 @@ function finalFormulationFor(
     selectedHypothesisId:
       selected.id,
 
-    centralFormulation:
+    maintenanceFormulation:
       fixture === "critic-constraints-win"
         ? "The current stall may be sufficiently explained by practical constraints and missing infrastructure."
         : selected.observedPattern,
+
+    maintenanceMechanism: {
+      trigger: "A concrete next step or self-directed work period begins.",
+      response: fixture === "critic-constraints-win"
+        ? "Action narrows around the available practical constraints."
+        : "The next step is deferred while more certainty or external structure is sought.",
+      shortTermFunction: fixture === "critic-constraints-win"
+        ? "Conserves limited resources."
+        : "Avoids premature commitment and exposure.",
+      longTermCost: "Direct evidence about fit and capacity accumulates slowly.",
+      reinforcingConsequence: "Limited new evidence leaves the original uncertainty intact.",
+    },
 
     whyItFits:
       selected.evidenceFor.length

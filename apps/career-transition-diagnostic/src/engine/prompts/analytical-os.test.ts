@@ -73,6 +73,7 @@ describe("analytical OS contracts", () => {
     expect(passCardFor("pass6")).toMatch(
       /finalFormulation|unresolved|strongest live alternative/i,
     );
+    expect(passCardFor("pass6")).toMatch(/maintenance.*developmental/i);
 
     expect(passCardFor("pass7")).toMatch(
       /0–3|0-3/i,

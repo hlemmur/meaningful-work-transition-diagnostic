@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   contradictionSchema,
   experimentSchema,
-  finalFormulationSchema,
+  currentFinalFormulationSchema,
   forkResolutionSchema,
   hiddenPositionLlmSchema,
   hypothesisCritiqueSchema,
@@ -55,7 +55,7 @@ export const pass6OutputSchema = z
       .min(1),
 
     finalFormulation:
-      finalFormulationSchema,
+      currentFinalFormulationSchema,
 
     hiddenPosition:
       hiddenPositionLlmSchema.nullable(),
@@ -154,6 +154,22 @@ export const pass9OutputSchema = z.object({
           code: "custom",
           message: `Report evidenceRefs must cite at least ${MIN_DISTINCT_EVIDENCE_QUESTION_IDS} distinct question ids`,
         });
+      }
+      const order = [
+        "problem", "reality", "contradiction", "hidden", "developmental",
+        "alternative", "experiment", "jungian", "questions", "close",
+      ];
+      let previous = -1;
+      for (const section of sections) {
+        const current = order.indexOf(section.id);
+        if (current <= previous) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Report section ${section.id} is out of peel order`,
+          });
+          break;
+        }
+        previous = current;
       }
     }),
 });

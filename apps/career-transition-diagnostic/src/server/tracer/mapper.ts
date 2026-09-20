@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { AnalysisRunRecord } from "@/engine/pipeline/run";
 import type { AnalysisStage } from "@/engine/pipeline/models";
-import type { CaseState } from "@/engine/schemas/case-state";
+import { caseStateSchema } from "@/engine/schemas/case-state";
 import type { ForkId } from "@/engine/schemas/analysis";
 import type { Report } from "@/engine/schemas/analysis";
 import {
@@ -272,7 +272,7 @@ export function tablesToStore(tables: TracerTables): TracerStore {
     store.caseStateVersions.push({
       assessmentId: String(row.assessment_id),
       stage: String(row.stage),
-      snapshot: row.snapshot as CaseState,
+      snapshot: caseStateSchema.parse(row.snapshot),
       createdAt: String(row.created_at),
     });
   }

@@ -587,11 +587,19 @@ export function buildCaseSnapshot(input: {
           caseState.finalFormulation
             .selectedHypothesisId,
 
-        centralFormulation:
+        maintenanceFormulation:
           trimText(
             caseState.finalFormulation
-              .centralFormulation,
+              .maintenanceFormulation,
           ),
+
+        maintenanceMechanism:
+          caseState.finalFormulation
+            .maintenanceMechanism,
+
+        developmentalFormulation:
+          caseState.finalFormulation
+            .developmentalFormulation,
 
         whyItFits:
           caseState.finalFormulation
