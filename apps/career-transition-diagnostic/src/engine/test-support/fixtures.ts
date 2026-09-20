@@ -946,7 +946,7 @@ export function passOutputFor(
       preferredHypothesisId?: string;
     };
     evidenceAllowlist?: string[];
-    requiresImageCitation?: boolean;
+    imageEvidenceRefs?: string[];
   },
 ) {
   if (fixture === "schema-fail" && stage === "pass3") {
@@ -1064,16 +1064,9 @@ export function passOutputFor(
     case "pass5": {
       const weakens = fixture === "image-weakens";
       const richInsufficient = fixture === "image-insufficient-rich";
+      const imageEvidenceRefs = ctx.imageEvidenceRefs ?? [];
       const citesImage =
-        !richInsufficient &&
-        (ctx.requiresImageCitation === true ||
-          fixture === "origin-gold" ||
-          fixture === "image-starved-peel" ||
-          fixture === "projection-starved-peel" ||
-          fixture === "money-starved-peel" ||
-          fixture === "clinical-voice-peel" ||
-          fixture === "speech-without-imaginal" ||
-          fixture === "non-origin-soft-mini");
+        !richInsufficient && imageEvidenceRefs.length > 0;
       return {
         votes: [
           imageVoteSchema.parse({
@@ -1091,19 +1084,9 @@ export function passOutputFor(
                 ? "The supplied threshold image is compatible with the container/authorization hypothesis."
                 : "The supplied symbolic material is too thin to constrain the hypothesis.",
           
-            evidenceRefs: citesImage
-              ? [
-                  `${ctx.assessmentId}:Q10.1`,
-                  `${ctx.assessmentId}:Q10.6`,
-                ]
-              : [ctx.evidenceRef],
+            evidenceRefs: citesImage ? imageEvidenceRefs : [ctx.evidenceRef],
           
-            exactClientMaterialUsed: citesImage
-              ? [
-                  `${ctx.assessmentId}:Q10.1`,
-                  `${ctx.assessmentId}:Q10.6`,
-                ]
-              : [],
+            exactClientMaterialUsed: citesImage ? imageEvidenceRefs : [],
           }),
           imageVoteSchema.parse({
             hypothesisId: practical.id,
@@ -1120,16 +1103,9 @@ export function passOutputFor(
                 ? "The image does not eliminate the practical explanation."
                 : "There is not enough symbolic material to constrain the practical hypothesis.",
           
-            evidenceRefs: citesImage
-              ? [
-                  `${ctx.assessmentId}:Q0.5`,
-                  `${ctx.assessmentId}:Q10.1`,
-                ]
-              : [ctx.evidenceRef],
+            evidenceRefs: citesImage ? imageEvidenceRefs : [ctx.evidenceRef],
           
-            exactClientMaterialUsed: citesImage
-              ? [`${ctx.assessmentId}:Q10.1`]
-              : [],
+            exactClientMaterialUsed: citesImage ? imageEvidenceRefs : [],
           }),
         ],
         overallNote: weakens

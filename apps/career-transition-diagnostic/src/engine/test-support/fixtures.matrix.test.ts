@@ -77,6 +77,11 @@ describe("negative and positive mock fixtures", () => {
         }),
       ]),
     );
+    const allowedImageRefs = new Set(["fx-1:Q10.1", "fx-1:Q10.2"]);
+    for (const vote of result.caseState.imageVotes) {
+      expect(vote.evidenceRefs.every((ref) => allowedImageRefs.has(ref))).toBe(true);
+      expect(vote.exactClientMaterialUsed.every((ref) => allowedImageRefs.has(ref))).toBe(true);
+    }
   });
 
   it("binds default pass8 output to the preferred caseSnapshot hypothesis id", async () => {

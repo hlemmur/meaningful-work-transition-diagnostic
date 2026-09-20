@@ -99,6 +99,7 @@ export const mockLlmAdapter: LlmAdapter = {
             requiredCitations?: {
               image?: {
                 mustAppearInReport?: boolean;
+                refs?: string[];
               } | null;
             };
             experimentBindings?: {
@@ -128,8 +129,12 @@ export const mockLlmAdapter: LlmAdapter = {
           draftReport,
           experimentBindings: caseSnapshot?.experimentBindings,
           evidenceAllowlist: caseSnapshot?.evidenceAllowlist,
-          requiresImageCitation:
-            caseSnapshot?.requiredCitations?.image?.mustAppearInReport === true,
+          imageEvidenceRefs:
+            caseSnapshot?.requiredCitations?.image?.mustAppearInReport === true
+              ? (caseSnapshot.requiredCitations.image.refs ?? []).filter((ref) =>
+                  caseSnapshot.evidenceAllowlist?.includes(ref),
+                )
+              : [],
         }),
         model,
         usage: {
