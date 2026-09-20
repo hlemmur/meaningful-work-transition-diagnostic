@@ -96,6 +96,11 @@ export const mockLlmAdapter: LlmAdapter = {
       const caseSnapshot = input.caseSnapshot as
         | {
             evidenceAllowlist?: string[];
+            requiredCitations?: {
+              image?: {
+                mustAppearInReport?: boolean;
+              } | null;
+            };
             experimentBindings?: {
               hypothesisIds: string[];
               openForkIds: string[];
@@ -123,6 +128,8 @@ export const mockLlmAdapter: LlmAdapter = {
           draftReport,
           experimentBindings: caseSnapshot?.experimentBindings,
           evidenceAllowlist: caseSnapshot?.evidenceAllowlist,
+          requiresImageCitation:
+            caseSnapshot?.requiredCitations?.image?.mustAppearInReport === true,
         }),
         model,
         usage: {

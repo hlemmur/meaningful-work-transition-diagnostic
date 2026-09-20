@@ -62,6 +62,23 @@ async function runFixture(
 }
 
 describe("negative and positive mock fixtures", () => {
+  it("completes the default mock pipeline when rich image material requires a substantive vote", async () => {
+    const result = await runFixture("default", {
+      "Q10.1": "A fictional traveler stands at a locked garden gate.",
+      "Q10.2": "Cold trees and a visible path surround the gate.",
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.caseState.imageVotes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          hypothesisId: "hyp-depth",
+          verdict: "supports",
+        }),
+      ]),
+    );
+  });
+
   it("binds default pass8 output to the preferred caseSnapshot hypothesis id", async () => {
     const result = await mockLlmAdapter.completeStructured({
       stage: "pass8",

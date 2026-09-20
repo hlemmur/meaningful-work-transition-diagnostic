@@ -946,6 +946,7 @@ export function passOutputFor(
       preferredHypothesisId?: string;
     };
     evidenceAllowlist?: string[];
+    requiresImageCitation?: boolean;
   },
 ) {
   if (fixture === "schema-fail" && stage === "pass3") {
@@ -1064,13 +1065,15 @@ export function passOutputFor(
       const weakens = fixture === "image-weakens";
       const richInsufficient = fixture === "image-insufficient-rich";
       const citesImage =
-        fixture === "origin-gold" ||
-        fixture === "image-starved-peel" ||
-        fixture === "projection-starved-peel" ||
-        fixture === "money-starved-peel" ||
-        fixture === "clinical-voice-peel" ||
-        fixture === "speech-without-imaginal" ||
-        fixture === "non-origin-soft-mini";
+        !richInsufficient &&
+        (ctx.requiresImageCitation === true ||
+          fixture === "origin-gold" ||
+          fixture === "image-starved-peel" ||
+          fixture === "projection-starved-peel" ||
+          fixture === "money-starved-peel" ||
+          fixture === "clinical-voice-peel" ||
+          fixture === "speech-without-imaginal" ||
+          fixture === "non-origin-soft-mini");
       return {
         votes: [
           imageVoteSchema.parse({
