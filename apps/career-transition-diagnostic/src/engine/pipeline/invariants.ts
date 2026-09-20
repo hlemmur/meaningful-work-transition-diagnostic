@@ -453,7 +453,7 @@ const selectedIsPractical =
   }
 
   const maintainingLoop = state.finalFormulation.maintainingLoop;
-  if (maintainingLoop && !selectedIsPractical) {
+  if (maintainingLoop) {
     const knownEvidence = new Set(collectCanonicalEvidenceIds(state));
     const invalidRefs = maintainingLoop.evidenceRefs.filter(
       (ref) => !knownEvidence.has(ref),

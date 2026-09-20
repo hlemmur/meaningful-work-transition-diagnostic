@@ -56,6 +56,29 @@ describe("finalFormulationSchema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("rejects duplicate maintaining-loop evidence refs", () => {
+    const result = finalFormulationSchema.safeParse({
+      selectedHypothesisId: "hyp-1",
+      maintenanceFormulation: "Seeking certainty keeps action suspended.",
+      maintenanceMechanism: mechanism,
+      maintainingLoop: {
+        goal: "Choose meaningful work.",
+        trigger: "A concrete option appears.",
+        response: "Action is delayed.",
+        payoff: "Options remain open.",
+        cost: "No evidence accumulates.",
+        selfConfirmingResult: "More certainty feels necessary.",
+        evidenceRefs: ["a:Q2.1", "a:Q2.1"],
+      },
+      whyItFits: ["a:Q2.1"],
+      whatItDoesNotExplain: [],
+      strongestAlternative: "Job-shape mismatch.",
+      unresolvedForks: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
   it("normalizes a legacy central formulation without losing its wording", () => {
     const parsed = finalFormulationSchema.parse({
       selectedHypothesisId: "hyp-1",

@@ -203,6 +203,29 @@ describe("applyResolution", () => {
 
     expect(() => applyResolution(state, output)).toThrow(/maintaining loop.*evidence/i);
   });
+
+  it("rejects invented loop evidence before omitting a practical loop", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [
+      hypothesisSchema.parse({
+        ...hypothesis("hyp-practical"),
+        category: "practical",
+      }),
+    ];
+    state.openForks = ["history_vs_stated_cause"];
+    const output = resolutionOutput("hyp-practical");
+    output.finalFormulation.maintainingLoop = {
+      goal: "Find work.",
+      trigger: "A listing appears.",
+      response: "Apply.",
+      payoff: "A chance of work.",
+      cost: "Time spent.",
+      selfConfirmingResult: "Market feedback remains weak.",
+      evidenceRefs: ["a1:Q98.1", "a1:Q99.1"],
+    };
+
+    expect(() => applyResolution(state, output)).toThrow(/maintaining loop.*evidence/i);
+  });
   it("rejects a final formulation that selects a nonexistent hypothesis", () => {
     const state = emptyCaseState("a1");
     state.hypotheses = [hypothesis("hyp-live")];
