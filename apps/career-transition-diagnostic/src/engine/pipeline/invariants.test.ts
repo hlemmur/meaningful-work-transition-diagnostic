@@ -143,6 +143,23 @@ describe("applyResolution", () => {
 
     expect(resolved.finalFormulation?.developmentalFormulation).toBeUndefined();
   });
+
+  it("rejects developmental evidence refs that are not present in the case", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+    state.openForks = ["history_vs_stated_cause"];
+    const output = resolutionOutput("hyp-live");
+    output.finalFormulation.developmentalFormulation = {
+      consciousPole: "Freedom",
+      compensatingPole: "Commitment",
+      coreOpposition: "Freedom versus commitment",
+      possibleDevelopmentalTask: "Try chosen structure.",
+      uncertainty: "A job-shape mismatch may suffice.",
+      evidenceRefs: ["a1:Q98.1", "a1:Q99.1"],
+    };
+
+    expect(() => applyResolution(state, output)).toThrow(/developmental.*evidence/i);
+  });
   it("rejects a final formulation that selects a nonexistent hypothesis", () => {
     const state = emptyCaseState("a1");
     state.hypotheses = [hypothesis("hyp-live")];

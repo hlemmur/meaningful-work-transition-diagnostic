@@ -2,6 +2,7 @@ import type { CaseState } from "../schemas/case-state";
 import type { Hypothesis, HypothesisCritique, ReportSection } from "../schemas/analysis";
 import type { pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
 import { collectCanonicalEvidenceIds } from "./evidence-ids";
+import { questions } from "@/questionnaire/questionnaire.v2";
 import {
   CANONICAL_PEEL_TITLES,
   imageVoteAdequate,
@@ -11,6 +12,9 @@ import {
 import type { z } from "zod";
 
 const PRACTICAL_CATEGORIES = new Set(["practical", "economic", "occupational"]);
+const QUESTION_SECTION_BY_ID = new Map(
+  questions.map((question) => [question.id, question.section]),
+);
 
 function clamp01(value: number) {
   return Math.max(
@@ -420,6 +424,33 @@ const selectedIsPractical =
   PRACTICAL_CATEGORIES.has(
     selectedHypothesis.category,
   );
+
+  const developmental = state.finalFormulation.developmentalFormulation;
+  if (developmental && !selectedIsPractical) {
+    const knownEvidence = new Set(collectCanonicalEvidenceIds(state));
+    const invalidRefs = developmental.evidenceRefs.filter(
+      (ref) => !knownEvidence.has(ref),
+    );
+    const sections = new Set(
+      developmental.evidenceRefs.flatMap((ref) => {
+        const questionId = ref.match(/:([^:]+)$/)?.[1];
+        const section = questionId
+          ? QUESTION_SECTION_BY_ID.get(questionId)
+          : undefined;
+        return section === undefined ? [] : [section];
+      }),
+    );
+    if (invalidRefs.length > 0 || sections.size < 2) {
+      throwGate({
+        id: "developmental-evidence",
+        passed: false,
+        detail:
+          invalidRefs.length > 0
+            ? `Developmental formulation cites evidence outside the current case: ${invalidRefs.join(", ")}.`
+            : "Developmental formulation requires evidence from at least two questionnaire sections.",
+      });
+    }
+  }
 
   if (selectedIsPractical && state.finalFormulation.developmentalFormulation) {
     state.finalFormulation = {
