@@ -487,6 +487,7 @@ export const CANONICAL_PEEL_TITLES: Record<string, string> = {
   reality: "What reality says",
   contradiction: "The contradiction at the center",
   hidden: "A possible hidden position",
+  developmental: "The developmental tension",
   alternative: "Another plausible interpretation",
   experiment: "Your experiment",
   jungian: "A Jungian lens",
@@ -503,6 +504,7 @@ const PLAIN_TITLE_BY_ID: Record<string, RegExp> = {
   reality: /^(what )?reality( says)?$/i,
   contradiction: /^(the )?contradiction( at the center)?$/i,
   hidden: /^(the |a )?(possible )?hidden( position)?$/i,
+  developmental: /^(the )?developmental tension$/i,
   alternative: /^(the |another )?(plausible )?interpretation$|^(the )?alternative$/i,
   experiment: /^(the |your )?experiment$/i,
   jungian: /^(the |a )?jungian lens$/i,
@@ -519,6 +521,7 @@ const INTERPRETIVE_SECTION_IDS = new Set([
   "reality",
   "contradiction",
   "hidden",
+  "developmental",
   "alternative",
   "jungian",
 ]);
@@ -756,6 +759,26 @@ export function questionsAndCloseAdequate(
   };
 }
 
+export function developmentalSectionAdequate(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const required = Boolean(
+    state.finalFormulation?.developmentalFormulation,
+  );
+  const present = sections.some(
+    (section) => section.id === "developmental",
+  );
+  return {
+    id: "developmental-section",
+    passed: !required || present,
+    detail:
+      required && !present
+        ? "A surviving developmental formulation requires the developmental report section."
+        : "Developmental report section matches the resolved formulation.",
+  };
+}
+
 const PROTECTION_PEEL = /protect|protective|keeps|shield|bargain|benefit of staying/i;
 const AIM_PEEL = /aim|develop|compensatory|growth|emerg|asking you to/i;
 const INFLATION_DIAGNOSIS =
@@ -902,6 +925,10 @@ export function antiInflationDiagnosis(text: string): GateFinding {
 
 /** Hard peel gates shared by pass9 and post-pass10 merge. */
 export function assertPeelHardGates(sections: ReportSection[], state: CaseState): void {
+  const developmental = developmentalSectionAdequate(sections, state);
+  if (!developmental.passed) {
+    throwGate(developmental);
+  }
   const layers = reportLayerCoverage(sections, state);
   if (!layers.passed) {
     throwGate(layers);

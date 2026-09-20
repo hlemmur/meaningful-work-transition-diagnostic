@@ -421,6 +421,17 @@ const selectedIsPractical =
     selectedHypothesis.category,
   );
 
+  if (selectedIsPractical && state.finalFormulation.developmentalFormulation) {
+    state.finalFormulation = {
+      ...state.finalFormulation,
+      developmentalFormulation: undefined,
+    };
+    state.gateRemediations = [
+      ...(state.gateRemediations ?? []),
+      "Dropped developmentalFormulation because the selected hypothesis is practical, economic, or occupational.",
+    ];
+  }
+
   const paraphrasesInsight =
     Boolean(requested) &&
     Boolean(output.hiddenPosition) &&
@@ -477,6 +488,12 @@ export function sanitizeReportSections(
         return false;
       }
       if ((section.id === "hidden" || /hidden position/i.test(section.title)) && !state.hiddenPosition) {
+        return false;
+      }
+      if (
+        (section.id === "developmental" || /developmental tension/i.test(section.title)) &&
+        !state.finalFormulation?.developmentalFormulation
+      ) {
         return false;
       }
       return true;

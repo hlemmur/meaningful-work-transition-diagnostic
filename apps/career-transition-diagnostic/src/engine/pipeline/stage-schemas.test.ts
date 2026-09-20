@@ -32,8 +32,15 @@ const pass6Base = {
 
   finalFormulation: {
     selectedHypothesisId: "hyp-depth",
-    centralFormulation:
+    maintenanceFormulation:
       "The stall may involve more than a practical constraint.",
+    maintenanceMechanism: {
+      trigger: "A next step becomes concrete.",
+      response: "Action is deferred.",
+      shortTermFunction: "Avoids premature commitment.",
+      longTermCost: "No new evidence accumulates.",
+      reinforcingConsequence: "Uncertainty therefore persists.",
+    },
     whyItFits: [
       "The pattern recurs alongside the stated desire.",
     ],
@@ -169,6 +176,28 @@ describe("pass9OutputSchema", () => {
       })),
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("requires developmental to appear after hidden and before alternative", () => {
+    const sections: Array<{
+      id: string;
+      title: string;
+      body: string;
+      evidenceRefs: string[];
+    }> = REQUIRED_PEEL_SECTION_IDS.map((id, index) => ({
+      id,
+      title: id,
+      body: "A concrete evidence-backed paragraph about the stall.",
+      evidenceRefs: [`a1:Q${index + 1}.1`],
+    }));
+    sections.splice(2, 0, {
+      id: "developmental",
+      title: "The developmental tension",
+      body: "A tentative opposition grounded in recurring evidence.",
+      evidenceRefs: ["a1:Q2.1", "a1:Q6.1"],
+    });
+
+    expect(pass9OutputSchema.safeParse({ sections }).success).toBe(false);
   });
 
   it("rejects a report that cites only one question id across all sections", () => {
