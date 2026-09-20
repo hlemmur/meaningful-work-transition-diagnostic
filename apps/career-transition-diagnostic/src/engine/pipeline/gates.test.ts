@@ -17,10 +17,15 @@ import {
   protectionAndAimInPeel,
   imaginalWhenSpeech,
   antiInflationDiagnosis,
+  experimentBoundToHypothesis,
+  imageVoteAdequate,
+  senexScoldOnly,
+  somaticProvenance,
+  questionsAndCloseAdequate,
 } from "./gates";
 
 const originAnswers = JSON.parse(
-  readFileSync(join(__dirname, "fixtures/origin-case-answers.json"), "utf8"),
+  readFileSync(join(__dirname, "../test-support/fixtures/origin-case-answers.json"), "utf8"),
 ) as Record<string, unknown>;
 
 function section(
@@ -72,18 +77,475 @@ describe("pipeline gates", () => {
   });
 });
 
+describe("experiment binding gate", () => {
+  function experimentState() {
+    const state = extractCaseStateFull("exp", {
+      "Q1.1": "I keep stalling.",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-structure",
+        title: "Missing structure",
+        category: "structural",
+
+        observedPattern:
+          "Action drops when external structure disappears.",
+
+        evidenceFor: ["exp:Q1.1"],
+        evidenceAgainst: [],
+
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+
+        simplerAlternatives: [
+          "The stall may mainly reflect missing business skill.",
+        ],
+
+        missingInformation: [],
+
+        originForks: [
+          "container_loss_vs_capacity",
+        ],
+
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.8,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+
+        confidence: "moderate",
+      },
+      {
+        id: "hyp-skill",
+        title: "Skill gap",
+        category: "practical",
+
+        observedPattern:
+          "The person has limited experience with this task.",
+
+        evidenceFor: ["exp:Q1.1"],
+        evidenceAgainst: [],
+
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+
+        simplerAlternatives: [],
+
+        missingInformation: [],
+
+        originForks: [
+          "container_loss_vs_capacity",
+        ],
+
+        scoring: {
+          evidenceCoverage: 0.6,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.6,
+          personSpecificity: 0.5,
+          developmentalFit: 0.3,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0,
+        },
+
+        confidence: "moderate",
+      },
+    ];
+
+    state.openForks = [
+      "container_loss_vs_capacity",
+    ];
+
+    return state;
+  }
+
+  it("allows recognizable legacy prose binding for persisted experiments", () => {
+    const state = experimentState();
+
+    const legacyExperiments = [
+      {
+        kind: "behavioral",
+        title: "Legacy structure test",
+        hypothesisTested:
+          "Missing structure may explain the stall",
+        action:
+          "Add external accountability.",
+        duration: "1 week",
+        whatToObserve: [
+          "Whether execution changes.",
+        ],
+        resultSupportingHypothesis:
+          "Execution improves.",
+        resultWeakeningHypothesis:
+          "Execution stays unchanged.",
+        riskLevel: "low",
+        practicalRequirements: [],
+      },
+    ];
+
+    expect(
+      experimentBoundToHypothesis(
+        state,
+        legacyExperiments,
+      ).passed,
+    ).toBe(true);
+
+  });
+  it("passes when hypothesisTested exactly matches a live hypothesis id", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Structure test",
+        hypothesisTested: "hyp-structure",
+        action:
+          "Add external accountability while leaving the task unchanged.",
+        duration: "2 weeks",
+        whatToObserve:
+          ["Whether execution changes under added structure."],
+        resultSupportingHypothesis:
+          "Execution improves materially.",
+        resultWeakeningHypothesis:
+          "Execution remains unchanged.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: ["hyp-skill"],
+        manipulatedVariable: "external accountability",
+        heldConstant: ["task", "offer"],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    expect(
+      experimentBoundToHypothesis(state).passed,
+    ).toBe(true);
+  });
+
+  it("passes when hypothesisTested exactly matches an open fork id", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Fork test",
+        hypothesisTested:
+          "container_loss_vs_capacity",
+        action:
+          "Change external structure while holding task difficulty stable.",
+        duration: "2 weeks",
+        whatToObserve:
+          ["Whether structure changes execution."],
+        resultSupportingHypothesis:
+          "Execution improves.",
+        resultWeakeningHypothesis:
+          "Execution does not improve.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        manipulatedVariable: "external structure",
+        heldConstant: ["task difficulty"],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    expect(
+      experimentBoundToHypothesis(state).passed,
+    ).toBe(true);
+  });
+
+  it("fails free-form hypothesisTested prose", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Loose test",
+        hypothesisTested:
+          "Maybe missing structure is the real issue",
+        action: "Try more accountability.",
+        duration: "1 week",
+        whatToObserve: ["Whether action changes."],
+        resultSupportingHypothesis:
+          "More action.",
+        resultWeakeningHypothesis:
+          "No change.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    const finding =
+      experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /exactly match/i,
+    );
+  });
+
+  it("fails unknown competing hypothesis ids", () => {
+    const state = experimentState();
+
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Bad rival",
+        hypothesisTested: "hyp-structure",
+        action: "Try more accountability.",
+        duration: "1 week",
+        whatToObserve: ["Whether action changes."],
+        resultSupportingHypothesis:
+          "More action.",
+        resultWeakeningHypothesis:
+          "No change.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [
+          "hyp-does-not-exist",
+        ],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    const finding =
+      experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /unknown competingHypothesisIds/i,
+    );
+  });
+
+  it("requires at least one behavioral experiment", () => {
+    const state = experimentState();
+    state.symbolicMaterial.scene = "A locked garden gate.";
+    state.experiments = [
+      {
+        kind: "imaginal",
+        title: "Ask the gate",
+        hypothesisTested: "hyp-structure",
+        action: "Ask the supplied gate what changes when support is added, then stop.",
+        duration: "10 minutes",
+        whatToObserve: ["What associations arise."],
+        resultSupportingHypothesis: "Support changes the scene.",
+        resultWeakeningHypothesis: "Support makes no difference.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    const finding = experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/behavioral experiment/i);
+  });
+
+  it("rejects imaginal experiments without supplied symbolic material", () => {
+    const state = experimentState();
+    const baseExperiment = {
+      title: "Structure test",
+      hypothesisTested: "hyp-structure",
+      duration: "1 week",
+      whatToObserve: ["What changes."],
+      resultSupportingHypothesis: "The scene or behavior changes.",
+      resultWeakeningHypothesis: "Nothing changes.",
+      riskLevel: "low" as const,
+      practicalRequirements: [],
+      competingHypothesisIds: [],
+      heldConstant: [],
+      outcomeInterpretations: [],
+    };
+    state.experiments = [
+      {
+        ...baseExperiment,
+        kind: "behavioral",
+        action: "Add one accountability session while holding the task stable.",
+      },
+      {
+        ...baseExperiment,
+        kind: "imaginal",
+        title: "Ask an imagined gate",
+        action: "Imagine a gate and ask what it wants.",
+      },
+    ];
+
+    const finding = experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/imaginal.*supplied symbolic material/i);
+  });
+
+  it("rejects imaginal experiments that script unsupplied dialogue", () => {
+    const state = experimentState();
+    state.symbolicMaterial.scene = "A locked garden gate.";
+    state.symbolicMaterial.obstacleSpeech = "Stay until the ground is yours.";
+    const common = {
+      hypothesisTested: "hyp-structure",
+      duration: "1 week",
+      whatToObserve: ["What changes."],
+      resultSupportingHypothesis: "The response changes.",
+      resultWeakeningHypothesis: "The response stays stable.",
+      riskLevel: "low" as const,
+      practicalRequirements: [],
+      competingHypothesisIds: [],
+      heldConstant: [],
+      outcomeInterpretations: [],
+    };
+    state.experiments = [
+      {
+        ...common,
+        kind: "behavioral",
+        title: "Structure test",
+        action: "Add accountability while keeping the task stable.",
+      },
+      {
+        ...common,
+        kind: "imaginal",
+        title: "Scripted gate reply",
+        action: 'Ask the supplied gate what it wants. The gate answers "Leave now."',
+      },
+    ];
+
+    const finding = experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/invented|unsupplied|dialogue/i);
+  });
+
+  it("rejects imaginal experiments built around unrelated invented imagery", () => {
+    const state = experimentState();
+    state.symbolicMaterial.scene = "A locked garden gate.";
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Structure test",
+        hypothesisTested: "hyp-structure",
+        action: "Add accountability while keeping the task stable.",
+        duration: "1 week",
+        whatToObserve: ["What changes."],
+        resultSupportingHypothesis: "The response changes.",
+        resultWeakeningHypothesis: "The response stays stable.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+      {
+        kind: "imaginal",
+        title: "Invented dragon",
+        hypothesisTested: "hyp-structure",
+        action: "Imagine a red dragon circling a mountain and follow it into a cave.",
+        duration: "10 minutes",
+        whatToObserve: ["What the dragon reveals."],
+        resultSupportingHypothesis: "The dragon demands support.",
+        resultWeakeningHypothesis: "The dragon disappears.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    const finding = experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/grounded|supplied symbolic material/i);
+  });
+
+  it("rejects unsupplied imaginal replies without double quotes", () => {
+    const state = experimentState();
+    state.symbolicMaterial.scene = "A locked garden gate.";
+    state.symbolicMaterial.obstacleSpeech = "Stay until the ground is yours.";
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Structure test",
+        hypothesisTested: "hyp-structure",
+        action: "Add accountability while keeping the task stable.",
+        duration: "1 week",
+        whatToObserve: ["What changes."],
+        resultSupportingHypothesis: "The response changes.",
+        resultWeakeningHypothesis: "The response stays stable.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+      {
+        kind: "imaginal",
+        title: "Invented reply",
+        hypothesisTested: "hyp-structure",
+        action: "Return to A locked garden gate. Ask once; it replies 'Leave now.'",
+        duration: "10 minutes",
+        whatToObserve: ["What changes."],
+        resultSupportingHypothesis: "The supplied scene changes.",
+        resultWeakeningHypothesis: "The supplied scene stays stable.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+      },
+    ];
+
+    const finding = experimentBoundToHypothesis(state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/invented|unsupplied|dialogue/i);
+  });
+});
+
 describe("Tier-A citation gates", () => {
   const origin = extractCaseStateFull("o1", originAnswers);
 
-  it("image_cited fails when rich associations exist but reality/hidden omit image", () => {
+  it("image_cited passes when rich associations are cited in any interpretive section", () => {
     const sections = [
-      section("reality", "Practical constraints dominate.", ["o1:Q0.5"]),
-      section("hidden", "One hypothesis about structure.", ["o1:Q9.2"]),
-      section("experiment", "Imagine the pipe across a threshold.", ["o1:Q1.1"]),
+      section(
+        "alternative",
+        "The image may point toward a different explanation of the stall.",
+        ["o1:Q10.1"],
+      ),
     ];
-    const finding = imageCited(sections, origin);
-    expect(finding.passed).toBe(false);
-    expect(finding.id).toBe("image_cited");
+
+    expect(
+      imageCited(sections, origin).passed,
+    ).toBe(true);
+  });
+
+  it("image_cited fails when rich associations exist but no Q10 evidence appears", () => {
+    const sections = [
+      section(
+        "reality",
+        "Practical constraints dominate.",
+        ["o1:Q0.5"],
+      ),
+      section(
+        "hidden",
+        "One hypothesis about structure.",
+        ["o1:Q9.2"],
+      ),
+    ];
+
+    expect(
+      imageCited(sections, origin).passed,
+    ).toBe(false);
   });
 
   it("image_cited passes when reality cites Q10", () => {
@@ -102,6 +564,25 @@ describe("Tier-A citation gates", () => {
     const thin = extractCaseStateFull("o1", { "Q1.1": "I stall" });
     const sections = [section("reality", "No image work.", ["o1:Q1.1"])];
     expect(imageCited(sections, thin).passed).toBe(true);
+  });
+
+  it("image_cited fails when Q10 appears only as experiment garnish", () => {
+    const sections = [
+      section(
+        "reality",
+        "Practical constraints dominate.",
+        ["o1:Q0.5"],
+      ),
+      section(
+        "experiment",
+        "Use the image during the exercise.",
+        ["o1:Q10.1"],
+      ),
+    ];
+
+    expect(
+      imageCited(sections, origin).passed,
+    ).toBe(false);
   });
 
   it("projection_cited fails when figures exist but contradiction/hidden omit them", () => {
@@ -127,16 +608,18 @@ describe("Tier-A citation gates", () => {
     expect(projectionCited(sections, origin).passed).toBe(false);
   });
 
-  it("projection_cited passes with Q5 refs on contradiction", () => {
+  it("projection_cited passes when projection evidence appears anywhere", () => {
     const sections = [
       section(
-        "contradiction",
-        "Admiration for grounded mentors marks a hooked quality of claiming space.",
-        ["o1:Q1.2", "o1:Q5.1"],
+        "alternative",
+        "Your admiration may point toward a quality you value.",
+        ["o1:Q5.1"],
       ),
-      section("hidden", "Protection keeps lightness.", ["o1:Q9.2"]),
     ];
-    expect(projectionCited(sections, origin).passed).toBe(true);
+
+    expect(
+      projectionCited(sections, origin).passed,
+    ).toBe(true);
   });
 
   it("money_cited fails when money buckets exist but reality/alternative omit them", () => {
@@ -150,16 +633,18 @@ describe("Tier-A citation gates", () => {
     expect(finding.id).toBe("money_cited");
   });
 
-  it("money_cited passes with Q8 refs on reality", () => {
+  it("money_cited passes when money evidence appears anywhere", () => {
     const sections = [
       section(
-        "reality",
-        "Industry machinery once delivered income.",
-        ["o1:Q8.4", "o1:Q0.5"],
+        "hidden",
+        "Your relationship to ease may depend partly on how work used to deliver income.",
+        ["o1:Q8.4"],
       ),
-      section("alternative", "Skill gap may suffice.", ["o1:Q0.5"]),
     ];
-    expect(moneyCited(sections, origin).passed).toBe(true);
+
+    expect(
+      moneyCited(sections, origin).passed,
+    ).toBe(true);
   });
 
   it("reportLayerCoverage fails when indicated layers are missing", () => {
@@ -367,35 +852,91 @@ describe("soft-depth conditional peel gates", () => {
     expect(protectionAndAimInPeel(sections, state).passed).toBe(true);
   });
 
-  it("imaginalWhenSpeech skips without obstacleSpeech", () => {
-    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
-    expect(
-      imaginalWhenSpeech([section("reality", "Practical notes only.", ["g1:Q1.1"])], state).passed,
-    ).toBe(true);
-  });
+  it("imaginalWhenSpeech passes without obstacleSpeech when no dialogue is invented", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
 
-  it("imaginalWhenSpeech fails when speech exists without imaginal or dialogue", () => {
-    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
-    state.symbolicMaterial.obstacleSpeech = "Turn back before you are seen.";
-    const sections = [
-      section("reality", "Money pressure is real and ADHD constraints matter.", ["g1:Q1.1"]),
-      section("hidden", "One hypothesis about authority outside.", ["g1:Q1.1"]),
-    ];
-    expect(imaginalWhenSpeech(sections, state).passed).toBe(false);
-  });
-
-  it("imaginalWhenSpeech passes with generic dialogue engagement (no origin tokens)", () => {
-    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
-    state.symbolicMaterial.obstacleSpeech = "Turn back before you are seen.";
     const sections = [
       section(
         "reality",
-        "You ask the image what it wants; its voice says you are unequipped at the threshold.",
+        "You face practical uncertainty.",
         ["g1:Q1.1"],
       ),
     ];
-    expect(imaginalWhenSpeech(sections, state).passed).toBe(true);
+
+    expect(
+      imaginalWhenSpeech(sections, state).passed,
+    ).toBe(true);
   });
+
+  it("imaginalWhenSpeech does not require dialogue when supplied speech exists", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+
+    state.symbolicMaterial.obstacleSpeech =
+      "Turn back before you are seen.";
+
+    const sections = [
+      section(
+        "reality",
+        "You described a threshold image alongside practical uncertainty.",
+        ["g1:Q1.1", "g1:Q10.6"],
+      ),
+    ];
+
+    expect(
+      imaginalWhenSpeech(sections, state).passed,
+    ).toBe(true);
+  });
+
+  it("imaginalWhenSpeech allows supplied speech without inventing a reply", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+
+    state.symbolicMaterial.obstacleSpeech =
+      "Turn back before you are seen.";
+
+    const sections = [
+      section(
+        "reality",
+        'The obstacle says, "Turn back before you are seen." You can treat that as material to explore rather than as a verdict.',
+        ["g1:Q10.6"],
+      ),
+    ];
+
+    expect(
+      imaginalWhenSpeech(sections, state).passed,
+    ).toBe(true);
+  });
+
+  it("imaginalWhenSpeech fails generated second-turn dialogue", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+
+    state.symbolicMaterial.obstacleSpeech =
+      "Turn back before you are seen.";
+
+    const sections = [
+      section(
+        "hidden",
+        'The obstacle says, "Turn back before you are seen." You reply that you are ready now.',
+        ["g1:Q10.6"],
+      ),
+    ];
+
+    const finding =
+      imaginalWhenSpeech(sections, state);
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /second turn|imaginal reply/i,
+    );
+  });
+
 
   it("antiInflationDiagnosis fails on romance of eternal becoming", () => {
     expect(
@@ -408,5 +949,374 @@ describe("soft-depth conditional peel gates", () => {
         "One hypothesis: possibility preferred over incarnation, without diagnosing you as an archetype.",
       ).passed,
     ).toBe(true);
+  });
+  it("allows exact supplied image speech", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked gate.",
+      "Q10.6":
+        "Turn back until the ground is yours.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        'The obstacle says, "Turn back until the ground is yours." You can treat that as material rather than a verdict.',
+        ["img:Q10.6"],
+      ),
+    ];
+
+    expect(
+      imaginalWhenSpeech(
+        sections,
+        state,
+      ).passed,
+    ).toBe(true);
+  });
+  it("fails invented attributed image speech", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked gate.",
+      "Q10.6":
+        "Turn back until the ground is yours.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        'The obstacle says, "You are not ready yet."',
+        ["img:Q10.6"],
+      ),
+    ];
+
+    const finding =
+      imaginalWhenSpeech(
+        sections,
+        state,
+      );
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /does not match|imaginal speech/i,
+    );
+  });
+  it("fails attributed image speech when none was supplied", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked gate.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        'The gate says, "Wait here."',
+        ["img:Q10.1"],
+      ),
+    ];
+
+    expect(
+      imaginalWhenSpeech(
+        sections,
+        state,
+      ).passed,
+    ).toBe(false);
+  });
+});
+
+describe("image vote adequacy gate", () => {
+  it("passes when there is no rich symbolic material", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+    });
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(true);
+  });
+
+  it("fails when rich symbolic material has no persisted votes", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked door",
+      "Q10.2": "A dark corridor",
+      "Q10.6": "Do not go further",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Exposure hypothesis",
+        category: "psychological",
+        observedPattern:
+          "Action stops near visible exposure.",
+        evidenceFor: ["img:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.7,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+        confidence: "moderate",
+      },
+    ];
+
+    state.imageVotes = [];
+    state.imageVote = undefined;
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(false);
+  });
+
+  it("passes when a leading hypothesis receives a grounded image vote", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked door",
+      "Q10.2": "A dark corridor",
+      "Q10.6": "Do not go further",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Exposure hypothesis",
+        category: "psychological",
+        observedPattern:
+          "Action stops near visible exposure.",
+        evidenceFor: ["img:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.7,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+        confidence: "moderate",
+      },
+    ];
+
+    state.imageVotes = [
+      {
+        hypothesisId: "hyp-a",
+        verdict: "supports",
+        interpretation:
+          "The blocked threshold is consistent with the exposure hypothesis.",
+        evidenceRefs: [
+          "img:Q10.1",
+          "img:Q10.6",
+        ],
+        exactClientMaterialUsed: [
+          "A locked door",
+          "Do not go further",
+        ],
+      },
+    ];
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(true);
+  });
+
+  it("fails an ungrounded insufficient vote on rich symbolic material", () => {
+    const state = extractCaseStateFull("img", {
+      "Q1.1": "I stall.",
+      "Q10.1": "A locked door",
+      "Q10.2": "A dark corridor",
+      "Q10.6": "Do not go further",
+    });
+
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Exposure hypothesis",
+        category: "psychological",
+        observedPattern:
+          "Action stops near visible exposure.",
+        evidenceFor: ["img:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.7,
+          contradictionResolution: 0.7,
+          personSpecificity: 0.8,
+          developmentalFit: 0.6,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.2,
+        },
+        confidence: "moderate",
+      },
+    ];
+
+    state.imageVotes = [
+      {
+        hypothesisId: "hyp-a",
+        verdict: "insufficient",
+        interpretation:
+          "Not enough information.",
+        evidenceRefs: [],
+        exactClientMaterialUsed: [],
+      },
+    ];
+
+    expect(
+      imageVoteAdequate(state).passed,
+    ).toBe(false);
+  });
+
+  it("senexScoldOnly fails grind-only framing", () => {
+    const finding = senexScoldOnly(
+      "You just need more discipline. Stop seeking insight and force yourself through the work.",
+    );
+
+    expect(finding.passed).toBe(false);
+  });
+  it("senexScoldOnly allows discipline inside a genuine polarity", () => {
+    const finding = senexScoldOnly(
+      "More discipline may matter, but the tension between structure and autonomy needs both poles rather than one replacing the other.",
+    );
+
+    expect(finding.passed).toBe(true);
+  });
+  it("senexScoldOnly does not require aliveness or possibility language", () => {
+    const finding = senexScoldOnly(
+      "The developmental tension may be between consistency and responsiveness; integrating both matters more than simply working harder.",
+    );
+
+    expect(finding.passed).toBe(true);
+  });
+});
+
+describe("somatic provenance gate", () => {
+  it("passes when report makes no explicit body claim", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        "You describe hesitation before exposure.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    expect(
+      somaticProvenance(
+        sections,
+        state,
+      ).passed,
+    ).toBe(true);
+  });
+
+  it("fails when report invents a body location", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        "You feel the conflict as tightness in your chest.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    const finding =
+      somaticProvenance(
+        sections,
+        state,
+      );
+
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(
+      /body|somatic|sensory/i,
+    );
+  });
+
+  it("does not mistake practical pressure for a somatic claim", () => {
+    const state = extractCaseStateFull("som", {
+      "Q0.5": "Financial pressure is real.",
+      "Q1.1": "I keep stalling.",
+    });
+
+    const sections = [
+      section(
+        "reality",
+        "You are under real financial pressure.",
+        ["som:Q0.5"],
+      ),
+    ];
+
+    expect(
+      somaticProvenance(sections, state).passed,
+    ).toBe(true);
+  });
+});
+describe("questions and close gate", () => {
+  it("passes exactly three questions and a close", () => {
+    const sections = [
+      section(
+        "questions",
+        "1. What happens when you test this? 2. What would weaken the hypothesis? 3. What remains unexplained?",
+        ["a1:Q1.1"],
+      ),
+      section(
+        "close",
+        "You can treat this as a working formulation rather than a verdict.",
+        ["a1:Q1.1"],
+      ),
+    ];
+
+    expect(
+      questionsAndCloseAdequate(
+        sections,
+      ).passed,
+    ).toBe(true);
+  });
+
+  it("fails when the questions section has fewer than three questions", () => {
+    const sections = [
+      section(
+        "questions",
+        "What would you test? What remains unexplained?",
+        ["a1:Q1.1"],
+      ),
+      section(
+        "close",
+        "You can treat this as a working formulation.",
+        ["a1:Q1.1"],
+      ),
+    ];
+
+    expect(
+      questionsAndCloseAdequate(
+        sections,
+      ).passed,
+    ).toBe(false);
   });
 });

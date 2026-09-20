@@ -7,7 +7,7 @@ import type { CaseState } from "@/engine/schemas/case-state";
 
 const originAnswers = JSON.parse(
   readFileSync(
-    join(__dirname, "../engine/pipeline/fixtures/origin-case-answers.json"),
+    join(__dirname, "../engine/test-support/fixtures/origin-case-answers.json"),
     "utf8",
   ),
 ) as Record<string, unknown>;
@@ -77,7 +77,7 @@ function betaShapedReport(assessmentId: string) {
       {
         id: "contradiction" as const,
         title: "Contradiction",
-        body: "You want sharp angles you cannot unsee while also wanting confirmation of your path.",
+        body: "You want to distinguish practical constraints from fear of visible experimentation while also wanting confirmation of your path.",
         evidenceRefs: [q("Q0.5")],
       },
       {
@@ -103,6 +103,23 @@ function betaShapedReport(assessmentId: string) {
 }
 
 describe("evaluateFrameworkFidelity", () => {
+  it("does not count generic depth vocabulary as Tier-A evidence use", () => {
+    const answers = { "Q1.1": "I stall.", "Q10.1": "A locked garden gate." };
+    const report = goldReport("generic");
+    report.sections = report.sections.map((section) => ({
+      ...section,
+      evidenceRefs: section.evidenceRefs.filter((ref) => !/:Q(?:5|6|8|9|10)\./.test(ref)),
+    }));
+
+    const result = evaluateFrameworkFidelity({
+      answers,
+      caseState: extractCaseStateFull("generic", answers),
+      report,
+    });
+
+    expect(result.scores.find((item) => item.id === "tier_a_used")?.passed).toBe(false);
+  });
+
   it("passes origin-gold shaped artifact", () => {
     const caseState = extractCaseStateFull("gold", originAnswers);
     caseState.contradictions = [
@@ -120,6 +137,9 @@ describe("evaluateFrameworkFidelity", () => {
           recurrence: 0.9,
           explanatoryImportance: 0.9,
           charge: 0.8,
+          crossDomainReach: 0,
+          noveltyOfConnection: 0,
+          consciousAwarenessPenalty: 0,
         },
       },
     ];
@@ -209,6 +229,9 @@ describe("evaluateFrameworkFidelity", () => {
         resultWeakeningHypothesis: "No change",
         riskLevel: "low",
         practicalRequirements: ["partner"],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
       },
     ];
     caseState.openForks = ["container_loss_vs_capacity"];
@@ -226,7 +249,7 @@ describe("evaluateFrameworkFidelity", () => {
     caseState.contradictions = [
       {
         id: "c1",
-        statementA: "I want sharp angles I cannot unsee",
+        statementA: "I want to distinguish practical constraints from fear of visible experimentation",
         statementB: "I want confirmation of my path",
         evidenceA: ["beta:Q11.3"],
         evidenceB: ["beta:Q11.3"],
@@ -238,14 +261,17 @@ describe("evaluateFrameworkFidelity", () => {
           recurrence: 0.5,
           explanatoryImportance: 0.9,
           charge: 0.5,
+          crossDomainReach: 0,
+          noveltyOfConnection: 0,
+          consciousAwarenessPenalty: 0,
         },
       },
     ];
     caseState.hiddenPosition = {
-      consciousPosition: "sharp angles",
+      consciousPosition: "distinguish practical constraints from fear",
       observedPattern: "insight hunger",
       possibleHiddenPosition:
-        "I hope it shows me some sharp angles that I can't unsee and will help me to shift my perspective",
+        "The fictional participant hopes the report distinguishes practical constraints from fear of visible experimentation.",
       protectiveFunction: ["Seeker identity"],
       threatenedByChange: ["Unglamorous work"],
       developmentalTension: { poleA: "insight", poleB: "execution" },
@@ -266,6 +292,9 @@ describe("evaluateFrameworkFidelity", () => {
         resultWeakeningHypothesis: "generic",
         riskLevel: "low",
         practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
       },
     ];
     caseState.openForks = ["container_loss_vs_capacity"];
@@ -360,6 +389,9 @@ describe("evaluateFrameworkFidelity", () => {
         resultWeakeningHypothesis: "stall",
         riskLevel: "low",
         practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
       },
     ];
     caseState.openForks = ["rational_caution_vs_hidden_bargain"];

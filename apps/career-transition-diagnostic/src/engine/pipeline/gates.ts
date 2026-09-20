@@ -1,5 +1,5 @@
 import type { CaseState } from "../schemas/case-state";
-import type { Experiment, ReportSection } from "../schemas/analysis";
+import type { ReportSection } from "../schemas/analysis";
 
 export type GateFinding = {
   id: string;
@@ -174,25 +174,84 @@ export function hasRichImageAssociations(state: CaseState) {
 
 export function imageVoteAdequate(
   state: CaseState,
-  vote?: CaseState["imageVote"],
 ): GateFinding {
-  if (!hasRichImageAssociations(state) || !vote) {
+  if (!hasRichImageAssociations(state)) {
     return {
       id: "image-adequacy",
       passed: true,
-      detail: "No rich image associations requiring a substantive vote.",
+      detail:
+        "No rich image associations requiring substantive image votes.",
     };
   }
-  const citesImage =
-    vote.evidenceRefs.some((ref) => /:Q10\./.test(ref)) ||
-    /scene|association|image|obstacle|speech/i.test(vote.note);
-  const failed = vote.verdict === "insufficient" && !citesImage;
+
+  const votes =
+    state.imageVotes?.length
+      ? state.imageVotes
+      : state.imageVote
+        ? [state.imageVote]
+        : [];
+
+  if (!votes.length) {
+    return {
+      id: "image-adequacy",
+      passed: false,
+      detail:
+        "Rich symbolic material exists but no image votes were persisted.",
+    };
+  }
+
+  const relevantHypothesisIds = new Set(
+    state.hypotheses
+      .slice(0, Math.min(3, state.hypotheses.length))
+      .map((hypothesis) => hypothesis.id),
+  );
+
+  const relevantVotes = votes.filter((vote) =>
+    relevantHypothesisIds.has(vote.hypothesisId),
+  );
+
+  if (!relevantVotes.length) {
+    return {
+      id: "image-adequacy",
+      passed: false,
+      detail:
+        "Rich symbolic material exists but no leading hypothesis received an image vote.",
+    };
+  }
+
+  const unsupportedInsufficientVotes =
+    relevantVotes.filter((vote) => {
+      if (vote.verdict !== "insufficient") {
+        return false;
+      }
+
+      const citesImage =
+        vote.evidenceRefs.some((ref) =>
+          /:Q10\./.test(ref),
+        ) ||
+        /scene|association|image|obstacle|speech/i.test(
+          vote.interpretation ??
+            vote.note ??
+            "",
+        );
+
+      return !citesImage;
+    });
+
+  if (unsupportedInsufficientVotes.length) {
+    return {
+      id: "image-adequacy",
+      passed: false,
+      detail:
+        "An image vote marked rich symbolic material insufficient without citing or interpreting the supplied image associations.",
+    };
+  }
+
   return {
     id: "image-adequacy",
-    passed: !failed,
-    detail: failed
-      ? "Rich Q10 associations present but image vote was insufficient without citing them."
-      : "Image vote respects available associations.",
+    passed: true,
+    detail:
+      "Leading hypotheses received substantive image votes grounded in supplied symbolic material.",
   };
 }
 
@@ -209,54 +268,168 @@ export function critiquesNonEmpty(critiques: unknown[]): GateFinding {
 
 export function experimentBoundToHypothesis(
   state: CaseState,
-  experiments: Experiment[] = state.experiments,
+  experiments: readonly unknown[] = state.experiments,
 ): GateFinding {
   if (!experiments.length) {
     return {
       id: "experiment-bind",
-      passed: true,
-      detail: "No experiments to bind yet.",
+      passed: false,
+      detail: "At least one behavioral experiment is required.",
     };
   }
-  const hypIds = state.hypotheses.map((item) => item.id);
-  const hypTitles = state.hypotheses.map((item) => normalize(item.title));
-  const forks = state.openForks.map((fork) => normalize(fork.replace(/_/g, " ")));
-  const favorite = state.hypotheses[0];
-  const openContainer =
-    state.openForks.includes("container_loss_vs_capacity") ||
-    state.openForks.includes("legitimacy_loop");
 
-  let passed = false;
-  for (const experiment of experiments) {
-    const tested = normalize(experiment.hypothesisTested);
-    const action = normalize(experiment.action);
-    const bindsId = hypIds.some((id) => tested.includes(normalize(id)) || tested.includes(id.toLowerCase()));
-    const bindsTitle = hypTitles.some((title) => title && (tested.includes(title) || paraphraseOverlap(tested, title) >= 0.35));
-    const bindsFork = forks.some((fork) => fork && tested.includes(fork));
-    const magicianCritique =
-      /mentor|critique|blind spot|failure point|three reasons/i.test(experiment.action) ||
-      /mentor|critique|blind spot/i.test(experiment.hypothesisTested);
-    if (openContainer && magicianCritique && favorite && /container|structure|authoriz|legitimacy/i.test(favorite.title + favorite.observedPattern)) {
-      return {
-        id: "experiment-bind",
-        passed: false,
-        detail: "Experiment is unbound Magician-critique while container/legitimacy fork is open.",
-      };
+  const hypothesisIds = new Set(
+    state.hypotheses.map((item) => item.id),
+  );
+
+  const forkIds = new Set(state.openForks);
+
+  const validTestIds = new Set<string>([
+    ...hypothesisIds,
+    ...forkIds,
+  ]);
+
+  const failures: string[] = [];
+  const suppliedSymbolicMaterial = Object.values(state.symbolicMaterial)
+    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+  if (
+    !experiments.some(
+      (experiment) =>
+        Boolean(experiment) &&
+        typeof experiment === "object" &&
+        (experiment as { kind?: unknown }).kind === "behavioral",
+    )
+  ) {
+    failures.push("At least one behavioral experiment is required.");
+  }
+
+  for (const rawExperiment of experiments) {
+    if (
+      !rawExperiment ||
+      typeof rawExperiment !== "object"
+    ) {
+      failures.push(
+        "Experiment is not a valid object.",
+      );
+      continue;
     }
-    if (bindsId || bindsTitle || bindsFork || (favorite && paraphraseOverlap(tested, favorite.observedPattern) >= 0.3)) {
-      passed = true;
+
+    const experiment = rawExperiment as {
+      kind?: unknown;
+      title?: unknown;
+      hypothesisTested?: unknown;
+      action?: unknown;
+      competingHypothesisIds?: unknown;
+    };
+
+    const title =
+      typeof experiment.title === "string"
+        ? experiment.title
+        : "Untitled experiment";
+
+    const hypothesisTested =
+      typeof experiment.hypothesisTested === "string"
+        ? experiment.hypothesisTested
+        : "";
+
+    const kind =
+      typeof experiment.kind === "string"
+        ? experiment.kind
+        : "";
+
+        const rawCompetingHypothesisIds =
+        experiment.competingHypothesisIds;
+
+      const hasNewBindingField =
+        Array.isArray(rawCompetingHypothesisIds);
+
+      const competingHypothesisIds: string[] =
+        Array.isArray(rawCompetingHypothesisIds)
+          ? rawCompetingHypothesisIds.filter(
+              (id): id is string =>
+                typeof id === "string",
+            )
+          : [];
+
+    const exactBinding =
+      validTestIds.has(hypothesisTested);
+
+    if (!hypothesisTested) {
+      failures.push(
+        `${title}: missing hypothesisTested`,
+      );
+      continue;
     }
-    // also accept explicit hyp id in title/action
-    if (hypIds.some((id) => action.includes(id.toLowerCase()))) {
-      passed = true;
+
+    if (!exactBinding && hasNewBindingField) {
+      failures.push(
+        `${title}: hypothesisTested must exactly match a live hypothesis or open fork id`,
+      );
+    }
+
+    const invalidCompetingIds =
+      competingHypothesisIds.filter(
+        (id) => !hypothesisIds.has(id),
+      );
+
+    if (invalidCompetingIds.length) {
+      failures.push(
+        `${title}: unknown competingHypothesisIds ${invalidCompetingIds.join(", ")}`,
+      );
+    }
+
+    if (
+      kind === "behavioral" &&
+      competingHypothesisIds.includes(
+        hypothesisTested,
+      )
+    ) {
+      failures.push(
+        `${title}: hypothesisTested must not also be listed as a competing hypothesis`,
+      );
+    }
+
+    if (kind === "imaginal") {
+      const suppliedSpeech = state.symbolicMaterial.obstacleSpeech?.trim();
+      const experimentText = JSON.stringify(rawExperiment).replaceAll('\\"', '"');
+      const experimentTokens = contentTokens(experimentText);
+      const grounded = suppliedSymbolicMaterial.some((material) => {
+        const materialTokens = contentTokens(material);
+        if (materialTokens.size < 2) {
+          return false;
+        }
+        const sharedTokens = [...materialTokens].filter((token) => experimentTokens.has(token));
+        return isParaphraseOf(experimentText, material) || sharedTokens.length >= 2;
+      });
+      if (!grounded) {
+        failures.push(
+          `${title}: imaginal experiment must be grounded in supplied symbolic material`,
+        );
+      }
+      const inventedSpeech = attributedImageSpeech(experimentText).some(
+        (speech) => !suppliedSpeech || normalize(speech) !== normalize(suppliedSpeech),
+      );
+      const invitesGeneratedSpeech =
+        /(?:allow|let|invite)(?:ing)?\s+(?:the\s+)?(?:voice|image|figure|obstacle|scene|gate|it)\s+(?:to\s+)?(?:speak|reply|respond|answer|continue)/i.test(
+          experimentText,
+        );
+      if (inventedSpeech || invitesGeneratedSpeech) {
+        failures.push(
+          `${title}: imaginal experiment contains invented or unsupplied dialogue`,
+        );
+      }
     }
   }
+
   return {
     id: "experiment-bind",
-    passed,
-    detail: passed
-      ? "Experiment bound to winning hypothesis or open fork."
-      : "Experiment hypothesisTested is not bound to a surviving hypothesis or open fork.",
+    passed: failures.length === 0,
+    detail:
+      failures.length === 0
+        ? "All experiments are bound to live hypotheses or open forks."
+        : failures.join("; "),
   };
 }
 
@@ -317,6 +490,8 @@ export const CANONICAL_PEEL_TITLES: Record<string, string> = {
   alternative: "Another plausible interpretation",
   experiment: "Your experiment",
   jungian: "A Jungian lens",
+  questions: "Three questions to stay with",
+  close: "A working formulation",
 };
 
 /**
@@ -331,14 +506,29 @@ const PLAIN_TITLE_BY_ID: Record<string, RegExp> = {
   alternative: /^(the |another )?(plausible )?interpretation$|^(the )?alternative$/i,
   experiment: /^(the |your )?experiment$/i,
   jungian: /^(the |a )?jungian lens$/i,
+  questions: /^(three )?questions( to stay with)?$/i,
+  close: /^(a )?working formulation$|^(the )?close$/i,
 };
-
-function sectionById(sections: ReportSection[], id: string) {
-  return sections.find((section) => section.id === id);
-}
 
 function refsOn(sections: ReportSection[]) {
   return sections.flatMap((section) => section.evidenceRefs);
+}
+
+const INTERPRETIVE_SECTION_IDS = new Set([
+  "problem",
+  "reality",
+  "contradiction",
+  "hidden",
+  "alternative",
+  "jungian",
+]);
+
+function interpretiveSections(
+  sections: ReportSection[],
+) {
+  return sections.filter((section) =>
+    INTERPRETIVE_SECTION_IDS.has(section.id),
+  );
 }
 
 export function hasProjectionFigures(state: CaseState) {
@@ -351,69 +541,84 @@ export function hasMoneyTierA(state: CaseState) {
   return Object.values(state.money).some((items) => items.length > 0);
 }
 
-/** When rich Q10 associations exist, reality or hidden must cite :Q10. (cues alone insufficient). */
-export function imageCited(sections: ReportSection[], state: CaseState): GateFinding {
+/** When rich Q10 associations exist, an interpretive report section must cite :Q10. */
+export function imageCited(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
   if (!hasRichImageAssociations(state)) {
     return {
       id: "image_cited",
       passed: true,
-      detail: "No rich image associations requiring citation.",
+      detail:
+        "No rich image associations requiring citation.",
     };
   }
-  const core = [sectionById(sections, "reality"), sectionById(sections, "hidden")].filter(
-    Boolean,
-  ) as ReportSection[];
-  const hasRef = refsOn(core).some((ref) => /:Q10\./.test(ref));
+
+  const hasRef = refsOn(
+    interpretiveSections(sections),
+  ).some((ref) => /:Q10\./.test(ref));
+
   return {
     id: "image_cited",
     passed: hasRef,
     detail: hasRef
-      ? "Image associations cited via :Q10. in reality or hidden."
-      : "Rich Q10 associations present but reality/hidden lack :Q10. evidenceRefs.",
+    ? "Rich symbolic material is represented in an interpretive section."
+    : "Rich symbolic material exists but no interpretive section contains a Q10 evidenceRef.",
   };
 }
 
 /** When admired/rejected figures exist, contradiction or hidden must cite :Q5. or :Q6. */
-export function projectionCited(sections: ReportSection[], state: CaseState): GateFinding {
+export function projectionCited(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
   if (!hasProjectionFigures(state)) {
     return {
       id: "projection_cited",
       passed: true,
-      detail: "No projection figures requiring citation.",
+      detail:
+        "No projection figures requiring citation.",
     };
   }
-  const target = [sectionById(sections, "contradiction"), sectionById(sections, "hidden")].filter(
-    Boolean,
-  ) as ReportSection[];
-  const hasRefs = refsOn(target).some((ref) => /:Q5\.|:Q6\./.test(ref));
+
+  const hasRef = refsOn(
+    interpretiveSections(sections),
+  ).some((ref) => /:Q5\.|:Q6\./.test(ref));
+
   return {
     id: "projection_cited",
-    passed: hasRefs,
-    detail: hasRefs
-      ? "Projection figures cited via :Q5./:Q6. in contradiction or hidden."
-      : "Admired/rejected figures present but contradiction/hidden lack :Q5./:Q6. evidenceRefs.",
+    passed: hasRef,
+    detail: hasRef
+      ? "Projection material is represented in the report."
+      : "Projection material exists but the report contains no Q5/Q6 evidenceRef.",
   };
 }
 
 /** When money Tier-A buckets exist, reality or alternative must cite :Q8. */
-export function moneyCited(sections: ReportSection[], state: CaseState): GateFinding {
+export function moneyCited(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
   if (!hasMoneyTierA(state)) {
     return {
       id: "money_cited",
       passed: true,
-      detail: "No money Tier-A buckets requiring citation.",
+      detail:
+        "No money material requiring citation.",
     };
   }
-  const target = [sectionById(sections, "reality"), sectionById(sections, "alternative")].filter(
-    Boolean,
-  ) as ReportSection[];
-  const hasRefs = refsOn(target).some((ref) => /:Q8\./.test(ref));
+
+  const hasRef = refsOn(
+    interpretiveSections(sections),
+  ).some((ref) => /:Q8\./.test(ref));
+
   return {
     id: "money_cited",
-    passed: hasRefs,
-    detail: hasRefs
-      ? "Money Tier-A cited via :Q8. in reality or alternative."
-      : "Money Tier-A present but reality/alternative lack :Q8. evidenceRefs.",
+    passed: hasRef,
+    detail: hasRef
+      ? "Money material is represented in the report."
+      : "Money material exists but the report contains no Q8 evidenceRef.",
   };
 }
 
@@ -476,24 +681,83 @@ export function clientVoiceGates(sections: ReportSection[]): GateFinding[] {
   return [secondPersonVoice(sections), plainTitles(sections), noAnalystOpeners(sections)];
 }
 
-export function senexScoldOnly(text: string): GateFinding {
-  const grind = /grow up|just (need )?(more )?discipline|stop seeking (insight|revelation)|unglamorous discomfort of daily execution/i.test(
-    text,
-  );
-  const aliveness = /structure in service|aliveness|possibility|play|fascination|both poles/i.test(text);
+export function senexScoldOnly(
+  text: string,
+): GateFinding {
+  const grindOnlyLanguage =
+    /grow up|just (?:need )?(?:more )?discipline|stop seeking (?:insight|revelation)|unglamorous discomfort of daily execution|just work harder|force yourself|only harder work/i.test(
+      text,
+    );
+
+  const balancingLanguage =
+    /polarity|both (?:sides|poles)|tension between|balance|integrat|compensat|while also|without losing|alongside|at the same time|one pole|other pole/i.test(
+      text,
+    );
+
+  const failed =
+    grindOnlyLanguage &&
+    !balancingLanguage;
+
   return {
     id: "senex-scold",
-    passed: !(grind && !aliveness),
+    passed: !failed,
+    detail: failed
+      ? "Developmental framing collapses to discipline/grind as the only valid pole."
+      : "Developmental framing does not collapse to grind-only.",
+  };
+}
+
+export function questionsAndCloseAdequate(
+  sections: ReportSection[],
+): GateFinding {
+  const questions = sections.find(
+    (section) => section.id === "questions",
+  );
+
+  const close = sections.find(
+    (section) => section.id === "close",
+  );
+
+  if (!questions || !close) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        "Report must include questions and close sections.",
+    };
+  }
+
+  const questionCount =
+    questions.body.match(/\?/g)?.length ?? 0;
+
+  if (questionCount !== 3) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        `Questions section must contain exactly 3 questions; found ${questionCount}.`,
+    };
+  }
+
+  if (!close.body.trim()) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        "Close section must contain a working formulation.",
+    };
+  }
+
+  return {
+    id: "questions-close",
+    passed: true,
     detail:
-      grind && !aliveness
-        ? "Developmental frame collapses to senex-scold / grind-only."
-        : "Developmental frame is not grind-only.",
+      "Report ends with exactly three questions and a working formulation.",
   };
 }
 
 const PROTECTION_PEEL = /protect|protective|keeps|shield|bargain|benefit of staying/i;
-const AIM_PEEL = /aim|develop|structure in service|aliveness|compensatory|asking you to/i;
-const DIALOGUE_PEEL = /ask|speak|say|said|voice|image|scene|obstacle|dialogue|reply|replies|whisper/i;
+const AIM_PEEL = /aim|develop|compensatory|growth|emerg|asking you to/i;
 const INFLATION_DIAGNOSIS =
   /you are (an? )?eternal youth|eternal[- ]youth (complex|identity|archetype)|you are (an? )?(puer|senex)\b|romance of eternal becoming|romance-of-eternal-becoming|you live in (an? )?(endless|eternal) becoming/i;
 
@@ -531,33 +795,94 @@ export function protectionAndAimInPeel(
       : "Hidden CaseState has aim/protection fields but peel text lacks both.",
   };
 }
+function attributedImageSpeech(
+  text: string,
+): string[] {
+  const matches: string[] = [];
 
-/** When obstacleSpeech exists, require imaginal experiment or dialogue engagement in reality/hidden. */
+  const pattern =
+    /\b(?:image|figure|obstacle|scene|gate|it)\s+(?:says?|said|whispers?|replies?|responds?|answers?)\s*[,\:]?\s*(?:["“']([^"”']+)["”']|([^.!?\n;}]+))/gi;
+
+  for (const match of text.matchAll(pattern)) {
+    const speech = (match[1] ?? match[2])?.trim();
+
+    if (speech) {
+      matches.push(speech);
+    }
+  }
+
+  return matches;
+}
+
 export function imaginalWhenSpeech(
   sections: ReportSection[],
   state: CaseState,
 ): GateFinding {
-  const speech = state.symbolicMaterial.obstacleSpeech?.trim();
-  if (!speech) {
-    return {
-      id: "imaginal-when-speech",
-      passed: true,
-      detail: "No obstacleSpeech; imaginal engagement check skipped.",
-    };
-  }
-  const hasImaginalExperiment = state.experiments.some((item) => item.kind === "imaginal");
-  const depthBodies = sections
-    .filter((section) => section.id === "reality" || section.id === "hidden")
+  const suppliedSpeech =
+    state.symbolicMaterial.obstacleSpeech?.trim();
+
+  const text = sections
     .map((section) => section.body)
     .join("\n");
-  const hasDialogue = DIALOGUE_PEEL.test(depthBodies);
-  const ok = hasImaginalExperiment || hasDialogue;
+
+  const generatedSecondTurn =
+    /\b(?:you|the image|the figure|the obstacle)\s+(?:reply|replies|respond|responds|answer|answers|whisper|whispers)\b/i.test(
+      text,
+    );
+
+  const scriptedExchange =
+    /\byou ask\b[\s\S]{0,180}\b(?:it|the image|the figure|the obstacle)\s+(?:says|replies|responds|answers)\b/i.test(
+      text,
+    );
+
+  if (generatedSecondTurn || scriptedExchange) {
+    return {
+      id: "imaginal-when-speech",
+      passed: false,
+      detail:
+        "Report appears to generate an imaginal reply or second turn of dialogue that was not supplied by the person.",
+    };
+  }
+
+  const attributedSpeech =
+    attributedImageSpeech(text);
+
+  if (attributedSpeech.length > 0) {
+    if (!suppliedSpeech) {
+      return {
+        id: "imaginal-when-speech",
+        passed: false,
+        detail:
+          "Report attributes speech to an image or obstacle although no image speech was supplied.",
+      };
+    }
+
+    const suppliedNormalized =
+      normalize(suppliedSpeech);
+
+    const inventedSpeech =
+      attributedSpeech.filter(
+        (speech) =>
+          normalize(speech) !==
+          suppliedNormalized,
+      );
+
+    if (inventedSpeech.length > 0) {
+      return {
+        id: "imaginal-when-speech",
+        passed: false,
+        detail:
+          "Report attributes imaginal speech that does not match the person's supplied image speech.",
+      };
+    }
+  }
+
   return {
     id: "imaginal-when-speech",
-    passed: ok,
-    detail: ok
-      ? "Image speech engaged via imaginal experiment or reality/hidden dialogue."
-      : "obstacleSpeech present but peel lacks imaginal experiment or image dialogue.",
+    passed: true,
+    detail: suppliedSpeech
+      ? "Supplied image speech may be used, but no additional imaginal dialogue was generated."
+      : "No supplied image speech and no invented imaginal dialogue detected.",
   };
 }
 
@@ -604,6 +929,18 @@ export function assertPeelHardGates(sections: ReportSection[], state: CaseState)
   if (!imaginal.passed) {
     throwGate(imaginal);
   }
+  const somatic =
+  somaticProvenance(sections, state);
+
+  if (!somatic.passed) {
+    throwGate(somatic);
+  }
+  const questionsClose =
+  questionsAndCloseAdequate(sections);
+
+if (!questionsClose.passed) {
+  throwGate(questionsClose);
+}
   const inflation = antiInflationDiagnosis(body);
   if (!inflation.passed) {
     throwGate(inflation);
@@ -626,4 +963,60 @@ export function throwGate(finding: GateFinding): never {
   error.gateId = finding.id;
   error.findings = [finding];
   throw error;
+}
+
+const SOMATIC_CLAIM =
+  /\b(?:in|through|across|around|inside|at)\s+(?:your\s+)?(?:chest|throat|stomach|belly|gut|heart|shoulders?|neck|jaw|head|back|arms?|legs?|hands?|feet)\b|\b(?:bodily|somatic|physical)\s+(?:tightness|pressure|heaviness|heat|cold|tingling|numbness|constriction|ache|pain|tension)\b/i;
+
+function hasSuppliedSomaticMaterial(
+  state: CaseState,
+) {
+  return (
+    state.affect.bodyResponses.length > 0
+  );
+}
+
+export function somaticProvenance(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const bodyClaims = sections.filter((section) =>
+    SOMATIC_CLAIM.test(section.body),
+  );
+
+  if (!bodyClaims.length) {
+    return {
+      id: "somatic-provenance",
+      passed: true,
+      detail:
+        "No explicit somatic claims require provenance.",
+    };
+  }
+
+  if (!hasSuppliedSomaticMaterial(state)) {
+    return {
+      id: "somatic-provenance",
+      passed: false,
+      detail:
+        `Report introduces explicit body/sensory claims without supplied body-response evidence in: ${bodyClaims
+          .map((section) => section.id)
+          .join(", ")}`,
+    };
+  }
+
+  const hasBodyEvidenceRef = bodyClaims.every(
+    (section) =>
+      section.evidenceRefs.some(
+        (ref) =>
+          /:Q3\.3S$/.test(ref),
+      ),
+  );
+
+  return {
+    id: "somatic-provenance",
+    passed: hasBodyEvidenceRef,
+    detail: hasBodyEvidenceRef
+      ? "Explicit somatic claims are grounded in supplied body-response evidence."
+      : "Explicit somatic claims must cite the supplied body-response evidence.",
+  };
 }

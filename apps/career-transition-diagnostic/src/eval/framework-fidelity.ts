@@ -15,10 +15,10 @@ import { isRequestedInsightSpine } from "@/engine/pipeline/report-grounding";
 export type SoftDimId =
   | "surprise"
   | "image_alive"
-  | "imaginal_sibling"
+  | "imaginal_grounding"
   | "aim_sibling"
   | "projection_gold"
-  | "cm_layer_feel"
+  | "affect_grounding"
   | "bridge_to_11";
 
 export type FrameworkScore = {
@@ -79,8 +79,7 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
   const refs = sections.flatMap((section) => section.evidenceRefs).join(" ");
   const tierAUsed =
     !hasTierAAnswers ||
-    /:Q5\.|:Q6\.|:Q8\.|:Q9\.|:Q10\./.test(refs) ||
-    /projection|money|bargain|image|scene|structure|container/i.test(text);
+    /:Q5\.|:Q6\.|:Q8\.|:Q9\.|:Q10\./.test(refs);
   scores.push(
     score(
       "tier_a_used",
@@ -186,14 +185,14 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
   const affectIndicated =
     (caseState.affect.chargeIntensity ?? 0) >= 1 || caseState.affect.emotions.length > 0;
   if (affectIndicated) {
-    const hasCharge = /shame|terror|freeze|chest|throat|body|charge/i.test(text);
+    const hasCharge = /shame|fear|terror|anxiety|freeze|emotion|chest|throat|body|charge/i.test(text);
     scores.push(
       score(
         "charge_language",
         hasCharge,
         hasCharge
-          ? "Peel includes charge/body language."
-          : "Affect indicated but peel lacks charge/body language.",
+          ? "Peel includes supplied emotion, charge, or somatic language."
+          : "Affect indicated but corresponding emotion or charge language is absent.",
       ),
     );
   }
@@ -211,8 +210,8 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
         question: "Was the Section 10 image treated as living association, not discarded fluff?",
       },
       {
-        id: "imaginal_sibling",
-        question: "When image speech exists, is there a short imaginal or dialogue sibling?",
+        id: "imaginal_grounding",
+        question: "When an imaginal experiment exists, is it grounded in supplied symbolic material without an invented reply?",
       },
       {
         id: "aim_sibling",
@@ -223,8 +222,8 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
         question: "When projections have wanted/judged quality, is gold-to-own worked as hypothesis?",
       },
       {
-        id: "cm_layer_feel",
-        question: "Does a depth beat lead with body/charge before theory?",
+        id: "affect_grounding",
+        question: "Does the report use supplied emotion, charge, or somatic language without inventing a body location?",
       },
       {
         id: "bridge_to_11",

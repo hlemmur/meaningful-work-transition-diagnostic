@@ -9,8 +9,8 @@ import {
   realityCheckSchema,
   reportSectionSchema,
 } from "../schemas/analysis";
-import type { AnalysisStage } from "./models";
-import { failingReportSectionIds } from "./report-grounding";
+import type { AnalysisStage } from "../pipeline/models";
+import { failingReportSectionIds } from "../pipeline/report-grounding";
 
 export type AnalysisFixture =
   | "default"
@@ -115,6 +115,59 @@ function hyp(
   });
 }
 
+function ensureQuestionsAndClose(
+  sections: ReportSection[],
+  ctx: {
+    assessmentId: string;
+    evidenceRef: string;
+  },
+): ReportSection[] {
+  const q = (questionId: string) =>
+    `${ctx.assessmentId}:${questionId}`;
+
+  const next = [...sections];
+
+  if (
+    !next.some(
+      (section) => section.id === "questions",
+    )
+  ) {
+    next.push(
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "Three questions to stay with",
+        body:
+          "1. What changes when you treat the stall as information rather than proof that you cannot do the work?\n\n2. Which explanation would you most want to disprove through action?\n\n3. What would you learn if the next step became smaller and more observable?",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
+      }),
+    );
+  }
+
+  if (
+    !next.some(
+      (section) => section.id === "close",
+    )
+  ) {
+    next.push(
+      reportSectionSchema.parse({
+        id: "close",
+        title: "A working formulation",
+        body:
+          "You do not need to treat this interpretation as a verdict. Use it as a working formulation: something to test against your experience and revise when reality gives you better evidence.",
+        evidenceRefs: [
+          ctx.evidenceRef,
+        ],
+      }),
+    );
+  }
+
+  return next;
+}
+
 function contradiction(
   assessmentId: string,
   evidenceRef: string,
@@ -176,9 +229,19 @@ function contradiction(
 
 function groundedReportSections(
   fixture: AnalysisFixture,
-  ctx: { assessmentId: string; evidenceRef: string },
+  ctx: {
+    assessmentId: string;
+    evidenceRef: string;
+    evidenceAllowlist?: string[];
+  },
 ): ReportSection[] {
-  const q = (questionId: string) => `${ctx.assessmentId}:${questionId}`;
+  const allowed = new Set(ctx.evidenceAllowlist ?? []);
+  const q = (questionId: string) => {
+    const ref = `${ctx.assessmentId}:${questionId}`;
+    return allowed.size === 0 || allowed.has(ref)
+      ? ref
+      : ctx.evidenceRef;
+  };
 
   if (fixture === "starved-case-report") {
     return [
@@ -232,8 +295,13 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "You want the work and are not taking the next step.",
-        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+        body:
+          "You want the work, yet your own account shows action stopping before the next concrete step.",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
       }),
       reportSectionSchema.parse({
         id: "hidden",
@@ -549,8 +617,13 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "You want the work and are not taking the next step.",
-        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+        body:
+          "You want the work, yet your own account shows action stopping before the next concrete step.",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
       }),
       reportSectionSchema.parse({
         id: "hidden",
@@ -643,8 +716,13 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "contradiction",
         title: "The contradiction at the center",
-        body: "You want the work and are not taking the next step.",
-        evidenceRefs: [q("Q1.1"), q("Q1.3")],
+        body:
+          "You want the work, yet your own account shows action stopping before the next concrete step.",
+        evidenceRefs: [
+          q("Q1.1"),
+          q("Q1.3"),
+          q("Q2.2"),
+        ],
       }),
       reportSectionSchema.parse({
         id: "hidden",
@@ -736,8 +814,13 @@ function groundedReportSections(
     reportSectionSchema.parse({
       id: "contradiction",
       title: "The contradiction at the center",
-      body: "You want the work and are not taking the next step.",
-      evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      body:
+        "You want the work, yet your own account shows action stopping before the next concrete step.",
+      evidenceRefs: [
+        q("Q1.1"),
+        q("Q1.3"),
+        q("Q2.2"),
+      ],
     }),
     reportSectionSchema.parse({
       id: "alternative",
@@ -777,6 +860,78 @@ function groundedReportSections(
   return sections;
 }
 
+function forkResolutionFor(
+  fixture: AnalysisFixture,
+  hypothesis: Hypothesis,
+  ctx: {
+    assessmentId: string;
+    evidenceRef: string;
+  },
+) {
+  const forkId =
+    hypothesis.originForks[0] ??
+    "history_vs_stated_cause";
+
+  const practicalWins =
+    fixture === "critic-constraints-win";
+
+  return {
+    forkId,
+
+    status: practicalWins
+      ? ("leans_b" as const)
+      : ("leans_a" as const),
+
+    interpretation: practicalWins
+      ? "Current practical constraints provide the stronger explanation."
+      : "The available evidence currently leans toward the selected hypothesis, while the rival remains plausible.",
+
+    evidenceRefs: [
+      ctx.evidenceRef,
+    ],
+
+    importance: "high" as const,
+
+    reportWorthiness: true,
+  };
+}
+
+function finalFormulationFor(
+  selected: Hypothesis,
+  practical: Hypothesis,
+  fixture: AnalysisFixture,
+) {
+  return {
+    selectedHypothesisId:
+      selected.id,
+
+    centralFormulation:
+      fixture === "critic-constraints-win"
+        ? "The current stall may be sufficiently explained by practical constraints and missing infrastructure."
+        : selected.observedPattern,
+
+    whyItFits:
+      selected.evidenceFor.length
+        ? selected.evidenceFor
+        : [
+            "It explains the strongest current contradiction.",
+          ],
+
+    whatItDoesNotExplain:
+      selected.contradictionsNotExplained.length
+        ? selected.contradictionsNotExplained
+        : [
+            "Some practical constraints remain independently relevant.",
+          ],
+
+    strongestAlternative:
+      practical.observedPattern,
+
+    unresolvedForks: [],
+  };
+}
+
+
 export function passOutputFor(
   stage: AnalysisStage,
   fixture: AnalysisFixture,
@@ -790,6 +945,8 @@ export function passOutputFor(
       openForkIds: string[];
       preferredHypothesisId?: string;
     };
+    evidenceAllowlist?: string[];
+    imageEvidenceRefs?: string[];
   },
 ) {
   if (fixture === "schema-fail" && stage === "pass3") {
@@ -839,17 +996,7 @@ export function passOutputFor(
     ctx.evidenceRef,
   );
 
-  const includePractical =
-    fixture === "practical-rival" ||
-    fixture === "critic-constraints-win" ||
-    fixture === "image-weakens" ||
-    fixture === "origin-gold" ||
-    fixture === "empty-jungian" ||
-    fixture === "non-origin-soft-mini" ||
-    fixture === "speech-without-imaginal";
-  const hypotheses = includePractical
-    ? [depth, practical, identity]
-    : [depth, identity, hyp("hyp-env", "environmental", "The current container may be missing.", ctx.evidenceRef)];
+  const hypotheses = [depth, practical, identity];
 
   switch (stage) {
     case "pass1":
@@ -858,61 +1005,107 @@ export function passOutputFor(
       return { contradictions: [contradiction(ctx.assessmentId, ctx.evidenceRef, fixture)] };
     case "pass3":
       return { hypotheses };
-    case "pass4":
-      if (fixture === "empty-critiques") {
-        return { critiques: [] };
-      }
-      return {
-        critiques: hypotheses.map((item) => ({
-          hypothesisId: item.id,
-          mundaneAlternative: "Money, visa, or labor-market constraints may suffice.",
-          survives: !(fixture === "critic-constraints-win" && item.id === "hyp-depth"),
-        })),
-      };
+      case "pass4":
+        if (fixture === "empty-critiques") {
+          return { critiques: [] };
+        }
+
+        return {
+          critiques: hypotheses.map((item) => {
+            const rejectedByCritic =
+              fixture === "critic-constraints-win" &&
+              item.id === "hyp-depth";
+
+            return {
+              hypothesisId: item.id,
+
+              strongestMundaneAlternative:
+                "Money, practical constraints, or missing infrastructure may be sufficient.",
+
+              counterEvidenceRefs:
+                rejectedByCritic
+                  ? [ctx.evidenceRef]
+                  : [],
+
+              missingEvidence:
+                rejectedByCritic
+                  ? [
+                      "Evidence that the pattern persists when practical constraints are reduced.",
+                    ]
+                  : [],
+
+              confirmationBiasRisk:
+                item.category === "psychological"
+                  ? "The interpretation may privilege depth because a psychological explanation is more interesting."
+                  : "Low, but practical explanations can also become overly convenient.",
+
+              overPsychologizingRisk:
+                item.category === "psychological"
+                  ? "Practical or environmental constraints may explain the stall without a hidden position."
+                  : "Low.",
+
+              evidenceActuallyUniqueToHypothesis:
+                rejectedByCritic
+                  ? []
+                  : item.evidenceFor,
+
+              rankAdjustment:
+                rejectedByCritic
+                  ? "reject"
+                  : "keep",
+
+              reason:
+                rejectedByCritic
+                  ? "The practical constraints currently explain the pattern without requiring the depth hypothesis."
+                  : "The hypothesis remains plausible after considering the strongest simpler alternative.",
+            };
+          }),
+        };
     case "pass5": {
       const weakens = fixture === "image-weakens";
       const richInsufficient = fixture === "image-insufficient-rich";
+      const imageEvidenceRefs = ctx.imageEvidenceRefs ?? [];
       const citesImage =
-        fixture === "origin-gold" ||
-        fixture === "image-starved-peel" ||
-        fixture === "projection-starved-peel" ||
-        fixture === "money-starved-peel" ||
-        fixture === "clinical-voice-peel" ||
-        fixture === "speech-without-imaginal" ||
-        fixture === "non-origin-soft-mini";
+        !richInsufficient && imageEvidenceRefs.length > 0;
       return {
         votes: [
           imageVoteSchema.parse({
             hypothesisId: "hyp-depth",
+
             verdict: weakens
               ? "weakens"
               : citesImage
                 ? "supports"
-                : richInsufficient
-                  ? "insufficient"
-                  : "insufficient",
-            note: weakens
-              ? "The empty landscape points to job-shape / direction, not a hidden stance."
+                : "insufficient",
+
+            interpretation: weakens
+              ? "The empty landscape points more toward direction or job shape than toward a hidden stance."
               : citesImage
-                ? "Pipe mid-threshold associations support container/authorization polarity."
-                : richInsufficient
-                  ? "Vote declined; material left uncited."
-                  : "Too thin to vote.",
-            evidenceRefs: citesImage
-              ? [`${ctx.assessmentId}:Q10.1`, `${ctx.assessmentId}:Q10.6`]
-              : [ctx.evidenceRef],
+                ? "The supplied threshold image is compatible with the container/authorization hypothesis."
+                : "The supplied symbolic material is too thin to constrain the hypothesis.",
+
+            evidenceRefs: citesImage ? imageEvidenceRefs : [ctx.evidenceRef],
+
+            exactClientMaterialUsed: citesImage ? imageEvidenceRefs : [],
           }),
           imageVoteSchema.parse({
             hypothesisId: practical.id,
-            verdict: weakens ? "supports" : citesImage ? "splits" : "insufficient",
-            note: weakens
-              ? "No path is a practical-direction constraint."
+
+            verdict: weakens
+              ? "supports"
               : citesImage
-                ? "Practical constraints remain a live rival beside the image."
-                : "Too thin.",
-            evidenceRefs: citesImage
-              ? [`${ctx.assessmentId}:Q0.5`, `${ctx.assessmentId}:Q10.1`]
-              : [ctx.evidenceRef],
+                ? "splits"
+                : "insufficient",
+
+            interpretation: weakens
+              ? "The image is more compatible with a practical-direction problem."
+              : citesImage
+                ? "The image does not eliminate the practical explanation."
+                : "There is not enough symbolic material to constrain the practical hypothesis.",
+
+            evidenceRefs: citesImage ? imageEvidenceRefs : [ctx.evidenceRef],
+
+            exactClientMaterialUsed: citesImage ? imageEvidenceRefs : [],
           }),
         ],
         overallNote: weakens
@@ -924,53 +1117,163 @@ export function passOutputFor(
               : "Insufficient image.",
       };
     }
+
     case "pass6": {
-      if (fixture === "critic-constraints-win") {
-        return { hiddenPosition: null, alternative: practical.observedPattern };
-      }
-      if (fixture === "q113-as-hidden") {
+      const selected =
+        fixture === "critic-constraints-win"
+          ? practical
+          : fixture === "image-weakens"
+            ? practical
+            : depth;
+
+      const forkResolutions = [
+        forkResolutionFor(
+          fixture,
+          selected,
+          ctx,
+        ),
+      ];
+
+      const finalFormulation =
+        finalFormulationFor(
+          selected,
+          practical,
+          fixture,
+        );
+
+      if (
+        fixture ===
+        "critic-constraints-win"
+      ) {
         return {
-          hiddenPosition: hiddenPositionSchema.parse({
-            consciousPosition: "I need confidence.",
-            observedPattern: "Insight hunger.",
-            possibleHiddenPosition:
-              ctx.requestedInsight?.trim() ||
-              "I hope it shows me some sharp angles that I can't unsee",
-            protectiveFunction: ["Keeps seeking"],
-            possibleCompensatoryAim: "Sit with ordinary exposure instead of seeking revelation",
-            threatenedByChange: ["Ordinary work"],
-            developmentalTension: { poleA: "insight", poleB: "execution" },
-            imageVoteSummary: "insufficient",
-            evidenceRefs: [`${ctx.assessmentId}:Q11.3`],
-            counterEvidenceRefs: [],
-            confidence: "tentative",
-          }),
-          alternative: practical.observedPattern,
+          selectedHypothesisId:
+            selected.id,
+
+          forkResolutions,
+
+          finalFormulation,
+
+          hiddenPosition: null,
+
+          alternative:
+            practical.observedPattern,
         };
       }
+
+      if (
+        fixture === "q113-as-hidden"
+      ) {
+        return {
+          selectedHypothesisId:
+            selected.id,
+
+          forkResolutions,
+
+          finalFormulation,
+
+          hiddenPosition:
+            hiddenPositionSchema.parse({
+              consciousPosition:
+                "I need confidence.",
+
+              observedPattern:
+                "Insight hunger.",
+
+              possibleHiddenPosition:
+                ctx.requestedInsight?.trim() ||
+                "I hope it shows me some sharp angles that I can't unsee",
+
+              protectiveFunction: [
+                "Keeps seeking",
+              ],
+
+              possibleCompensatoryAim:
+                "Sit with ordinary exposure instead of seeking revelation",
+
+              threatenedByChange: [
+                "Ordinary work",
+              ],
+
+              developmentalTension: {
+                poleA: "insight",
+                poleB: "execution",
+              },
+
+              imageVoteSummary:
+                "insufficient",
+
+              evidenceRefs: [
+                `${ctx.assessmentId}:Q11.3`,
+              ],
+
+              counterEvidenceRefs: [],
+
+              confidence: "tentative",
+            }),
+
+          alternative:
+            practical.observedPattern,
+        };
+      }
+
       return {
-        hiddenPosition: hiddenPositionSchema.parse({
-          consciousPosition: "I need more confidence.",
-          observedPattern:
-            fixture === "origin-gold"
-              ? "Freeze at exposure without container"
-              : "Desire without the next concrete step.",
-          possibleHiddenPosition:
-            fixture === "origin-gold"
-              ? "Freedom while an external container still carries authority and money"
-              : "Structure is being asked to serve aliveness, not the other way around.",
-          protectiveFunction: ["Keeps the work from becoming only grind."],
-          possibleCompensatoryAim: "Structure in service of aliveness",
-          threatenedByChange: ["Losing the feeling of possibility."],
-          developmentalTension: { poleA: "possibility", poleB: "incarnation" },
-          imageVoteSummary: fixture === "image-weakens" ? "weakens" : "insufficient",
-          evidenceRefs: [ctx.evidenceRef],
-          counterEvidenceRefs: [],
-          confidence: "tentative",
-        }),
-        alternative: practical.observedPattern,
+        selectedHypothesisId:
+          selected.id,
+
+        forkResolutions,
+
+        finalFormulation,
+
+        hiddenPosition:
+          hiddenPositionSchema.parse({
+            consciousPosition:
+              "I need more confidence.",
+
+            observedPattern:
+              fixture === "origin-gold"
+                ? "Freeze at exposure without container"
+                : "Desire without the next concrete step.",
+
+            possibleHiddenPosition:
+              fixture === "origin-gold"
+                ? "Freedom while an external container still carries authority and money"
+                : "Structure is being asked to serve aliveness, not the other way around.",
+
+            protectiveFunction: [
+              "Keeps the work from becoming only grind.",
+            ],
+
+            possibleCompensatoryAim:
+              "Structure in service of aliveness",
+
+            threatenedByChange: [
+              "Losing the feeling of possibility.",
+            ],
+
+            developmentalTension: {
+              poleA: "possibility",
+              poleB: "incarnation",
+            },
+
+            imageVoteSummary:
+              fixture === "image-weakens"
+                ? "weakens"
+                : "insufficient",
+
+            evidenceRefs: [
+              ctx.evidenceRef,
+            ],
+
+            counterEvidenceRefs: [],
+
+            confidence: "tentative",
+          }),
+
+        alternative:
+          practical.observedPattern,
       };
     }
+
     case "pass7":
       if (fixture === "empty-jungian-no-omit") {
         return { jungianLenses: [] };
@@ -1058,7 +1361,15 @@ export function passOutputFor(
       };
     }
     case "pass9":
-      return { sections: groundedReportSections(fixture, ctx) };
+      return {
+        sections: ensureQuestionsAndClose(
+          groundedReportSections(
+            fixture,
+            ctx,
+          ),
+          ctx,
+        ),
+      };
     case "pass10": {
       const draft = ctx.draftReport?.sections ?? [];
       const failingSectionIds = failingReportSectionIds({
@@ -1068,10 +1379,16 @@ export function passOutputFor(
       if (!failingSectionIds.length) {
         return { failingSectionIds: [], regeneratedSections: [] };
       }
-      const grounded = groundedReportSections(
-        fixture === "starved-case-report" ? "default" : fixture,
-        ctx,
-      );
+      const grounded =
+  ensureQuestionsAndClose(
+    groundedReportSections(
+      fixture === "starved-case-report"
+        ? "default"
+        : fixture,
+      ctx,
+    ),
+    ctx,
+  );
       return {
         failingSectionIds,
         regeneratedSections: grounded.filter((section) => failingSectionIds.includes(section.id)),

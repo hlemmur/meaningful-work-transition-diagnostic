@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const useDevServer = process.env.PLAYWRIGHT_DEV === "1";
+const testPort = process.env.PLAYWRIGHT_PORT ?? "3000";
+const baseURL = `http://127.0.0.1:${testPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -11,7 +13,7 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -24,9 +26,9 @@ export default defineConfig({
   ],
   webServer: {
     command: useDevServer
-      ? "bun run dev -- --hostname 127.0.0.1 --port 3000"
-      : "bun run start -- --hostname 127.0.0.1 --port 3000",
-    url: "http://127.0.0.1:3000",
+      ? `bun run dev -- --hostname 127.0.0.1 --port ${testPort}`
+      : `bun run start -- --hostname 127.0.0.1 --port ${testPort}`,
+    url: baseURL,
     reuseExistingServer: false,
     timeout: 120_000,
     env: {

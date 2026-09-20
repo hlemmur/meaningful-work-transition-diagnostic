@@ -20,9 +20,30 @@ function chargeCase(chargeIntensity: number, emotion: string) {
 }
 
 describe("evaluateReport evidence grounding", () => {
-  const section = (id: string, body: string, evidenceRefs: string[]) => ({
+  const section = (
+    id: string,
+    body: string,
+    evidenceRefs: string[],
+  ) => ({
     id: id as (typeof REQUIRED_PEEL_SECTION_IDS)[number],
-    title: id === "problem" ? "The problem as you see it" : id === "reality" ? "What reality says" : id === "contradiction" ? "The contradiction at the center" : id === "alternative" ? "Another plausible interpretation" : id === "experiment" ? "Your experiment" : id === "jungian" ? "A Jungian lens" : id,
+    title:
+      id === "problem"
+        ? "The problem as you see it"
+        : id === "reality"
+          ? "What reality says"
+          : id === "contradiction"
+            ? "The contradiction at the center"
+            : id === "alternative"
+              ? "Another plausible interpretation"
+              : id === "experiment"
+                ? "Your experiment"
+                : id === "jungian"
+                  ? "A Jungian lens"
+                  : id === "questions"
+                    ? "Three questions to stay with"
+                    : id === "close"
+                      ? "A working formulation"
+                      : id,
     body,
     evidenceRefs,
   });
@@ -68,6 +89,16 @@ describe("evaluateReport evidence grounding", () => {
           section("experiment", "Two weeks of external deadlines tests whether your structure restores motion.", [
             "a1:Q1.1",
           ]),
+          section(
+            "questions",
+            "What would make you question this explanation? What changes when you test structure directly? What still feels unexplained to you?",
+            ["a1:Q1.1", "a1:Q1.3"],
+          ),
+          section(
+            "close",
+            "You can treat this as a working formulation rather than a verdict.",
+            ["a1:Q1.1"],
+          ),
         ],
       },
       requestedInsight: "sharp angles that I can't unsee",
@@ -137,6 +168,16 @@ describe("evaluateReport evidence grounding", () => {
             "Two weeks of stakes tests whether your body charge shifts with accountability.",
             ["a1:Q1.1"],
           ),
+          section(
+            "questions",
+            "What would make you question this polarity reading? What changes for you under real accountability? What still feels unexplained to you?",
+            ["a1:Q1.1", "a1:Q1.3"],
+          ),
+          section(
+            "close",
+            "You can treat this as a working formulation rather than a verdict.",
+            ["a1:Q1.1"],
+          ),
         ],
       },
       caseState: chargeCase(2, "shame"),
@@ -172,6 +213,26 @@ describe("evaluateReport evidence grounding", () => {
     });
     expect(withoutCharge.findings.find((item) => item.id === "charge-language")?.passed).toBe(false);
     expect(withoutCharge.passed).toBe(false);
+  });
+
+  it("accepts supplied emotion language without requiring a body location", () => {
+    const result = evaluateReport({
+      report: {
+        engineVersion: "engine.v2",
+        sections: [
+          section("problem", "You feel fear when the work becomes publicly visible.", ["a1:Q1.1"]),
+          section("reality", "Your financial constraints remain a practical part of the picture.", ["a1:Q0.5"]),
+          section("contradiction", "You want meaningful visibility and repeatedly avoid the smallest public test.", ["a1:Q1.1", "a1:Q1.3"]),
+          section("alternative", "A skill or job-shape mismatch may explain the same pattern.", ["a1:Q0.5"]),
+          section("experiment", "Run one bounded visibility test and compare fear with actual response.", ["a1:Q1.3"]),
+          section("questions", "What would weaken this formulation? What changes after one test? What remains unexplained?", ["a1:Q1.1", "a1:Q1.3"]),
+          section("close", "Treat this as a working formulation to test, not a verdict.", ["a1:Q1.1"]),
+        ],
+      },
+      caseState: chargeCase(2, "fear"),
+    });
+
+    expect(result.findings.find((item) => item.id === "charge-language")?.passed).toBe(true);
   });
 
   it("fails clinical third-person analyst voice", () => {

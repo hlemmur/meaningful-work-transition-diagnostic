@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { mockLlmAdapter } from "@/server/adapters/openai/mock";
+import type { LlmAdapter } from "@/server/adapters/types";
+import type { AnalysisFixture } from "@/engine/test-support/fixtures";
 import { executeAnalysis, type AnalysisRunRecord } from "./run";
+
+function llmForFixture(
+  fixture: AnalysisFixture,
+): LlmAdapter {
+  return {
+    async completeStructured(request) {
+      return mockLlmAdapter.completeStructured({
+        ...request,
+        input: {
+          ...request.input,
+          fixture,
+        },
+      });
+    },
+  };
+}
 
 describe("failure run output persistence", () => {
   it("persists LLM output on pass8 gate failure so bind misses are inspectable", async () => {
@@ -8,12 +26,12 @@ describe("failure run output persistence", () => {
     const result = await executeAnalysis({
       assessmentId: "fail-out-1",
       answers: {
-        "Q1.1": "I stall without structure WRONG_EXPERIMENT",
+        "Q1.1": "I stall without structure",
         "Q0.5": "ADHD",
         "Q11.3": "sharp angles",
       },
       completedStages: [],
-      llm: mockLlmAdapter,
+      llm: llmForFixture("wrong-experiment"),
       persistRun(run) {
         runs.push(run);
       },

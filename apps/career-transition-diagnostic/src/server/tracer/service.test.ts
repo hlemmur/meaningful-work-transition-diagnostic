@@ -135,6 +135,8 @@ describe("mock purchase-to-report tracer", () => {
     expect(delivery.reportEmail.subject).toMatch(/report is ready/i);
     expect(delivery.reportEmail.text).toContain(`/r/${delivery.reportToken}`);
     expect(delivery.reportEmail.text).not.toContain(delivery.draftBody);
+    expect(delivery.draftBody).toMatch(/working formulation|provisional|test/i);
+    expect(delivery.draftBody).not.toMatch(/structure.*aliveness|container.*freedom/i);
   });
 
   it("rejects re-submit after approval and keeps the report token valid", async () => {

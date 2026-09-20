@@ -1,14 +1,12 @@
 import { extractCaseStateFull } from "../checkpoints/extract";
-import { ENGINE_VERSION } from "../prompts";
+import { ENGINE_VERSION, promptRegistry } from "../prompts";
 import type { CaseState } from "../schemas/case-state";
 import type { Report } from "../schemas/analysis";
 import type { LlmAdapter } from "@/server/adapters/types";
 import { firstEvidenceId } from "./evidence-ids";
 import {
-  inferAnalysisFixture,
-  type AnalysisFixture,
-} from "./fixtures";
-import {
+  applyCritiques,
+  rankContradictions,
   applyImageVotes,
   applyResolution,
   ensurePracticalRival,
@@ -26,7 +24,6 @@ import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from
 import { passOutputSchemas } from "./stage-schemas";
 import { buildStageLlmInput } from "./stage-input";
 import { runStructuredStage, StructuredStageError } from "./structured";
-import type { z } from "zod";
 
 export type AnalysisRunRecord = {
   assessmentId: string;
@@ -51,7 +48,7 @@ export type AnalysisPipelineResult = {
   error?: string;
 };
 
-function seedCaseState(
+function extractInitialCaseState(
   assessmentId: string,
   answers: Record<string, unknown>,
   previous?: CaseState,
@@ -67,34 +64,53 @@ export async function executeAnalysis(input: {
   priorRuns?: AnalysisRunRecord[];
   existingReport?: Report;
   llm: LlmAdapter;
-  fixture?: AnalysisFixture;
   failStage?: AnalysisStage;
   persistRun: (run: AnalysisRunRecord) => void;
   persistCaseState: (stage: AnalysisStage, snapshot: CaseState) => void;
 }): Promise<AnalysisPipelineResult> {
   const completed = new Set(input.completedStages);
-  const fixture =
-    input.fixture ?? inferAnalysisFixture(input.answers);
-  let caseState = seedCaseState(
+  let caseState = extractInitialCaseState(
     input.assessmentId,
     input.answers,
     input.previousCaseState,
   );
-  const completeness = assertCaseStateCompleteness(caseState, input.answers);
+
+  const completeness = assertCaseStateCompleteness(
+    caseState,
+    input.answers,
+  );
+
   if (!completeness.passed) {
     input.persistRun({
       assessmentId: input.assessmentId,
+
+      // This is still attributed to pass1 operationally,
+      // because analysis cannot begin with an incomplete extracted state.
       stage: "pass1",
+
       attempt: 1,
-      promptVersion: "pass1.v1",
-      model: modelForStage("pass1"),
+
+      // Make the reason explicit: this failure happened before
+      // the LLM pass, during deterministic extraction validation.
+      promptVersion: "deterministic-extraction",
+
+      model: "deterministic",
+
       status: "failure",
       error: completeness.detail,
-      idempotencyKey: `${input.assessmentId}:pass1:completeness-failure`,
+
+      idempotencyKey:
+        `${input.assessmentId}:deterministic-extraction:completeness-failure`,
     });
-    return { status: "failed", caseState, failedStage: "pass1" };
+
+    return {
+      status: "failed",
+      caseState,
+      failedStage: "pass1",
+      error: completeness.detail,
+    };
   }
-  let critiques = hydrateCritiques(input.priorRuns);
+
   let report =
     input.existingReport ??
     hydrateReport(input.priorRuns, caseState, input.assessmentId);
@@ -115,22 +131,18 @@ export async function executeAnalysis(input: {
         llm: input.llm,
         input: buildStageLlmInput({
           stage,
-          fixture,
           assessmentId: input.assessmentId,
           evidenceRef,
           caseState,
           answers: input.answers,
-          failSchema: fixture === "schema-fail" && stage === "pass3",
           failStage: input.failStage,
           draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
         }),
       });
       stageOutput = result.output;
 
-      caseState = applyStage(stage, caseState, result.output, critiques);
-      if (stage === "pass4") {
-        critiques = passOutputSchemas.pass4.parse(result.output).critiques;
-      }
+      caseState = applyStage(stage, caseState, result.output);
+
       if (stage === "pass9") {
         const sections = sanitizeReportSections(
           passOutputSchemas.pass9.parse(result.output).sections,
@@ -164,7 +176,7 @@ export async function executeAnalysis(input: {
         assessmentId: input.assessmentId,
         stage,
         attempt: result.attempts,
-        promptVersion: `${stage}.v1`,
+        promptVersion: promptRegistry[stage].version,
         model: result.model,
         status: "success",
         tokenUsage: result.usage
@@ -188,7 +200,7 @@ export async function executeAnalysis(input: {
         assessmentId: input.assessmentId,
         stage,
         attempt: attempts,
-        promptVersion: `${stage}.v1`,
+        promptVersion: promptRegistry[stage].version,
         model,
         status: "failure",
         error: message,
@@ -200,14 +212,6 @@ export async function executeAnalysis(input: {
   }
 
   return { status: "completed", caseState, report };
-}
-
-function hydrateCritiques(runs: AnalysisRunRecord[] | undefined) {
-  const pass4 = [...(runs ?? [])]
-    .reverse()
-    .find((run) => run.stage === "pass4" && run.status === "success");
-  const parsed = passOutputSchemas.pass4.safeParse(pass4?.output);
-  return parsed.success ? parsed.data.critiques : [];
 }
 
 function hydrateReport(
@@ -244,7 +248,6 @@ export async function runAnalysisPasses(input: {
   assessmentId: string;
   answers: Record<string, unknown>;
   llm: LlmAdapter;
-  fixture?: AnalysisFixture;
   failStage?: AnalysisStage;
   store: AnalysisStore;
 }): Promise<PipelineResult> {
@@ -259,7 +262,6 @@ export async function runAnalysisPasses(input: {
     priorRuns: runs,
     existingReport: input.store.getReport?.(input.assessmentId),
     llm: input.llm,
-    fixture: input.fixture,
     failStage: input.failStage,
     persistRun: input.store.saveRun,
     persistCaseState(stage, snapshot) {
@@ -278,7 +280,6 @@ function applyStage(
   stage: AnalysisStage,
   state: CaseState,
   output: unknown,
-  critiques: z.infer<(typeof passOutputSchemas)["pass4"]>["critiques"],
 ): CaseState {
   const next = structuredClone(state);
   switch (stage) {
@@ -289,32 +290,65 @@ function applyStage(
       return next;
     }
     case "pass2": {
-      const parsed = passOutputSchemas.pass2.parse(output);
-      next.contradictions = parsed.contradictions;
-      const forks = new Set(next.openForks);
-      for (const item of parsed.contradictions) {
-        for (const fork of item.originForks) {
+      const parsed =
+        passOutputSchemas.pass2.parse(
+          output,
+        );
+
+      next.contradictions =
+        parsed.contradictions;
+
+      const forks =
+        new Set(next.openForks);
+
+      for (
+        const item
+        of parsed.contradictions
+      ) {
+        for (
+          const fork
+          of item.originForks
+        ) {
           forks.add(fork);
         }
       }
+
       next.openForks = [...forks];
-      return next;
+
+      return rankContradictions(next);
     }
     case "pass3":
       next.hypotheses = passOutputSchemas.pass3.parse(output).hypotheses;
       return ensurePracticalRival(next);
-    case "pass4": {
-      const parsed = passOutputSchemas.pass4.parse(output);
-      const critiqueGate = critiquesNonEmpty(parsed.critiques);
-      if (!critiqueGate.passed) {
-        throwGate(critiqueGate);
+      case "pass4": {
+        const parsed =
+          passOutputSchemas.pass4.parse(
+            output,
+          );
+
+        const critiqueGate =
+          critiquesNonEmpty(
+            parsed.critiques,
+          );
+
+        if (!critiqueGate.passed) {
+          throwGate(critiqueGate);
+        }
+
+        return applyCritiques(
+          next,
+          parsed.critiques,
+        );
       }
-      return next;
-    }
     case "pass5":
       return applyImageVotes(next, passOutputSchemas.pass5.parse(output));
-    case "pass6":
-      return applyResolution(next, passOutputSchemas.pass6.parse(output), critiques);
+      case "pass6":
+        return applyResolution(
+          next,
+          passOutputSchemas.pass6.parse(
+            output,
+          ),
+        );
     case "pass7": {
       const parsed = passOutputSchemas.pass7.parse(output);
       next.jungianLenses = parsed.jungianLenses;

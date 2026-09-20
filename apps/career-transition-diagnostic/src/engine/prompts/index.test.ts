@@ -75,27 +75,53 @@ describe("promptRegistry contracts", () => {
       "strong",
     ]);
     expectMentions(promptRegistry.pass4.text, [
-      "critiques",
       "hypothesisId",
-      "mundaneAlternative",
-      "survives",
+      "strongestMundaneAlternative",
+      "counterEvidenceRefs",
+      "missingEvidence",
+      "confirmationBiasRisk",
+      "overPsychologizingRisk",
+      "evidenceActuallyUniqueToHypothesis",
+      "rankAdjustment",
+      "raise",
+      "keep",
+      "lower",
+      "reject",
+      "reason",
     ]);
-    expectMentions(promptRegistry.pass5.text, [
-      "votes",
-      "at least 1",
-      "supports",
-      "weakens",
-      "splits",
-      "insufficient",
-      "overallNote",
-    ]);
-    expectMentions(promptRegistry.pass6.text, [
-      "hiddenPosition",
-      "nullable",
-      "alternative",
-      "requestedInsight",
-      "possibleCompensatoryAim",
-    ]);
+    // pass5
+expectMentions(promptRegistry.pass5.text, [
+  "hypothesisId",
+  "verdict",
+  "supports",
+  "weakens",
+  "splits",
+  "insufficient",
+  "interpretation",
+  "evidenceRefs",
+  "exactClientMaterialUsed",
+  "overallNote",
+]);
+    // pass6
+expectMentions(promptRegistry.pass6.text, [
+  "selectedHypothesisId",
+  "forkResolutions",
+  "forkId",
+  "status",
+  "leans_a",
+  "leans_b",
+  "both",
+  "unresolved",
+  "not_relevant",
+  "finalFormulation",
+  "centralFormulation",
+  "whyItFits",
+  "whatItDoesNotExplain",
+  "strongestAlternative",
+  "unresolvedForks",
+  "hiddenPosition",
+  "alternative",
+]);
     expectMentions(promptRegistry.pass7.text, [
       "jungianLenses",
       "0-3",
@@ -103,21 +129,20 @@ describe("promptRegistry contracts", () => {
       "You are a Puer",
       "tentative",
     ]);
-    expectMentions(promptRegistry.pass8.text, [
-      "realityCheck",
-      "experiments",
-      "behavioral",
-      "imaginal",
-      "riskLevel",
-      "obstacleSpeech",
-      "experimentBindings",
-      "hypothesisTested",
-      "hypothesisIds",
-      "openForkIds",
-    ]);
+    // pass8
+expectMentions(promptRegistry.pass8.text, [
+  "competingHypothesisIds",
+  "manipulatedVariable",
+  "heldConstant",
+  "outcomeInterpretations",
+  "outcome",
+  "favors",
+  "because",
+]);
     expect(promptRegistry.pass8.text).toMatch(/exactly one|exact id|exactly matching/i);
     expect(promptRegistry.pass8.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass8.text).not.toMatch(/\bprovider\b/i);
+
     expectMentions(promptRegistry.pass9.text, [
       "sections",
       "peel",
@@ -127,49 +152,96 @@ describe("promptRegistry contracts", () => {
       "contradiction",
       "alternative",
       "experiment",
+      "questions",
+      "close",
       "caseSnapshot",
+      "evidenceAllowlist",
+      "answersByQuestionId",
       "distinct question",
       "Q11.3",
+      "requestedInsight",
       "image",
       "projection",
       "money",
-      "bargain",
+      "Tier-A",
       "polarity",
       "second person",
       "the client",
-      "requiredCitations",
-      "citeRefs",
       "requiredTitles",
       "possibleCompensatoryAim",
-      "obstacleSpeech",
-      "wantedQuality",
-      "claim→cite",
-      "romance-of-eternal-becoming",
+      "finalFormulation",
+      "selectedHypothesisId",
+      "centralFormulation",
+      "whyItFits",
+      "whatItDoesNotExplain",
+      "strongestAlternative",
+      "unresolvedForks",
+      "somatic",
+      "dialogue",
+      "exactly 3",
+      "working formulation",
+      "provisional",
     ]);
+
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v8");
+    expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
+    expect(promptRegistry.pass9.version).toBe("pass-9.v9");
+
+    expect(promptRegistry.pass9.text).toMatch(
+      /never generate.*reply|second turn of dialogue|new speech/i,
+    );
+    expect(promptRegistry.pass9.text).toMatch(
+      /body location only if|mention a body location only if/i,
+    );
+    expect(promptRegistry.pass9.text).toMatch(
+      /you are a puer\/senex|archetypal identity/i,
+    )
+
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
       "regeneratedSections",
       "Q11.3",
-      "peel",
-      "one-sentence",
-      "distinct question",
+      "requestedInsight",
       "draftReport",
       "evidenceAllowlist",
-      "requestedInsight",
+      "distinct question",
       "Tier-A",
-      "inflation",
       "the client",
-      "second-person",
-      "requiredCitations",
       "requiredTitles",
       "possibleCompensatoryAim",
-      "obstacleSpeech",
-      "eternal becoming",
+      "finalFormulation",
+      "centralFormulation",
+      "strongestAlternative",
+      "whatItDoesNotExplain",
+      "unresolvedForks",
+      "somatic",
+      "dialogue",
+      "questions",
+      "exactly 3",
+      "close",
+      "provisional",
     ]);
-    expect(promptRegistry.pass10.version).toBe("pass-10.v8");
-    expect(promptRegistry.pass8.version).toBe("pass-8.v4");
+
+    expect(promptRegistry.pass10.text).not.toMatch(/\bmustCiteIn\b/i);
+
+    expect(promptRegistry.pass10.text).toMatch(
+      /invent.*body|body location/i,
+    );
+
+    expect(promptRegistry.pass10.text).toMatch(
+      /second turn of dialogue|new imaginal speech|writes speech/i,
+    );
+
+    expect(promptRegistry.pass10.text).toMatch(
+      /turns? a hypothesis into a fact|hypothesis.*fact/i,
+    );
+
+    expect(promptRegistry.pass10.text).toMatch(
+      /you are a puer\/senex|archetypal identity/i,
+    );
+
+    expect(promptRegistry.pass10.version).toBe("pass-10.v9");
+    expect(promptRegistry.pass8.version).toBe("pass-8.v5");
   });
 });

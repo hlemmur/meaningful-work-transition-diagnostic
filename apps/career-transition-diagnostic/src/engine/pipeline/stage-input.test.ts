@@ -38,6 +38,25 @@ function peelSections(assessmentId = "a1") {
       body: "For two weeks, run your outreach under external deadlines and watch charge.",
       evidenceRefs: [q("Q1.1")],
     },
+    {
+      id: "questions",
+      title: "Three questions to stay with",
+      body:
+        "What would make you question this explanation? What changes when you test structure directly? What still feels unexplained to you?",
+      evidenceRefs: [
+        q("Q1.1"),
+        q("Q1.3"),
+      ],
+    },
+    {
+      id: "close",
+      title: "A working formulation",
+      body:
+        "You can treat this as a working formulation rather than a verdict.",
+      evidenceRefs: [
+        q("Q1.1"),
+      ],
+    },
   ];
 }
 
@@ -78,6 +97,9 @@ function seededCase(assessmentId = "a1"): CaseState {
         recurrence: 0.7,
         explanatoryImportance: 0.9,
         charge: 0.8,
+        crossDomainReach: 0.8,
+        noveltyOfConnection: 0.7,
+        consciousAwarenessPenalty: 0.2,
       },
     },
   ];
@@ -139,7 +161,6 @@ describe("buildStageLlmInput", () => {
       evidenceRef: "a1:Q1.1",
       caseState: state,
       answers: { "Q1.1": "long answer", "Q11.3": "sharp angles" },
-      fixture: "happy",
     });
     const snapshot = input.caseSnapshot as Record<string, unknown>;
     expect(snapshot).toBeDefined();
@@ -278,7 +299,7 @@ describe("buildStageLlmInput", () => {
     expect(snapshot.experimentBindings).not.toHaveProperty("preferredHypothesisId");
   });
 
-  it("exposes Tier-A citeRefs and requiredCitations so pass9 can satisfy hard gates", () => {
+  it("exposes Tier-A citeRefs and report-wide coverage requirements", () => {
     const state = seededCase("a1");
     state.symbolicMaterial = {
       scene: "A rusty pipe across a threshold",
@@ -334,9 +355,9 @@ describe("buildStageLlmInput", () => {
         money: { citeRefs: string[] };
       };
       requiredCitations: {
-        image: { mustCiteIn: string[]; refs: string[] };
-        projection: { mustCiteIn: string[]; refs: string[] };
-        money: { mustCiteIn: string[]; refs: string[] };
+        image: { mustAppearInReport: boolean; refs: string[] };
+        projection: { mustAppearInReport: boolean; refs: string[] };
+        money: { mustAppearInReport: boolean; refs: string[] };
       };
       requiredTitles: Record<string, string>;
     };
@@ -350,17 +371,27 @@ describe("buildStageLlmInput", () => {
       expect.arrayContaining(["a1:Q10.1", "a1:Q5.1", "a1:Q6.1", "a1:Q8.2"]),
     );
     expect(snapshot.requiredCitations.image).toEqual({
-      mustCiteIn: ["reality", "hidden"],
-      refs: expect.arrayContaining(["a1:Q10.1", "a1:Q10.6"]),
+      mustAppearInReport: true,
+      refs: expect.arrayContaining([
+        "a1:Q10.1",
+        "a1:Q10.6",
+      ]),
     });
     expect(snapshot.requiredCitations.projection).toEqual({
-      mustCiteIn: ["contradiction", "hidden"],
-      refs: expect.arrayContaining(["a1:Q5.1", "a1:Q6.1"]),
+      mustAppearInReport: true,
+      refs: expect.arrayContaining([
+        "a1:Q5.1",
+        "a1:Q6.1",
+      ]),
     });
+
     expect(snapshot.requiredCitations.money).toEqual({
-      mustCiteIn: ["reality", "alternative"],
-      refs: expect.arrayContaining(["a1:Q8.2"]),
+      mustAppearInReport: true,
+      refs: expect.arrayContaining([
+        "a1:Q8.2",
+      ]),
     });
+
     expect(snapshot.requiredTitles).toEqual(
       expect.objectContaining({
         problem: "The problem as you see it",
@@ -383,7 +414,6 @@ describe("buildStageLlmInput", () => {
       evidenceRef: "a1:Q0.5",
       caseState: seededCase(),
       answers,
-      fixture: "happy",
     });
     const snapshot = forPass9.caseSnapshot as Record<string, unknown>;
     expect(snapshot).toEqual(

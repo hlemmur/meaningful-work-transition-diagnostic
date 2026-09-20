@@ -2,13 +2,17 @@ import { z } from "zod";
 import {
   contradictionSchema,
   experimentSchema,
+  finalFormulationSchema,
   forkIdSchema,
+  forkResolutionSchema,
   hiddenPositionSchema,
+  hypothesisCritiqueSchema,
   hypothesisSchema,
   imageVoteSchema,
   jungianLensSchema,
   realityCheckSchema,
 } from "./analysis";
+
 import {
   avoidedActionSchema,
   evidenceItemSchema,
@@ -102,14 +106,29 @@ export const caseStateSchema = z.object({
   }),
   money: z.object({
     beliefs: z.array(evidenceItemSchema),
+
     easyMoneyHistory: z.array(evidenceItemSchema),
+
     hardMoneyHistory: z.array(evidenceItemSchema),
+
     economicStructures: z.array(evidenceItemSchema),
+
     invisibleMachinery: z.array(evidenceItemSchema),
-    effortFairness: z.array(evidenceItemSchema),
-    refusedWellPaidWork: z.array(evidenceItemSchema),
-    continuePoorlyPaidWork: z.array(evidenceItemSchema),
-    backgroundIncome: z.array(evidenceItemSchema),
+
+    easyVsHardDifference:
+      z.array(evidenceItemSchema),
+
+    effortFairness:
+      z.array(evidenceItemSchema),
+
+    refusedWellPaidWork:
+      z.array(evidenceItemSchema),
+
+    continuePoorlyPaidWork:
+      z.array(evidenceItemSchema),
+
+    backgroundIncome:
+      z.array(evidenceItemSchema),
   }),
   hiddenBargain: z.object({
     costsOfStaying: z.array(evidenceItemSchema),
@@ -135,12 +154,43 @@ export const caseStateSchema = z.object({
     explanationShift: z.string().optional(),
     requestedInsight: z.string().optional(),
   }),
+
   openForks: z.array(forkIdSchema),
-  contradictions: z.array(contradictionSchema),
-  hypotheses: z.array(hypothesisSchema),
-  imageVote: imageVoteSchema.optional(),
-  hiddenPosition: hiddenPositionSchema.optional(),
-  jungianLenses: z.array(jungianLensSchema),
+
+contradictions: z.array(
+  contradictionSchema,
+),
+
+hypotheses: z.array(
+  hypothesisSchema,
+),
+
+hypothesisCritiques: z
+  .array(hypothesisCritiqueSchema)
+  .default([]),
+
+imageVotes: z
+  .array(imageVoteSchema)
+  .default([]),
+
+// Temporary compatibility field.
+// Remove after all gates/tests/UI have moved to imageVotes.
+imageVote: imageVoteSchema.optional(),
+
+forkResolutions: z
+  .array(forkResolutionSchema)
+  .default([]),
+
+finalFormulation:
+  finalFormulationSchema.optional(),
+
+hiddenPosition:
+  hiddenPositionSchema.optional(),
+
+jungianLenses: z.array(
+  jungianLensSchema,
+),
+
   jungianOmitReason: z.string().optional(),
   realityCheck: realityCheckSchema.optional(),
   experiments: z.array(experimentSchema),
