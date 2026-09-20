@@ -452,14 +452,33 @@ const selectedIsPractical =
     }
   }
 
-  if (selectedIsPractical && state.finalFormulation.developmentalFormulation) {
+  const maintainingLoop = state.finalFormulation.maintainingLoop;
+  if (maintainingLoop && !selectedIsPractical) {
+    const knownEvidence = new Set(collectCanonicalEvidenceIds(state));
+    const invalidRefs = maintainingLoop.evidenceRefs.filter(
+      (ref) => !knownEvidence.has(ref),
+    );
+    if (invalidRefs.length > 0) {
+      throwGate({
+        id: "maintaining-loop-evidence",
+        passed: false,
+        detail: `Maintaining loop cites evidence outside the current case: ${invalidRefs.join(", ")}.`,
+      });
+    }
+  }
+
+  if (
+    selectedIsPractical &&
+    (state.finalFormulation.developmentalFormulation || state.finalFormulation.maintainingLoop)
+  ) {
     state.finalFormulation = {
       ...state.finalFormulation,
       developmentalFormulation: undefined,
+      maintainingLoop: undefined,
     };
     state.gateRemediations = [
       ...(state.gateRemediations ?? []),
-      "Dropped developmentalFormulation because the selected hypothesis is practical, economic, or occupational.",
+      "Dropped developmentalFormulation and maintainingLoop because the selected hypothesis is practical, economic, or occupational.",
     ];
   }
 

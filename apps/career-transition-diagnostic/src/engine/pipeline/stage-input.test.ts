@@ -134,6 +134,51 @@ function seededCase(assessmentId = "a1"): CaseState {
 }
 
 describe("buildStageLlmInput", () => {
+  it("carries a resolved maintaining loop into report-stage snapshots", () => {
+    const state = seededCase();
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "Waiting for certainty sustains delay.",
+      maintenanceMechanism: {
+        trigger: "A concrete choice appears.",
+        response: "Commitment is deferred.",
+        shortTermFunction: "Options remain open.",
+        longTermCost: "No fit evidence accumulates.",
+        reinforcingConsequence: "More certainty feels necessary.",
+      },
+      maintainingLoop: {
+        goal: "Choose meaningful work.",
+        trigger: "A concrete choice appears.",
+        response: "Commitment is deferred.",
+        payoff: "Options remain open.",
+        cost: "No fit evidence accumulates.",
+        selfConfirmingResult: "More certainty feels necessary.",
+        evidenceRefs: ["a1:Q0.5", "a1:Q1.1"],
+      },
+      whyItFits: ["a1:Q1.1"],
+      whatItDoesNotExplain: [],
+      strongestAlternative: "ADHD and job shape.",
+      unresolvedForks: [],
+    };
+
+    const input = buildStageLlmInput({
+      stage: "pass9",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: state,
+      answers: { "Q1.1": "stall" },
+    });
+
+    const snapshot = input.caseSnapshot as {
+      finalFormulation?: {
+        maintainingLoop?: typeof state.finalFormulation.maintainingLoop;
+      };
+    };
+    expect(snapshot.finalFormulation?.maintainingLoop).toEqual(
+      state.finalFormulation.maintainingLoop,
+    );
+  });
+
   it("adds Tier-A case snapshot for pass2+ including early analysis passes", () => {
     const state = seededCase();
     state.projections.admiredFigures = [

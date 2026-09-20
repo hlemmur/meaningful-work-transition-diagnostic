@@ -116,6 +116,8 @@ expectMentions(promptRegistry.pass6.text, [
   "finalFormulation",
   "maintenanceFormulation",
   "maintenanceMechanism",
+  "maintainingLoop",
+  "selfConfirmingResult",
   "developmentalFormulation",
   "at least two",
   "whyItFits",
@@ -175,6 +177,7 @@ expectMentions(promptRegistry.pass8.text, [
       "finalFormulation",
       "selectedHypothesisId",
       "maintenanceFormulation",
+      "maintainingLoop",
       "developmentalFormulation",
       "The developmental tension",
       "whyItFits",
@@ -191,7 +194,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v10");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v11");
 
     expect(promptRegistry.pass9.text).toMatch(
       /never generate.*reply|second turn of dialogue|new speech/i,
@@ -218,6 +221,7 @@ expectMentions(promptRegistry.pass8.text, [
       "finalFormulation",
       "maintenanceFormulation",
       "maintenanceMechanism",
+      "maintainingLoop",
       "developmentalFormulation",
       "strongestAlternative",
       "whatItDoesNotExplain",
@@ -248,7 +252,7 @@ expectMentions(promptRegistry.pass8.text, [
       /you are a puer\/senex|archetypal identity/i,
     );
 
-    expect(promptRegistry.pass10.version).toBe("pass-10.v10");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v11");
     expect(promptRegistry.pass8.version).toBe("pass-8.v5");
   });
 });

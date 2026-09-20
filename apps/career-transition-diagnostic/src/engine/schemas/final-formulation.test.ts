@@ -10,6 +10,52 @@ const mechanism = {
 };
 
 describe("finalFormulationSchema", () => {
+  it("accepts a complete evidence-grounded maintaining loop", () => {
+    const parsed = finalFormulationSchema.parse({
+      selectedHypothesisId: "hyp-1",
+      maintenanceFormulation: "Seeking certainty keeps action suspended.",
+      maintenanceMechanism: mechanism,
+      maintainingLoop: {
+        goal: "Choose meaningful work responsibly.",
+        trigger: "A concrete option appears.",
+        response: "More certainty is sought before acting.",
+        payoff: "Options and self-image remain protected.",
+        cost: "No direct evidence about fit accumulates.",
+        selfConfirmingResult: "The missing evidence makes certainty feel even more necessary.",
+        evidenceRefs: ["a:Q2.1", "a:Q4.2"],
+      },
+      whyItFits: ["a:Q2.1", "a:Q4.2"],
+      whatItDoesNotExplain: [],
+      strongestAlternative: "Job-shape mismatch.",
+      unresolvedForks: [],
+    });
+
+    expect(parsed.maintainingLoop?.goal).toBe("Choose meaningful work responsibly.");
+  });
+
+  it("rejects a loop that repeats the same statement as every step", () => {
+    const repeated = "Nothing changes.";
+    const result = finalFormulationSchema.safeParse({
+      selectedHypothesisId: "hyp-1",
+      maintenanceFormulation: "Seeking certainty keeps action suspended.",
+      maintenanceMechanism: mechanism,
+      maintainingLoop: {
+        goal: repeated,
+        trigger: repeated,
+        response: repeated,
+        payoff: repeated,
+        cost: repeated,
+        selfConfirmingResult: repeated,
+        evidenceRefs: ["a:Q2.1", "a:Q4.2"],
+      },
+      whyItFits: ["a:Q2.1"],
+      whatItDoesNotExplain: [],
+      strongestAlternative: "Job-shape mismatch.",
+      unresolvedForks: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
   it("normalizes a legacy central formulation without losing its wording", () => {
     const parsed = finalFormulationSchema.parse({
       selectedHypothesisId: "hyp-1",

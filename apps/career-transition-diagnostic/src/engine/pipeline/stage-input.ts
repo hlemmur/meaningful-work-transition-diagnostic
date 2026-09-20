@@ -597,6 +597,10 @@ export function buildCaseSnapshot(input: {
           caseState.finalFormulation
             .maintenanceMechanism,
 
+        maintainingLoop:
+          caseState.finalFormulation
+            .maintainingLoop,
+
         developmentalFormulation:
           caseState.finalFormulation
             .developmentalFormulation,
