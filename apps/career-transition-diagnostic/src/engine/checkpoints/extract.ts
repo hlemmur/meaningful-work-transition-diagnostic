@@ -201,6 +201,9 @@ export function extractCaseStateFull(
   previous?: CaseState,
 ): CaseState {
   const next = extractPass1Lite(assessmentId, "D", answers, previous);
+  if (previous?.openForks.length) {
+    next.openForks = [...new Set([...previous.openForks, ...next.openForks])];
+  }
 
   next.practicalContext.pressureSources = upsertEvidence(
     next.practicalContext.pressureSources,
