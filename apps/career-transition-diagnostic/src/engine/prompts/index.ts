@@ -128,12 +128,12 @@ export const promptRegistry = {
   }. Return at least 1 vote. ${EMPTY_ARRAYS}`,
   },
   pass6: {
-    version: "pass-6.v5",
+    version: "pass-6.v6",
     text: `Resolve the case after contradiction generation, competing hypotheses, adversarial critique, and image voting. Do not restart the analysis from scratch.
 
   Choose selectedHypothesisId from the hypotheses present in caseSnapshot. Resolve each materially relevant open fork rather than silently ignoring it. A fork may lean one way, remain both, remain unresolved, or be not relevant.
 
-  Produce one FinalFormulation that later report stages must treat as the working analytical spine. maintenanceFormulation and maintenanceMechanism explain why the pattern repeats now. developmentalFormulation is optional and describes a possible developmental meaning, never the maintenance cause. Include developmentalFormulation only when its opposition recurs across at least two independent questionnaire domains; otherwise omit it. Never force polarity onto a practical-only case. State what the selected hypothesis explains, what it does not explain, the strongest alternative, and unresolved forks. Do not present either formulation as certainty.
+  Produce one FinalFormulation that later report stages must treat as the working analytical spine. maintenanceFormulation and maintenanceMechanism explain why the pattern repeats now. maintainingLoop is optional: include it only when at least two supplied evidence refs support a recurring goal → trigger → response → payoff → cost → selfConfirmingResult cycle. Do not force a loop onto a sufficient practical explanation, repeat one statement as every step, or assume a predefined legitimacy pattern. developmentalFormulation is optional and describes a possible developmental meaning, never the maintenance cause. Include developmentalFormulation only when its opposition recurs across at least two independent questionnaire domains; otherwise omit it. Never force polarity onto a practical-only case. State what the selected hypothesis explains, what it does not explain, the strongest alternative, and unresolved forks. Do not present either formulation as certainty.
 
   hiddenPosition is optional and must be null when practical/environmental/economic explanation is sufficient or when evidence does not warrant a deeper hidden stance. If hiddenPosition is present:
   - use hypothesis language
@@ -161,6 +161,15 @@ export const promptRegistry = {
         shortTermFunction,
         longTermCost,
         reinforcingConsequence
+      },
+      maintainingLoop?: {
+        goal,
+        trigger,
+        response,
+        payoff,
+        cost,
+        selfConfirmingResult,
+        evidenceRefs
       },
       developmentalFormulation?: {
         consciousPole,
@@ -240,7 +249,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v10",
+    version: "pass-9.v11",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Voice and stance:
@@ -264,7 +273,8 @@ export const promptRegistry = {
   - If supplied image speech is quoted or explicitly attributed to the image/obstacle, reproduce only the person's supplied speech. Never generate a reply, a second turn of dialogue, new speech, or a scripted exchange.
 
   Analytical shape:
-  - Use caseSnapshot.finalFormulation as the resolved analytical spine when present. Preserve finalFormulation.selectedHypothesisId, finalFormulation.maintenanceFormulation, finalFormulation.maintenanceMechanism, finalFormulation.whyItFits, finalFormulation.whatItDoesNotExplain, finalFormulation.strongestAlternative, and finalFormulation.unresolvedForks. Do not replace that resolution with a newly invented formulation.
+  - Use caseSnapshot.finalFormulation as the resolved analytical spine when present. Preserve finalFormulation.selectedHypothesisId, finalFormulation.maintenanceFormulation, finalFormulation.maintenanceMechanism, optional finalFormulation.maintainingLoop, finalFormulation.whyItFits, finalFormulation.whatItDoesNotExplain, finalFormulation.strongestAlternative, and finalFormulation.unresolvedForks. Do not replace that resolution with a newly invented formulation.
+  - When maintainingLoop exists, explain the recurring cycle as a provisional working model in the most relevant interpretive section and synthesize it briefly in the close. Do not present payoff or selfConfirmingResult as known motive.
   - When finalFormulation.developmentalFormulation exists, keep it explicitly tentative and render it in a developmental section titled “The developmental tension”. Do not infer this section from hiddenPosition or Jungian lenses alone.
   - Distinguish conscious explanation from enacted reality.
   - Make the central contradiction genuinely explanatory, not merely a restatement.
@@ -313,7 +323,7 @@ export const promptRegistry = {
   Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
-    version: "pass-10.v10",
+    version: "pass-10.v11",
     text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
 
   Fail a section when it:
@@ -330,7 +340,8 @@ export const promptRegistry = {
   - treats eternal becoming, eternal youth, or similar Jungian language as the person's identity;
   - treats discipline/grind as the only developmental answer;
   - when caseSnapshot.hiddenPosition exists, omits hiddenPosition.protectiveFunction or hiddenPosition.possibleCompensatoryAim from the hidden section;
-  - contradicts, silently replaces, or materially drifts from caseSnapshot.finalFormulation, including finalFormulation.maintenanceFormulation, finalFormulation.maintenanceMechanism, finalFormulation.strongestAlternative, finalFormulation.whatItDoesNotExplain, or finalFormulation.unresolvedForks;
+  - contradicts, silently replaces, or materially drifts from caseSnapshot.finalFormulation, including finalFormulation.maintenanceFormulation, finalFormulation.maintenanceMechanism, finalFormulation.maintainingLoop, finalFormulation.strongestAlternative, finalFormulation.whatItDoesNotExplain, or finalFormulation.unresolvedForks;
+  - states a maintainingLoop payoff or selfConfirmingResult as settled motive rather than a provisional working model;
   - adds a developmental section when caseSnapshot.finalFormulation.developmentalFormulation is absent, or omits/drifts from it when present;
   - ignores a materially relevant practical rival or constraint;
   - contains theory without concrete facts from caseSnapshot.answersByQuestionId;

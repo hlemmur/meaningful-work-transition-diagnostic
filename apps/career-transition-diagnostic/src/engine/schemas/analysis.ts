@@ -193,12 +193,48 @@ export const developmentalFormulationSchema = z
     }
   });
 
+export const maintainingLoopSchema = z
+  .object({
+    goal: z.string().trim().min(1),
+    trigger: z.string().trim().min(1),
+    response: z.string().trim().min(1),
+    payoff: z.string().trim().min(1),
+    cost: z.string().trim().min(1),
+    selfConfirmingResult: z.string().trim().min(1),
+    evidenceRefs: z.array(z.string()).min(2),
+  })
+  .superRefine((value, ctx) => {
+    if (new Set(value.evidenceRefs).size < 2) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidenceRefs"],
+        message: "maintainingLoop requires at least two distinct evidence refs",
+      });
+    }
+    const steps = [
+      value.goal,
+      value.trigger,
+      value.response,
+      value.payoff,
+      value.cost,
+      value.selfConfirmingResult,
+    ].map((item) => item.toLocaleLowerCase().replace(/\W+/g, " ").trim());
+    if (new Set(steps).size < 4) {
+      ctx.addIssue({
+        code: "custom",
+        message: "maintainingLoop must describe distinct steps rather than repeat one circular statement",
+      });
+    }
+  });
+
 export const currentFinalFormulationSchema = z.object({
   selectedHypothesisId: z.string(),
 
   maintenanceFormulation: z.string().trim().min(1),
 
   maintenanceMechanism: maintenanceMechanismSchema,
+
+  maintainingLoop: maintainingLoopSchema.optional(),
 
   developmentalFormulation: developmentalFormulationSchema.optional(),
 
