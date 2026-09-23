@@ -143,6 +143,11 @@ function ensureQuestionsAndClose(
           q("Q1.3"),
           q("Q2.2"),
         ],
+        questionIntents: [
+          { question: "What changes when you treat the stall as information rather than proof that you cannot do the work?", targetUncertainty: "Whether the stall is information or incapacity", couldWeakenSelectedFormulation: false },
+          { question: "Which explanation would you most want to disprove through action?", targetUncertainty: "Which explanation survives action", couldWeakenSelectedFormulation: true },
+          { question: "What would you learn if the next step became smaller and more observable?", targetUncertainty: "Whether task size changes action", couldWeakenSelectedFormulation: false },
+        ],
       }),
     );
   }
@@ -157,7 +162,7 @@ function ensureQuestionsAndClose(
         id: "close",
         title: "A working formulation",
         body:
-          "You do not need to treat this interpretation as a verdict. Use it as a working formulation: something to test against your experience and revise when reality gives you better evidence.",
+          "You can treat the working maintenance hypothesis as the possibility that the stall may protect a not-yet-incarnated way of working, or that freedom without an internalized container and capacity stalls action. Your strongest practical alternative is that constraints and missing infrastructure may be enough to explain the stall. Important unknowns remain, and evidence from your experiment should update or revise this formulation rather than turn it into a verdict.",
         evidenceRefs: [
           ctx.evidenceRef,
         ],

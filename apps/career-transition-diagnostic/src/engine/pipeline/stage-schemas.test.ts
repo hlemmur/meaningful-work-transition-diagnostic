@@ -179,6 +179,19 @@ describe("pass6OutputSchema / hiddenPosition aim", () => {
 });
 
 describe("pass9OutputSchema", () => {
+  it("rejects questions without structured intent and a disconfirming question", () => {
+    const sections = REQUIRED_PEEL_SECTION_IDS.map((id, index) => ({
+      id,
+      title: id,
+      body: id === "questions"
+        ? "What do you notice? What could change? What remains unknown?"
+        : "A concrete evidence-backed paragraph about the stall.",
+      evidenceRefs: [`a1:Q${index + 1}.1`],
+    }));
+
+    expect(pass9OutputSchema.safeParse({ sections }).success).toBe(false);
+  });
+
   it("rejects a single thin section like the live Gemini miss", () => {
     const parsed = pass9OutputSchema.safeParse({
       sections: [
@@ -200,6 +213,13 @@ describe("pass9OutputSchema", () => {
         title: id,
         body: "A concrete evidence-backed paragraph about the stall.",
         evidenceRefs: [`a1:Q${index + 1}.1`],
+        ...(id === "questions" ? {
+          questionIntents: [
+            { question: "What evidence would weaken this formulation?", targetUncertainty: "Whether the formulation fits", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: true },
+            { question: "What do you notice when you test it?", targetUncertainty: "What changes in action", relatedHypothesisId: "h2", couldWeakenSelectedFormulation: false },
+            { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
+          ],
+        } : {}),
       })),
     });
     expect(parsed.success).toBe(true);

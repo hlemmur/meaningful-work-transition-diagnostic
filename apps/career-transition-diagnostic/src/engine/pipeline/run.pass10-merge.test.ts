@@ -55,6 +55,11 @@ function peelSections(assessmentId = "a1") {
       body:
         "What would make you question this explanation? What changes when you test structure directly? What still feels unexplained to you?",
       evidenceRefs: [q("Q1.1"), q("Q1.3")],
+      questionIntents: [
+        { question: "What would make you question this explanation?", targetUncertainty: "Whether the explanation fits", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: true },
+        { question: "What changes when you test structure directly?", targetUncertainty: "Whether structure changes action", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: false },
+        { question: "What still feels unexplained to you?", targetUncertainty: "The unexplained remainder", couldWeakenSelectedFormulation: false },
+      ],
     },
     {
       id: "close" as const,
@@ -138,14 +143,18 @@ function seededCase(assessmentId = "a1"): CaseState {
   return state;
 }
 
-function criticThatRegenerates(body: string): LlmAdapter {
+function criticThatRegenerates(body: string, draftProblemBody = GOOD_PROBLEM): LlmAdapter {
   return {
     async completeStructured(request) {
       if (request.stage === "pass9") {
         return {
           stage: request.stage,
           fixture: "happy",
-          output: { sections: peelSections("a1") },
+          output: {
+            sections: peelSections("a1").map((section) =>
+              section.id === "problem" ? { ...section, body: draftProblemBody } : section,
+            ),
+          },
           model: request.model ?? "mock-strong",
           usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.001 },
         };
@@ -212,6 +221,26 @@ const completedThroughPass8 = [
 ] as const;
 
 describe("pass10 critic merge", () => {
+  it("regenerates only the section containing an unsupported certain predicate", async () => {
+    const result = await executeAnalysis({
+      assessmentId: "a1",
+      answers: { "Q1.1": "I quit IT and freeze on marketing." },
+      previousCaseState: seededCase(),
+      completedStages: completedThroughPass8,
+      llm: criticThatRegenerates(
+        "You may be avoiding commitment to the new identity because success could expose you.",
+        "You unconsciously avoid commitment to the new identity because success would expose you.",
+      ),
+      persistRun() {},
+      persistCaseState() {},
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(result).toMatchObject({ status: "completed" });
+    expect(result.report?.sections.find((section) => section.id === "problem")?.body).toMatch(/may be avoiding/);
+    expect(result.report?.sections.find((section) => section.id === "reality")?.body).toBe(peelSections("a1")[1]?.body);
+  });
+
   it("rejects a regenerated section that violates hard gates and keeps the pass9 draft", async () => {
     const result = await executeAnalysis({
       assessmentId: "a1",

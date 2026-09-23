@@ -23,6 +23,8 @@ import {
   somaticProvenance,
   questionsAndCloseAdequate,
   developmentalSectionAdequate,
+  epistemicallyUncalibratedSectionIds,
+  closeSynthesisAdequate,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -1543,13 +1545,38 @@ describe("somatic provenance gate", () => {
   });
 });
 describe("questions and close gate", () => {
-  it("passes exactly three questions and a close", () => {
+  it("identifies only the section with an unsupported certain psychological claim", () => {
     const sections = [
       section(
-        "questions",
-        "1. What happens when you test this? 2. What would weaken the hypothesis? 3. What remains unexplained?",
+        "contradiction",
+        "You unconsciously avoid committing because success would expose you.",
         ["a1:Q1.1"],
       ),
+      section(
+        "alternative",
+        "A practical job-shape mismatch may also explain the delay.",
+        ["a1:Q0.5"],
+      ),
+    ];
+
+    expect(epistemicallyUncalibratedSectionIds(sections)).toEqual([
+      "contradiction",
+    ]);
+  });
+
+  it("passes exactly three questions and a close", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. What happens when you test this? 2. What evidence would weaken the hypothesis for you? 3. What remains unexplained for you?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          { question: "What happens when you test this?", targetUncertainty: "Whether behavior changes", couldWeakenSelectedFormulation: false },
+          { question: "What evidence would weaken the hypothesis for you?", targetUncertainty: "Whether the formulation fits", couldWeakenSelectedFormulation: true },
+          { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
+        ],
+      }),
       section(
         "close",
         "You can treat this as a working formulation rather than a verdict.",
@@ -1583,5 +1610,36 @@ describe("questions and close gate", () => {
         sections,
       ).passed,
     ).toBe(false);
+  });
+
+  it("rejects leading questions and preloaded answers", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    const questions = reportSectionSchema.parse({
+      id: "questions",
+      title: "questions",
+      body: "Why do you avoid commitment? What do you notice? What remains unknown for you?",
+      evidenceRefs: ["a1:Q1.1"],
+      questionIntents: [
+        { question: "Why do you avoid commitment?", targetUncertainty: "Commitment", couldWeakenSelectedFormulation: true },
+        { question: "What do you notice?", targetUncertainty: "Observation", couldWeakenSelectedFormulation: false },
+        { question: "What remains unknown for you?", targetUncertainty: "Unknowns", couldWeakenSelectedFormulation: false },
+      ],
+    });
+    expect(questionsAndCloseAdequate([questions, section("close", "A working formulation.", ["a1:Q1.1"])], state).passed).toBe(false);
+  });
+
+  it("rejects a close that omits the rival, unknowns, and updating evidence", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "Waiting for certainty sustains delay.",
+      maintenanceMechanism: {
+        trigger: "A visible next step appears.", response: "Action pauses.", shortTermFunction: "Uncertainty falls.", longTermCost: "Evidence stays scarce.", reinforcingConsequence: "More certainty feels necessary.",
+      },
+      whyItFits: ["Delay recurs."], whatItDoesNotExplain: ["Market fit."], strongestAlternative: "The role may simply be a poor job-shape match.", unresolvedForks: [],
+    };
+    expect(closeSynthesisAdequate([
+      section("close", "You can treat certainty as a working formulation.", ["a1:Q1.1"]),
+    ], state).passed).toBe(false);
   });
 });

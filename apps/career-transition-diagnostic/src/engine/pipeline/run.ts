@@ -19,6 +19,7 @@ import {
   assertPeelHardGates,
   throwGate,
   warrantsJungianPolarity,
+  epistemicallyUncalibratedSectionIds,
 } from "./gates";
 import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from "./models";
 import { passOutputSchemas } from "./stage-schemas";
@@ -114,6 +115,9 @@ export async function executeAnalysis(input: {
   let report =
     input.existingReport ??
     hydrateReport(input.priorRuns, caseState, input.assessmentId);
+  let epistemicDraftFailures = report
+    ? epistemicallyUncalibratedSectionIds(report.sections)
+    : [];
 
   for (const stage of ANALYSIS_STAGES) {
     if (completed.has(stage)) {
@@ -154,9 +158,24 @@ export async function executeAnalysis(input: {
           engineVersion: ENGINE_VERSION,
           sections,
         };
+        epistemicDraftFailures = epistemicallyUncalibratedSectionIds(sections);
       }
       if (stage === "pass10" && report) {
         const critic = passOutputSchemas.pass10.parse(result.output);
+        const regeneratedIds = new Set(critic.regeneratedSections.map((section) => section.id));
+        const declaredFailures = new Set(critic.failingSectionIds);
+        if (
+          critic.regeneratedSections.some((section) => !declaredFailures.has(section.id)) ||
+          epistemicDraftFailures.some(
+            (id) => !declaredFailures.has(id) || !regeneratedIds.has(id),
+          )
+        ) {
+          throwGate({
+            id: "epistemic-calibration",
+            passed: false,
+            detail: "Pass 10 must declare and regenerate each epistemically uncalibrated section, without regenerating undeclared sections.",
+          });
+        }
         let nextReport = report;
         if (critic.regeneratedSections.length) {
           const replacements = new Map(
@@ -171,6 +190,14 @@ export async function executeAnalysis(input: {
           };
         }
         assertPeelHardGates(nextReport.sections, caseState);
+        const remaining = epistemicallyUncalibratedSectionIds(nextReport.sections);
+        if (remaining.length > 0) {
+          throwGate({
+            id: "epistemic-calibration",
+            passed: false,
+            detail: `Pass 10 left unsupported high-certainty claims in: ${remaining.join(", ")}.`,
+          });
+        }
         report = nextReport;
       }
 
