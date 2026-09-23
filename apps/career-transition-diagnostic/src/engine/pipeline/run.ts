@@ -157,11 +157,12 @@ export async function executeAnalysis(input: {
       }
       if (stage === "pass10" && report) {
         const critic = passOutputSchemas.pass10.parse(result.output);
+        let nextReport = report;
         if (critic.regeneratedSections.length) {
           const replacements = new Map(
             critic.regeneratedSections.map((section) => [section.id, section]),
           );
-          report = {
+          nextReport = {
             ...report,
             sections: sanitizeReportSections(
               report.sections.map((section) => replacements.get(section.id) ?? section),
@@ -169,7 +170,8 @@ export async function executeAnalysis(input: {
             ),
           };
         }
-        assertPeelHardGates(report.sections, caseState);
+        assertPeelHardGates(nextReport.sections, caseState);
+        report = nextReport;
       }
 
       input.persistRun({

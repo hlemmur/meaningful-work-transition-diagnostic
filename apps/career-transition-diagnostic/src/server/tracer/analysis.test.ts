@@ -269,6 +269,48 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     )).toBe(false);
   });
 
+  it("keeps the pass9 draft when pass10 regeneration fails hard gates", async () => {
+    const { assessmentId } = await submittedAssessment();
+    const rejected = await runAnalysisPipeline(assessmentId, {
+      llm: {
+        async completeStructured(request) {
+          if (request.stage === "pass10") {
+            const draft = request.input.draftReport as
+              | { sections?: Array<{ id: string; title: string; body: string; evidenceRefs: string[] }> }
+              | undefined;
+            const problem = draft?.sections?.find((section) => section.id === "problem");
+            return {
+              stage: request.stage,
+              fixture: "happy",
+              output: {
+                failingSectionIds: ["problem"],
+                regeneratedSections: problem
+                  ? [{ ...problem, body: `${problem.body} You are an eternal youth.` }]
+                  : [],
+              },
+              model: request.model ?? "mock-cheap",
+            };
+          }
+          return mockLlmAdapter.completeStructured(request);
+        },
+      },
+    });
+
+    expect(rejected.status).toBe("failed");
+    expect(rejected.failedStage).toBe("pass10");
+    const draft = await getDraftReport(assessmentId);
+    expect(draft?.generated.sections.map((section) => section.body).join("\n")).not.toMatch(
+      /eternal youth/i,
+    );
+    expect(draft?.status).toBe("draft");
+
+    const resumed = await runAnalysisPipeline(assessmentId);
+    expect(resumed.status).toBe("completed");
+    expect((await getDraftReport(assessmentId))?.generated.sections.map((section) => section.body).join("\n")).not.toMatch(
+      /eternal youth/i,
+    );
+  });
+
   it("requires valid evidenceRefs on every major report claim", async () => {
     const { assessmentId } = await submittedAssessment();
     const result = await runAnalysisPipeline(assessmentId);
