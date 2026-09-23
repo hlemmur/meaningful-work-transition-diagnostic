@@ -2,6 +2,7 @@ import type { CaseState } from "../schemas/case-state";
 import type { Hypothesis, HypothesisCritique, ReportSection } from "../schemas/analysis";
 import type { pass5OutputSchema, pass6OutputSchema } from "./stage-schemas";
 import { collectCanonicalEvidenceIds } from "./evidence-ids";
+import { STAGE_INPUT_TRIM, trimText } from "./stage-input";
 import { questions } from "@/questionnaire/questionnaire.v2";
 import {
   CANONICAL_PEEL_TITLES,
@@ -244,11 +245,27 @@ export function applyImageVotes(
     questionId: string,
   ) => {
     const values = Array.isArray(value) ? value : value ? [value] : [];
-    for (const item of values) {
-      const key = normalize(item);
+    const register = (text: string) => {
+      const key = normalize(text);
+      if (!key) {
+        return;
+      }
       const refs = target.get(key) ?? new Set<string>();
       refs.add(`${state.assessmentId}:${questionId}`);
       target.set(key, refs);
+    };
+    for (const item of values) {
+      register(item);
+      // Pass 5 snapshots trim Q10 quotes (and answers) before the model sees them.
+      // A compliant model that copies that snapshot text must still pass provenance.
+      const snapshotQuote = trimText(item, STAGE_INPUT_TRIM.maxQuoteChars);
+      if (typeof snapshotQuote === "string") {
+        register(snapshotQuote);
+      }
+      const snapshotAnswer = trimText(item, STAGE_INPUT_TRIM.maxAnswerChars);
+      if (typeof snapshotAnswer === "string") {
+        register(snapshotAnswer);
+      }
     }
   };
   addSymbolic(literalSymbolic, state.symbolicMaterial.scene, "Q10.1");

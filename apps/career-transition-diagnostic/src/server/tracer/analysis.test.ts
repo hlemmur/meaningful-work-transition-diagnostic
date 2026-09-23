@@ -186,6 +186,28 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     expect(practical.length).toBeGreaterThan(0);
   });
 
+  it("completes pass 5 when Q10 answers exceed the snapshot quote trim", async () => {
+    const longScene = `A fictional traveler stands at a forest gate. ${"Cold trees and morning light surround them. ".repeat(16)}`;
+    const longSpeech = `The gate says you came unequipped. ${"You left support behind and nothing is ahead. ".repeat(14)}`;
+    expect(longScene.length).toBeGreaterThan(280);
+    expect(longSpeech.length).toBeGreaterThan(400);
+
+    const { assessmentId } = await submittedAssessment({
+      "Q1.1": "I left a career that still pays my bills.",
+      "Q1.3": "I lack confidence.",
+      "Q10.1": longScene,
+      "Q10.2": "Cold trees, a visible path, and morning light surround them.",
+      "Q10.6": longSpeech,
+      "Q11.3": "See the contradiction I cannot name",
+    });
+
+    const result = await runAnalysisPipeline(assessmentId);
+
+    expect(result.status).toBe("completed");
+    expect(result.failedStage).toBeUndefined();
+    expect(result.caseState.imageAnalysis?.literalFacts[0]?.text).toMatch(/fictional traveler/i);
+  });
+
   it("re-ranks hypotheses when image votes weaken one and support another", async () => {
     const { assessmentId } = await submittedAssessment({
       "Q1.1": "I feel stuck",
