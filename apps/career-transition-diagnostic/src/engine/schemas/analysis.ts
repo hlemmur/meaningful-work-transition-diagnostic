@@ -404,6 +404,14 @@ export const reportSectionIdSchema = z.enum([
   "close",
 ]);
 
+export const unresolvedQuestionIntentSchema = z.object({
+  question: z.string().trim().min(1),
+  targetUncertainty: z.string().trim().min(1),
+  relatedHypothesisId: z.string().trim().min(1).optional(),
+  relatedForkId: forkIdSchema.optional(),
+  couldWeakenSelectedFormulation: z.boolean(),
+});
+
 export const REQUIRED_PEEL_SECTION_IDS = [
   "problem",
   "reality",
@@ -421,6 +429,8 @@ export const reportSectionSchema = z.object({
   title: z.string(),
   body: z.string(),
   evidenceRefs: z.array(z.string()),
+  // Optional at the durable report boundary for legacy engine.v2 reports.
+  questionIntents: z.array(unresolvedQuestionIntentSchema).optional(),
 });
 
 export const reportSchema = z.object({

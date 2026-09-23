@@ -206,7 +206,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v12");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v13");
 
     expect(promptRegistry.pass9.text).toMatch(
       /never generate.*reply|second turn of dialogue|new speech/i,
@@ -264,7 +264,7 @@ expectMentions(promptRegistry.pass8.text, [
       /you are a puer\/senex|archetypal identity/i,
     );
 
-    expect(promptRegistry.pass10.version).toBe("pass-10.v12");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v13");
     expect(promptRegistry.pass8.version).toBe("pass-8.v6");
   });
 });

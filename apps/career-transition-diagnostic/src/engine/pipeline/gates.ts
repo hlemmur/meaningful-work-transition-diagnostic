@@ -851,6 +851,7 @@ export function senexScoldOnly(
 
 export function questionsAndCloseAdequate(
   sections: ReportSection[],
+  state?: CaseState,
 ): GateFinding {
   const questions = sections.find(
     (section) => section.id === "questions",
@@ -881,6 +882,36 @@ export function questionsAndCloseAdequate(
     };
   }
 
+  const intents = questions.questionIntents ?? [];
+  const liveHypotheses = new Set(state?.hypotheses.map((hypothesis) => hypothesis.id) ?? []);
+  const liveForks = new Set(state?.forkResolutions.map((fork) => fork.forkId) ?? []);
+  const leading = /\b(?:why do you|what makes you|don't you|isn't it|wouldn't you|surely)\b/i;
+  const renderedQuestions = (questions.body.match(/[^?]+\?/g) ?? []).map((question) =>
+    normalize(question.replace(/^\s*\d+[.)]\s*/, "")),
+  );
+  const intentQuestions = intents.map((intent) => normalize(intent.question));
+  const invalidIntent = intents.some((intent) =>
+    !/\b(?:you|your)\b/i.test(intent.question) ||
+    leading.test(intent.question) ||
+    (intent.relatedHypothesisId !== undefined && state !== undefined && !liveHypotheses.has(intent.relatedHypothesisId)) ||
+    (intent.relatedForkId !== undefined && state !== undefined && !liveForks.has(intent.relatedForkId)),
+  );
+  if (
+    state !== undefined &&
+    (intents.length !== 3 ||
+      new Set(intentQuestions).size !== 3 ||
+      new Set(renderedQuestions).size !== 3 ||
+      intentQuestions.some((question) => !renderedQuestions.includes(question)) ||
+      invalidIntent ||
+      !intents.some((intent) => intent.couldWeakenSelectedFormulation))
+  ) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail: "Questions require three personalized, non-leading structured intents, including one that could weaken the selected formulation.",
+    };
+  }
+
   if (!close.body.trim()) {
     return {
       id: "questions-close",
@@ -895,6 +926,66 @@ export function questionsAndCloseAdequate(
     passed: true,
     detail:
       "Report ends with exactly three questions and a working formulation.",
+  };
+}
+
+const CERTAIN_PSYCHOLOGICAL_PREDICATE =
+  /\b(?:unconsciously|secretly|the real reason|you (?:avoid|fear|refuse)|you are driven by|this protects you from)\b/i;
+const EPISTEMIC_HEDGE =
+  /\b(?:may|might|could|perhaps|possibly|seems?|suggests?|working (?:hypothesis|formulation)|one possibility|it is possible)\b/i;
+
+/** Return only sections containing an unhedged psychological inference. */
+export function epistemicallyUncalibratedSectionIds(
+  sections: ReportSection[],
+) {
+  return sections.flatMap((section) => {
+    if (section.id === "questions") {
+      return [];
+    }
+    const sentences = section.body.split(/(?<=[.!?])\s+/);
+    const unsupported = sentences.some((sentence) =>
+      sentence.split(/\s+(?:but|yet|however)\s+|[;—]/i).some(
+        (clause) =>
+          CERTAIN_PSYCHOLOGICAL_PREDICATE.test(clause) &&
+          !EPISTEMIC_HEDGE.test(clause),
+      ),
+    );
+    return unsupported ? [section.id] : [];
+  });
+}
+
+function mentionsSource(body: string, source: string) {
+  const bodyTokens = contentTokens(body);
+  const generic = new Set(["pattern", "practical", "change", "stall", "working", "formulation", "hypothesis"]);
+  const sourceTokens = [...contentTokens(source)].filter(
+    (token) => token.length >= 4 && !generic.has(token),
+  );
+  const matches = sourceTokens.filter((token) => bodyTokens.has(token)).length;
+  return sourceTokens.length > 0 && matches >= Math.min(2, sourceTokens.length);
+}
+
+export function closeSynthesisAdequate(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const close = sections.find((section) => section.id === "close");
+  const formulation = state.finalFormulation;
+  if (!close || !formulation) {
+    return { id: "close-synthesis", passed: Boolean(close), detail: close ? "No resolved formulation to synthesize." : "Close section is missing." };
+  }
+  const body = close.body;
+  const complete =
+    mentionsSource(body, formulation.maintenanceFormulation) &&
+    mentionsSource(body, formulation.strongestAlternative) &&
+    (!formulation.developmentalFormulation || mentionsSource(body, formulation.developmentalFormulation.possibleDevelopmentalTask)) &&
+    /\b(?:unknown|unresolved|uncertain|remains?)\b/i.test(body) &&
+    /\b(?:evidence|update|revise|weaken|change)\b/i.test(body);
+  return {
+    id: "close-synthesis",
+    passed: complete,
+    detail: complete
+      ? "Close synthesizes the working formulation, rival, warranted development, unknowns, and updating evidence."
+      : "Close must synthesize maintenance, the strongest alternative, warranted development, remaining unknowns, and evidence that would update the formulation.",
   };
 }
 
@@ -1102,11 +1193,15 @@ export function assertPeelHardGates(sections: ReportSection[], state: CaseState)
     throwGate(somatic);
   }
   const questionsClose =
-  questionsAndCloseAdequate(sections);
+  questionsAndCloseAdequate(sections, state);
 
 if (!questionsClose.passed) {
   throwGate(questionsClose);
 }
+  const closeSynthesis = closeSynthesisAdequate(sections, state);
+  if (!closeSynthesis.passed) {
+    throwGate(closeSynthesis);
+  }
   const inflation = antiInflationDiagnosis(body);
   if (!inflation.passed) {
     throwGate(inflation);

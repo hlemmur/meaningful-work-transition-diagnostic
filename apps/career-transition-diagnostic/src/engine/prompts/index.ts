@@ -272,7 +272,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v12",
+    version: "pass-9.v13",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Voice and stance:
@@ -308,7 +308,7 @@ export const promptRegistry = {
   - Preserve multiple imageAnalysis.plausibleReadings when the symbol remains ambiguous. Do not collapse unresolvedSymbolicQuestion into a factual claim.
   - Use projectionInterpretations only as tentative inferences; keep their possible value, literal-enactment warning, and mature expression separate from the raw figure evidence.
   - Keep any hidden bargain interpretation provisional rather than presenting it as motive-reading.
-  - Jungian section should stay thin and only appear when jungianLenses survived.
+  - Jungian section should stay thin, begin from supplied image material, and only appear when jungianLenses survived. It may illuminate the existing formulation but cannot introduce a new analytical center.
 
   Required report order:
   1. problem
@@ -329,17 +329,21 @@ export const promptRegistry = {
   - Each question must address the person directly using you/your.
   - Each question should genuinely arise from this person's evidence.
   - Do not answer those questions for the person.
+  - Represent each question in questionIntents with its targetUncertainty, optional relatedHypothesisId or relatedForkId, and couldWeakenSelectedFormulation.
+  - At least one question must be capable of weakening the selected formulation. Avoid leading forms that preload a motive or answer.
 
   Close:
   - End with a short working formulation.
   - Explicitly frame it as provisional and testable, not settled truth.
+  - Synthesize the maintenance hypothesis, strongest alternative, warranted developmental opposition when present, remaining unknowns, and evidence that would update the formulation.
 
   Return JSON {
     sections: array of {
       id,
       title,
       body,
-      evidenceRefs
+      evidenceRefs,
+      questionIntents?: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation }]
     }
   }.
 
@@ -348,7 +352,7 @@ export const promptRegistry = {
   Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
-    version: "pass-10.v12",
+    version: "pass-10.v13",
     text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
 
   Fail a section when it:
@@ -362,6 +366,7 @@ export const promptRegistry = {
   - changes supplied image speech rather than preserving the person's actual words;
   - collapses multiple live symbolic readings into one settled meaning, answers an unresolvedSymbolicQuestion, or turns projectionInterpretations into raw facts;
   - turns a hypothesis into a fact or otherwise presents an interpretation as established psychological truth;
+  - contains an unsupported high-certainty psychological predicate in any sentence; fail only the affected section and calibrate that sentence;
   - uses archetypal identity framing such as “you are a puer/senex/shadow”;
   - treats eternal becoming, eternal youth, or similar Jungian language as the person's identity;
   - treats discipline/grind as the only developmental answer;
@@ -383,10 +388,16 @@ export const promptRegistry = {
   - must contain exactly 3 personalized unresolved questions;
   - each question must address the person directly using you/your;
   - do not answer those questions for the person.
+  - require structured questionIntents for all three questions, with target uncertainty and optional live hypothesis/fork relation;
+  - reject leading or preloaded questions and require at least one question that could weaken the selected formulation.
 
   Close section:
   - must contain a short provisional working formulation;
   - fail it if it presents the formulation as diagnosis, settled truth, or verdict.
+  - require synthesis of maintenance, the strongest alternative, warranted developmental opposition, remaining unknowns, and evidence that would update the formulation.
+
+  Jungian section:
+  - keep it brief, image-first, conditional on surviving lenses, and subordinate to the existing analytical center.
 
   Required ids:
   problem, reality, contradiction, alternative, experiment, questions, close.
@@ -404,7 +415,8 @@ export const promptRegistry = {
         id,
         title,
         body,
-        evidenceRefs
+        evidenceRefs,
+        questionIntents?: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation }]
       }
     ]
   }.
