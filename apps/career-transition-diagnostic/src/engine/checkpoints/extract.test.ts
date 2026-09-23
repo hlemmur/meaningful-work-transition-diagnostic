@@ -210,4 +210,38 @@ describe("extractCaseStateFull", () => {
       "There is daylight beyond it",
     );
   });
+
+  it("keeps pipeline-discovered open forks when re-extracting a prior snapshot", () => {
+    const previous = extractCaseStateFull("resume-1", originCaseAnswers);
+    previous.openForks = [
+      "history_vs_stated_cause",
+      "container_loss_vs_capacity",
+      "legitimacy_loop",
+    ];
+
+    const resumed = extractCaseStateFull("resume-1", originCaseAnswers, previous);
+
+    expect(resumed.openForks).toEqual([
+      "history_vs_stated_cause",
+      "container_loss_vs_capacity",
+      "legitimacy_loop",
+      "rational_caution_vs_hidden_bargain",
+      "background_income_relief_vs_replacement",
+    ]);
+  });
+
+  it("does not invent open forks that were not preferred or previously open", () => {
+    const previous = extractCaseStateFull("resume-2", originCaseAnswers);
+    previous.openForks = ["container_loss_vs_capacity"];
+
+    const resumed = extractCaseStateFull("resume-2", originCaseAnswers, previous);
+
+    expect(resumed.openForks).toEqual([
+      "container_loss_vs_capacity",
+      "rational_caution_vs_hidden_bargain",
+      "background_income_relief_vs_replacement",
+    ]);
+    expect(resumed.openForks).not.toContain("legitimacy_loop");
+    expect(resumed.openForks).not.toContain("impostor_filter_vs_inexperience");
+  });
 });
