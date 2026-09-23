@@ -501,10 +501,11 @@ export function experimentBoundToHypothesis(
         );
       }
 
-      const experimentText = `${title} ${action} ${manipulatedVariable} ${observations.join(" ")}`;
-      const exposureClaim = /\b(?:exposure|visible|visibility|public|publish|audience|outreach)\b/i.test(
-        experimentText,
-      );
+      const exposureClaim =
+        /\b(?:exposure|visibility|audience(?:\s+size)?)\b/i.test(manipulatedVariable) ||
+        /\b(?:exposure|visibility|audience(?:\s+size)?)\s+(?:test|experiment)\b|\b(?:test|vary|change|increase|decrease|compare)\w*\s+(?:public\s+)?(?:exposure|visibility|audience(?:\s+size)?)\b/i.test(
+          `${title} ${action}`,
+        );
       if (exposureClaim) {
         const variesExposure =
           /\b(?:exposure|visible|visibility|public|publish|audience|outreach)\b/i.test(

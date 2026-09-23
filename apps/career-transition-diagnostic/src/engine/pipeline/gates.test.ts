@@ -559,6 +559,39 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/must vary exposure/i);
   });
 
+  it("allows an accountability experiment whose stable task happens to be outreach", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Accountability on a stable outreach task",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding outreach task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed outreach attempts out of five and task-specific errors."],
+      resultSupportingHypothesis: "Completion rises under accountability.",
+      resultWeakeningHypothesis: "Task-specific errors persist.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["outreach task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "At least four of five outreach attempts are completed.",
+          favors: "hyp-structure",
+          because: "Execution changed under accountability while the outreach task stayed stable.",
+        },
+        {
+          outcome: "Completion stays low and errors cluster in unfamiliar outreach steps.",
+          favors: "hyp-skill",
+          because: "Persistent task-specific errors fit limited experience better.",
+        },
+      ],
+    }];
+
+    expect(experimentBoundToHypothesis(state).passed).toBe(true);
+  });
+
   it("requires at least one behavioral experiment", () => {
     const state = experimentState();
     state.symbolicMaterial.scene = "A locked garden gate.";
