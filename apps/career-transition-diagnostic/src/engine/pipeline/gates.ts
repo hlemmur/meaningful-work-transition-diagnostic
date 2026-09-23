@@ -939,6 +939,9 @@ export function epistemicallyUncalibratedSectionIds(
   sections: ReportSection[],
 ) {
   return sections.flatMap((section) => {
+    if (section.id === "questions") {
+      return [];
+    }
     const sentences = section.body.split(/(?<=[.!?])\s+/);
     const unsupported = sentences.some((sentence) =>
       sentence.split(/\s+(?:but|yet|however)\s+|[;—]/i).some(

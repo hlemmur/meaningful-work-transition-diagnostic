@@ -1570,6 +1570,12 @@ describe("questions and close gate", () => {
     ])).toEqual(["contradiction"]);
   });
 
+  it("does not treat unresolved question text as a declarative certainty claim", () => {
+    expect(epistemicallyUncalibratedSectionIds([
+      section("questions", "When do you avoid taking the next step? What do you fear losing? What evidence would change your view?", ["a1:Q1.1"]),
+    ])).toEqual([]);
+  });
+
   it("passes exactly three questions and a close", () => {
     const sections = [
       reportSectionSchema.parse({
