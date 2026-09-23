@@ -265,6 +265,6 @@ expectMentions(promptRegistry.pass8.text, [
     );
 
     expect(promptRegistry.pass10.version).toBe("pass-10.v12");
-    expect(promptRegistry.pass8.version).toBe("pass-8.v5");
+    expect(promptRegistry.pass8.version).toBe("pass-8.v6");
   });
 });
