@@ -104,10 +104,10 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
       "pass-8.v5",
     );
     expect((await listAnalysisRuns(assessmentId)).find((run) => run.stage === "pass9")?.promptVersion).toBe(
-      "pass-9.v11",
+      "pass-9.v12",
     );
     expect((await listAnalysisRuns(assessmentId)).find((run) => run.stage === "pass10")?.promptVersion).toBe(
-      "pass-10.v11",
+      "pass-10.v12",
     );
     expect((await listAnalysisRuns(assessmentId))[0]?.costUsd).toBeGreaterThan(0);
     expect((await getDraftReport(assessmentId))?.status).toBe("draft");
@@ -190,6 +190,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     const { assessmentId } = await submittedAssessment({
       "Q1.1": "I feel stuck",
       "Q10.1": "An empty landscape with no path.",
+      "Q10.2": "Nothing nearby offers direction or shelter.",
     });
     const result = await runAnalysisPipeline(assessmentId, { llm: llmForFixture("image-weakens") });
     expect(result.caseState.hypotheses[0]?.id).toBe("hyp-practical");

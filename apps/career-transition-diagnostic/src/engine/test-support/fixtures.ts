@@ -959,6 +959,8 @@ export function passOutputFor(
     };
     evidenceAllowlist?: string[];
     imageEvidenceRefs?: string[];
+    symbolicMaterial?: Record<string, string | string[] | undefined>;
+    projectionEvidenceRefs?: string[];
   },
 ) {
   if (fixture === "schema-fail" && stage === "pass3") {
@@ -1079,6 +1081,27 @@ export function passOutputFor(
       const imageEvidenceRefs = ctx.imageEvidenceRefs ?? [];
       const citesImage =
         !richInsufficient && imageEvidenceRefs.length > 0;
+      const symbolic = ctx.symbolicMaterial ?? {};
+      const observation = (field: string, questionId: string) => {
+        const value = symbolic[field];
+        const text = Array.isArray(value) ? value[0] : value;
+        return typeof text === "string" && text.trim()
+          ? { text, evidenceRefs: [`${ctx.assessmentId}:${questionId}`] }
+          : undefined;
+      };
+      const literalFacts = [
+        observation("scene", "Q10.1"),
+        observation("surroundings", "Q10.2"),
+        observation("obstacle", "Q10.3"),
+        observation("ahead", "Q10.4"),
+        observation("figures", "Q10.5"),
+      ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+      const personalAssociations = [
+        observation("obstacleSpeech", "Q10.6"),
+        observation("obstacleWant", "Q10.7"),
+        observation("ifNotRemoved", "Q10.8"),
+      ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+      const readingRefs = imageEvidenceRefs.slice(0, 2);
       return {
         votes: [
           imageVoteSchema.parse({
@@ -1120,6 +1143,48 @@ export function passOutputFor(
             exactClientMaterialUsed: citesImage ? imageEvidenceRefs : [],
           }),
         ],
+        imageAnalysis: {
+          literalFacts,
+          personalAssociations,
+          plausibleReadings: citesImage
+            ? weakens
+              ? [
+                  {
+                    interpretation: "The supplied image is more compatible with an ordinary direction problem.",
+                    supportsHypothesisIds: [practical.id],
+                    weakensHypothesisIds: ["hyp-depth"],
+                    evidenceRefs: readingRefs,
+                  },
+                ]
+              : [
+                  {
+                    interpretation: "The threshold may express waiting for authorization or a containing structure.",
+                    supportsHypothesisIds: ["hyp-depth"],
+                    weakensHypothesisIds: [],
+                    evidenceRefs: readingRefs,
+                  },
+                  {
+                    interpretation: "The same threshold may preserve a practical route or job-shape explanation.",
+                    supportsHypothesisIds: [practical.id],
+                    weakensHypothesisIds: [],
+                    evidenceRefs: readingRefs,
+                  },
+                ]
+            : [],
+          unresolvedSymbolicQuestion: citesImage && !weakens
+            ? "Does the threshold concern permission, structure, or ordinary route clarity?"
+            : undefined,
+        },
+        projectionInterpretations: (ctx.projectionEvidenceRefs ?? []).length
+          ? [
+              {
+                projectionEvidenceRefs: ctx.projectionEvidenceRefs ?? [],
+                possibleDisownedValue: "The admired or rejected quality may point to a value not yet owned directly.",
+                literalEnactmentRisk: "This does not imply copying or acting out the projected figure literally.",
+                matureExpression: "A bounded expression of the quality can be tested without adopting the figure's whole identity.",
+              },
+            ]
+          : [],
         overallNote: weakens
           ? "Image weakens the psychological favorite."
           : citesImage

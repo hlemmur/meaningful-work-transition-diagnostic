@@ -1,10 +1,37 @@
 import { describe, expect, it } from "vitest";
 import {
+  pass5OutputSchema,
   pass6OutputSchema,
   pass7OutputSchema,
   pass9OutputSchema,
   REQUIRED_PEEL_SECTION_IDS,
 } from "./stage-schemas";
+
+describe("pass5OutputSchema / symbolic readings", () => {
+  it("rejects a reading that neither supports nor weakens a hypothesis", () => {
+    const parsed = pass5OutputSchema.safeParse({
+      votes: [{
+        hypothesisId: "hyp-depth",
+        verdict: "splits",
+        evidenceRefs: ["a1:Q10.1"],
+        exactClientMaterialUsed: ["a1:Q10.1"],
+      }],
+      imageAnalysis: {
+        literalFacts: [{ text: "A gate.", evidenceRefs: ["a1:Q10.1"] }],
+        personalAssociations: [],
+        plausibleReadings: [{
+          interpretation: "An unbound interpretation.",
+          supportsHypothesisIds: [],
+          weakensHypothesisIds: [],
+          evidenceRefs: ["a1:Q10.1"],
+        }],
+      },
+      projectionInterpretations: [],
+      overallNote: "Synthetic.",
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
 
 const lens = {
   concept: "compensation",

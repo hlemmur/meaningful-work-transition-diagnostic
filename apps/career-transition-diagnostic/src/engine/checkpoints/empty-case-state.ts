@@ -95,6 +95,7 @@ export function emptyCaseState(assessmentId: string): CaseState {
     hypotheses: [],
     hypothesisCritiques: [],
     imageVotes: [],
+    projectionInterpretations: [],
     forkResolutions: [],
     jungianLenses: [],
     experiments: [],

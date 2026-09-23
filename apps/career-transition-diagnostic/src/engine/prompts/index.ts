@@ -105,7 +105,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass5: {
-    version: "pass-5.v3",
+    version: "pass-5.v4",
     text: `Use symbolic material as an adversarial constraint on the leading hypotheses, not as decoration and not as a symbol dictionary. Personal associations outrank generic symbolic meanings. Vote independently on the relevant top hypotheses.
 
   For each vote choose:
@@ -113,6 +113,10 @@ export const promptRegistry = {
   - weakens: the supplied image materially conflicts with it
   - splits: the image appears to support more than one psychological or practical center
   - insufficient: the supplied material is too thin to constrain the hypothesis
+
+  Preserve the fact/inference boundary. literalFacts and personalAssociations must copy the person's supplied words exactly and cite the matching Q10 evidence refs. plausibleReadings are interpretations: keep more than one when the material admits competing meanings, name the live hypothesis ids each reading supports or weakens, and cite supplied symbolic evidence. For thin material, return insufficient votes and no plausible readings. unresolvedSymbolicQuestion is optional and should remain open rather than preload an answer.
+
+  Projection interpretation is separate from the raw projection evidence. It may tentatively propose a possibleDisownedValue, warn against literal enactment, and offer a matureExpression, but projectionEvidenceRefs must cite supplied Q5/Q6 projection evidence and the raw projection records must remain unchanged.
 
   Never invent imagery, speech, bodily sensation, or associations. exactClientMaterialUsed must identify only supplied evidence refs actually used in the interpretation.
 
@@ -124,14 +128,31 @@ export const promptRegistry = {
       evidenceRefs,
       exactClientMaterialUsed
     }],
+    imageAnalysis: {
+      literalFacts: [{ text, evidenceRefs }],
+      personalAssociations: [{ text, evidenceRefs }],
+      plausibleReadings: [{
+        interpretation,
+        supportsHypothesisIds,
+        weakensHypothesisIds,
+        evidenceRefs
+      }],
+      unresolvedSymbolicQuestion?
+    },
+    projectionInterpretations: [{
+      projectionEvidenceRefs,
+      possibleDisownedValue?,
+      literalEnactmentRisk?,
+      matureExpression?
+    }],
     overallNote: string
   }. Return at least 1 vote. ${EMPTY_ARRAYS}`,
   },
   pass6: {
-    version: "pass-6.v6",
+    version: "pass-6.v7",
     text: `Resolve the case after contradiction generation, competing hypotheses, adversarial critique, and image voting. Do not restart the analysis from scratch.
 
-  Choose selectedHypothesisId from the hypotheses present in caseSnapshot. Resolve each materially relevant open fork rather than silently ignoring it. A fork may lean one way, remain both, remain unresolved, or be not relevant.
+  Choose selectedHypothesisId from the hypotheses present in caseSnapshot. Resolve each materially relevant open fork rather than silently ignoring it. A fork may lean one way, remain both, remain unresolved, or be not relevant. Preserve competing imageAnalysis.plausibleReadings and unresolvedSymbolicQuestion when symbolic material splits the leading explanations; do not force one symbolic meaning to manufacture resolution.
 
   Produce one FinalFormulation that later report stages must treat as the working analytical spine. maintenanceFormulation and maintenanceMechanism explain why the pattern repeats now. maintainingLoop is optional: include it only when at least two supplied evidence refs support a recurring goal → trigger → response → payoff → cost → selfConfirmingResult cycle. Do not force a loop onto a sufficient practical explanation, repeat one statement as every step, or assume a predefined legitimacy pattern. developmentalFormulation is optional and describes a possible developmental meaning, never the maintenance cause. Include developmentalFormulation only when its opposition recurs across at least two independent questionnaire domains; otherwise omit it. Never force polarity onto a practical-only case. State what the selected hypothesis explains, what it does not explain, the strongest alternative, and unresolved forks. Do not present either formulation as certainty.
 
@@ -249,7 +270,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v11",
+    version: "pass-9.v12",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Voice and stance:
@@ -282,6 +303,8 @@ export const promptRegistry = {
   - When caseSnapshot.hiddenPosition survived, preserve both hiddenPosition.protectiveFunction and hiddenPosition.possibleCompensatoryAim in the hidden section. Treat them as sibling hypotheses: what the pattern may protect, and what development may be asking for.
   - Do not collapse development into discipline/grind as the only valid pole.
   - Projection may be framed as a quality the person could potentially reclaim; never claim that the admired/rejected figure “is” the person's unconscious truth.
+  - Preserve multiple imageAnalysis.plausibleReadings when the symbol remains ambiguous. Do not collapse unresolvedSymbolicQuestion into a factual claim.
+  - Use projectionInterpretations only as tentative inferences; keep their possible value, literal-enactment warning, and mature expression separate from the raw figure evidence.
   - Keep any hidden bargain interpretation provisional rather than presenting it as motive-reading.
   - Jungian section should stay thin and only appear when jungianLenses survived.
 
@@ -323,7 +346,7 @@ export const promptRegistry = {
   Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
-    version: "pass-10.v11",
+    version: "pass-10.v12",
     text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
 
   Fail a section when it:
@@ -335,6 +358,7 @@ export const promptRegistry = {
   - makes a somatic claim without corresponding supplied somatic evidence;
   - invents image dialogue, writes speech that was not supplied, creates new imaginal speech, or generates a second turn of dialogue;
   - changes supplied image speech rather than preserving the person's actual words;
+  - collapses multiple live symbolic readings into one settled meaning, answers an unresolvedSymbolicQuestion, or turns projectionInterpretations into raw facts;
   - turns a hypothesis into a fact or otherwise presents an interpretation as established psychological truth;
   - uses archetypal identity framing such as “you are a puer/senex/shadow”;
   - treats eternal becoming, eternal youth, or similar Jungian language as the person's identity;

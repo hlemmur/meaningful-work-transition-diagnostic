@@ -101,6 +101,13 @@ export const mockLlmAdapter: LlmAdapter = {
                 mustAppearInReport?: boolean;
                 refs?: string[];
               } | null;
+              projection?: {
+                mustAppearInReport?: boolean;
+                refs?: string[];
+              } | null;
+            };
+            signals?: {
+              symbolicMaterial?: Record<string, string | string[] | undefined>;
             };
             experimentBindings?: {
               hypothesisIds: string[];
@@ -132,6 +139,13 @@ export const mockLlmAdapter: LlmAdapter = {
           imageEvidenceRefs:
             caseSnapshot?.requiredCitations?.image?.mustAppearInReport === true
               ? (caseSnapshot.requiredCitations.image.refs ?? []).filter((ref) =>
+                  caseSnapshot.evidenceAllowlist?.includes(ref),
+                )
+              : [],
+          symbolicMaterial: caseSnapshot?.signals?.symbolicMaterial,
+          projectionEvidenceRefs:
+            caseSnapshot?.requiredCitations?.projection?.mustAppearInReport === true
+              ? (caseSnapshot.requiredCitations.projection.refs ?? []).filter((ref) =>
                   caseSnapshot.evidenceAllowlist?.includes(ref),
                 )
               : [],

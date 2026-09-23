@@ -9,6 +9,8 @@ import {
   hypothesisCritiqueSchema,
   hypothesisSchema,
   imageVoteSchema,
+  projectionInterpretationSchema,
+  symbolicImageAnalysisSchema,
   jungianLensSchema,
   realityCheckSchema,
 } from "./analysis";
@@ -171,6 +173,12 @@ hypothesisCritiques: z
 
 imageVotes: z
   .array(imageVoteSchema)
+  .default([]),
+
+imageAnalysis: symbolicImageAnalysisSchema.optional(),
+
+projectionInterpretations: z
+  .array(projectionInterpretationSchema)
   .default([]),
 
 // Temporary compatibility field.

@@ -76,6 +76,234 @@ function resolutionOutput(
 }
 
 describe("applyImageVotes", () => {
+  it("persists multiple grounded symbolic readings and projection interpretation separately", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q5.1": "I admire founders who act before certainty; I want their boldness.",
+      "Q10.1": "A locked garden gate at dusk.",
+      "Q10.2": "A visible path continues beyond it.",
+      "Q10.6": "Wait until the ground is yours.",
+    });
+    state.hypotheses = [hypothesis("hyp-depth"), hypothesis("hyp-practical")];
+
+    applyImageVotes(state, {
+      votes: [
+        {
+          hypothesisId: "hyp-depth",
+          verdict: "splits",
+          interpretation: "The threshold can fit either authorization or ordinary uncertainty.",
+          evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+          exactClientMaterialUsed: ["a1:Q10.1", "a1:Q10.6"],
+        },
+      ],
+      imageAnalysis: {
+        literalFacts: [
+          { text: "A locked garden gate at dusk.", evidenceRefs: ["a1:Q10.1"] },
+        ],
+        personalAssociations: [
+          { text: "Wait until the ground is yours.", evidenceRefs: ["a1:Q10.6"] },
+        ],
+        plausibleReadings: [
+          {
+            interpretation: "The gate may represent waiting for authorization.",
+            supportsHypothesisIds: ["hyp-depth"],
+            weakensHypothesisIds: [],
+            evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+          },
+          {
+            interpretation: "The visible path may preserve an ordinary direction problem.",
+            supportsHypothesisIds: ["hyp-practical"],
+            weakensHypothesisIds: [],
+            evidenceRefs: ["a1:Q10.1", "a1:Q10.2"],
+          },
+        ],
+        unresolvedSymbolicQuestion: "Is the gate about permission or route clarity?",
+      },
+      projectionInterpretations: [
+        {
+          projectionEvidenceRefs: ["a1:Q5.1"],
+          possibleDisownedValue: "Acting before certainty may be a disowned value.",
+          literalEnactmentRisk: "This does not imply copying the admired founders literally.",
+          matureExpression: "Try one bounded action while retaining ordinary caution.",
+        },
+      ],
+      overallNote: "The image remains split.",
+    });
+
+    expect(state.imageAnalysis?.plausibleReadings).toHaveLength(2);
+    expect(state.imageAnalysis?.unresolvedSymbolicQuestion).toMatch(/permission/i);
+    expect(state.projectionInterpretations).toHaveLength(1);
+    expect(state.projections.admiredFigures[0]?.figure).toMatch(/founders/i);
+    expect(state.projections.admiredFigures[0]).not.toHaveProperty("matureExpression");
+  });
+
+  it("rejects invented personal associations", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A locked gate.",
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "A locked gate.", evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [{ text: "The gate fears success.", evidenceRefs: ["a1:Q10.6"] }],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/not exact supplied client material/i);
+  });
+
+  it("rejects valid symbolic text placed in the wrong fact or association bucket", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A locked gate.",
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
+          personalAssociations: [],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/literal fact.*matching provenance/i);
+  });
+
+  it("rejects an invented extra ref attached to supplied symbolic text", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A locked gate.",
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{
+            text: "A locked gate.",
+            evidenceRefs: ["a1:Q10.1", "a1:Q10.99"],
+          }],
+          personalAssociations: [],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/matching provenance/i);
+  });
+
+  it("rejects symbolic readings that reference a non-live hypothesis", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A locked gate.",
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "splits",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "A locked gate.", evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
+          plausibleReadings: [{
+            interpretation: "Invented center.",
+            supportsHypothesisIds: ["hyp-invented"],
+            weakensHypothesisIds: [],
+            evidenceRefs: ["a1:Q10.1"],
+          }],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/non-live hypothesis/i);
+  });
+
+  it("rejects projection interpretations that are not grounded in raw projection evidence", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q5.1": "I admire decisive founders.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "insufficient",
+          evidenceRefs: ["a1:Q1.1"],
+          exactClientMaterialUsed: [],
+        }],
+        imageAnalysis: { literalFacts: [], personalAssociations: [], plausibleReadings: [] },
+        projectionInterpretations: [{
+          projectionEvidenceRefs: ["a1:Q6.1"],
+          possibleDisownedValue: "Decisiveness.",
+        }],
+        overallNote: "Thin image.",
+      }),
+    ).toThrow(/raw supplied projection evidence/i);
+  });
+
+  it("keeps thin symbolic material explicitly insufficient", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A road.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "A road.", evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/thin symbolic material.*insufficient/i);
+  });
+
   it("rejects votes for hypotheses that are not in the current case", () => {
     const state = emptyCaseState("a1");
     state.hypotheses = [hypothesis("hyp-live")];
@@ -90,6 +318,8 @@ describe("applyImageVotes", () => {
             exactClientMaterialUsed: [],
           },
         ],
+        imageAnalysis: { literalFacts: [], personalAssociations: [], plausibleReadings: [] },
+        projectionInterpretations: [],
         overallNote: "Synthetic invalid vote.",
       }),
     ).toThrow(/image vote.*live hypothesis/i);
@@ -114,6 +344,8 @@ describe("applyImageVotes", () => {
             exactClientMaterialUsed: ["a1:Q10.1"],
           },
         ],
+        imageAnalysis: { literalFacts: [], personalAssociations: [], plausibleReadings: [] },
+        projectionInterpretations: [],
         overallNote: "Synthetic invalid vote.",
       }),
     ).toThrow(/image vote.*live hypothesis/i);

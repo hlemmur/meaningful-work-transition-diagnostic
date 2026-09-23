@@ -399,6 +399,11 @@ export function buildCaseSnapshot(input: {
           STAGE_INPUT_TRIM.maxQuoteChars,
         ),
 
+        figures: caseState.symbolicMaterial.figures
+          ?.slice(0, 3)
+          .map((item) => trimText(item, STAGE_INPUT_TRIM.maxQuoteChars))
+          .filter((item): item is string => typeof item === "string"),
+
         obstacleSpeech: trimText(
           caseState.symbolicMaterial
             .obstacleSpeech,
@@ -556,6 +561,21 @@ export function buildCaseSnapshot(input: {
         [],
     }),
   ),
+  imageAnalysis: caseState.imageAnalysis
+    ? {
+        literalFacts: caseState.imageAnalysis.literalFacts,
+        personalAssociations: caseState.imageAnalysis.personalAssociations,
+        plausibleReadings: caseState.imageAnalysis.plausibleReadings,
+        unresolvedSymbolicQuestion:
+          caseState.imageAnalysis.unresolvedSymbolicQuestion,
+      }
+    : null,
+  projectionInterpretations: caseState.projectionInterpretations.map((item) => ({
+    projectionEvidenceRefs: item.projectionEvidenceRefs,
+    possibleDisownedValue: trimText(item.possibleDisownedValue),
+    literalEnactmentRisk: trimText(item.literalEnactmentRisk),
+    matureExpression: trimText(item.matureExpression),
+  })),
   forkResolutions:
   caseState.forkResolutions.map(
     (resolution) => ({
