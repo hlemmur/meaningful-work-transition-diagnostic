@@ -227,16 +227,18 @@ export const promptRegistry = {
     text: `Jungian amplification only after resolution. Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v5",
+    version: "pass-8.v6",
     text: `Produce a reality check and at least one low-risk behavioral experiment. The behavioral experiment should discriminate between at least two live explanations when possible rather than merely encouraging action.
 
   Use caseSnapshot.finalFormulation.selectedHypothesisId when present. hypothesisTested must use exactly one id from caseSnapshot.experimentBindings.hypothesisIds or caseSnapshot.experimentBindings.openForkIds; do not use free-form prose in hypothesisTested.
 
   For a behavioral experiment:
-  - competingHypothesisIds should name meaningful rival hypotheses when available
-  - manipulatedVariable should name what is deliberately changed
-  - heldConstant should name what should stay as stable as practical
-  - outcomeInterpretations should explain how different observable results would favor different explanations
+  - competingHypothesisIds must name at least one meaningful live rival hypothesis
+  - manipulatedVariable must name the relevant variable deliberately changed and the action must actually vary it
+  - heldConstant must name meaningful alternative factors explicitly kept stable in the action
+  - outcomeInterpretations must contain at least two observable outcomes that favor different live explanations for stated reasons
+  - success versus failure labels alone are not discriminating outcomes
+  - an experiment that claims to test exposure must vary exposure itself while holding the main rival explanation stable
 
   An imaginal experiment is optional. Use it only when supplied symbolic material is sufficiently rich and analytically relevant. Never script the figure's answer, invent dialogue, or place words in the image's mouth. You may ask the client a new question to the image/figure, but stop before answering it.
 

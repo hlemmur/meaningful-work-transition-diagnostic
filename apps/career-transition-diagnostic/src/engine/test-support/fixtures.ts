@@ -1392,6 +1392,17 @@ export function passOutputFor(
         ctx.experimentBindings?.preferredHypothesisId ??
         ctx.experimentBindings?.hypothesisIds[0] ??
         ctx.experimentBindings?.openForkIds[0];
+      const hypothesisTested = fixture === "wrong-experiment"
+        ? "intellectualizing delay"
+        : closedSetBinding ??
+          (fixture === "critic-constraints-win"
+            ? "hyp-practical"
+            : fixture === "origin-gold"
+              ? "container_loss_vs_capacity"
+              : "hyp-depth");
+      const competingHypothesisId =
+        ctx.experimentBindings?.hypothesisIds.find((id) => id !== hypothesisTested) ??
+        "hyp-practical";
       return {
         realityCheck: realityCheckSchema.parse({
           sufficientWithoutDepth: fixture === "critic-constraints-win",
@@ -1412,27 +1423,34 @@ export function passOutputFor(
               fixture === "wrong-experiment"
                 ? "Mentor critique interview"
                 : "Two weeks of external deadlines",
-            hypothesisTested:
-              fixture === "wrong-experiment"
-                ? "intellectualizing delay"
-                : closedSetBinding ??
-                  (fixture === "critic-constraints-win"
-                    ? "hyp-practical"
-                    : fixture === "origin-gold"
-                      ? "container_loss_vs_capacity"
-                      : "hyp-depth"),
+            hypothesisTested,
             action:
               fixture === "wrong-experiment"
-                ? "Ask a mentor to list three blind spots and failure points in your method."
-                : fixture === "critic-constraints-win"
-                  ? "Add two external deadline blocks and one accountability check-in each week."
-                  : "Send one concrete artifact twice a week to a trusted reviewer.",
+                ? "Ask a mentor to list three blind spots while holding the method and task scope stable."
+                : "Add two external deadline blocks and one accountability check-in each week while holding task difficulty stable.",
             duration: "14 days",
-            whatToObserve: ["output count", "body charge after sending"],
+            whatToObserve: ["completed attempts out of four", "task-specific errors"],
             resultSupportingHypothesis: "Output rises when someone else holds the deadline.",
             resultWeakeningHypothesis: "Nothing changes even with accountability.",
             riskLevel: "low",
             practicalRequirements: ["one reviewer", "two calendar blocks"],
+            competingHypothesisIds: [competingHypothesisId],
+            manipulatedVariable: fixture === "wrong-experiment"
+              ? "mentor feedback"
+              : "external deadline and accountability",
+            heldConstant: ["task difficulty"],
+            outcomeInterpretations: [
+              {
+                outcome: "At least three of four planned attempts are completed under the added deadline.",
+                favors: hypothesisTested,
+                because: "Execution changed when the named variable changed while task difficulty stayed stable.",
+              },
+              {
+                outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
+                favors: competingHypothesisId,
+                because: "Persistent task-specific errors fit the live rival better than the selected explanation.",
+              },
+            ],
           }),
         ],
       };

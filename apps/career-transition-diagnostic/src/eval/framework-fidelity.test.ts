@@ -222,16 +222,29 @@ describe("evaluateFrameworkFidelity", () => {
         kind: "behavioral",
         title: "Stakes accountability",
         hypothesisTested: "container_loss_vs_capacity",
-        action: "Mutual dependency outreach for two weeks",
+        action:
+          "Add mutual-dependency accountability while holding ADHD supports and money pressure stable.",
         duration: "14 days",
-        whatToObserve: ["output", "charge"],
+        whatToObserve: ["Completed attempts out of four", "task-specific errors"],
         resultSupportingHypothesis: "Output rises with stakes",
         resultWeakeningHypothesis: "No change",
         riskLevel: "low",
         practicalRequirements: ["partner"],
-        competingHypothesisIds: [],
-        heldConstant: [],
-        outcomeInterpretations: [],
+        competingHypothesisIds: ["hyp-practical"],
+        manipulatedVariable: "mutual-dependency accountability",
+        heldConstant: ["ADHD supports", "money pressure"],
+        outcomeInterpretations: [
+          {
+            outcome: "At least three of four planned attempts are completed with accountability.",
+            favors: "container_loss_vs_capacity",
+            because: "Execution changed when accountability changed while practical pressure stayed stable.",
+          },
+          {
+            outcome: "Completion remains low in proportion to ADHD and money-pressure days.",
+            favors: "hyp-practical",
+            because: "Stable accountability with constraint-linked variation fits the practical rival better.",
+          },
+        ],
       },
     ];
     caseState.openForks = ["container_loss_vs_capacity"];

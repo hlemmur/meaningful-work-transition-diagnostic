@@ -376,17 +376,17 @@ export const experimentSchema = z.object({
     z.array(z.string()).default([]),
 
   manipulatedVariable:
-    z.string().optional(),
+    z.string().trim().min(1).optional(),
 
   heldConstant:
-    z.array(z.string()).default([]),
+    z.array(z.string().trim().min(1)).default([]),
 
   outcomeInterpretations:
     z.array(
       z.object({
-        outcome: z.string(),
-        favors: z.string(),
-        because: z.string(),
+        outcome: z.string().trim().min(1),
+        favors: z.string().trim().min(1),
+        because: z.string().trim().min(1),
       }),
     ).default([]),
 });

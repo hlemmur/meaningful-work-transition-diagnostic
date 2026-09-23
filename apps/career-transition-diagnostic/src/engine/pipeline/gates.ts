@@ -322,6 +322,10 @@ export function experimentBoundToHypothesis(
       hypothesisTested?: unknown;
       action?: unknown;
       competingHypothesisIds?: unknown;
+      manipulatedVariable?: unknown;
+      heldConstant?: unknown;
+      whatToObserve?: unknown;
+      outcomeInterpretations?: unknown;
     };
 
     const title =
@@ -389,6 +393,140 @@ export function experimentBoundToHypothesis(
       failures.push(
         `${title}: hypothesisTested must not also be listed as a competing hypothesis`,
       );
+    }
+
+    if (kind === "behavioral" && hasNewBindingField) {
+      const manipulatedVariable =
+        typeof experiment.manipulatedVariable === "string"
+          ? experiment.manipulatedVariable.trim()
+          : "";
+      const heldConstant = Array.isArray(experiment.heldConstant)
+        ? experiment.heldConstant.filter(
+            (item): item is string => typeof item === "string" && item.trim().length > 0,
+          )
+        : [];
+      const observations = Array.isArray(experiment.whatToObserve)
+        ? experiment.whatToObserve.filter((item): item is string => typeof item === "string")
+        : [];
+      const action = typeof experiment.action === "string" ? experiment.action : "";
+      const actionAndObservationTokens = contentTokens(
+        `${action} ${observations.join(" ")}`,
+      );
+      const manipulatedTokens = contentTokens(manipulatedVariable);
+      const genericVariableTokens = new Set([
+        "external",
+        "internal",
+        "level",
+        "amount",
+        "degree",
+        "condition",
+        "variable",
+      ]);
+      const variableAppearsInTest = [...manipulatedTokens].some(
+        (token) =>
+          !genericVariableTokens.has(token) && actionAndObservationTokens.has(token),
+      );
+
+      if (!manipulatedVariable || !variableAppearsInTest) {
+        failures.push(
+          `${title}: manipulatedVariable must name the variable actually changed in the action or observations`,
+        );
+      }
+
+      const actionTokens = contentTokens(action);
+      const constantsAppearInAction = heldConstant.every((constant) =>
+        [...contentTokens(constant)].some((token) => actionTokens.has(token)),
+      );
+      if (
+        !heldConstant.length ||
+        !constantsAppearInAction ||
+        !/\b(?:hold|held|keep|kept|same|unchanged|stable|constant|leav(?:e|ing))\b/i.test(action)
+      ) {
+        failures.push(
+          `${title}: heldConstant must name a meaningful factor explicitly kept stable in the action`,
+        );
+      }
+
+      if (!competingHypothesisIds.length) {
+        failures.push(
+          `${title}: a discriminating behavioral experiment requires at least one live competing hypothesis id`,
+        );
+      }
+
+      const outcomes = Array.isArray(experiment.outcomeInterpretations)
+        ? experiment.outcomeInterpretations.filter(
+            (item): item is { outcome: string; favors: string; because: string } =>
+              Boolean(item) &&
+              typeof item === "object" &&
+              typeof (item as { outcome?: unknown }).outcome === "string" &&
+              typeof (item as { favors?: unknown }).favors === "string" &&
+              typeof (item as { because?: unknown }).because === "string",
+          )
+        : [];
+      const allowedOutcomeIds = new Set([hypothesisTested, ...competingHypothesisIds]);
+      const invalidOutcomeIds = outcomes
+        .map((outcome) => outcome.favors)
+        .filter((id) => !allowedOutcomeIds.has(id));
+      const favoredIds = new Set(outcomes.map((outcome) => outcome.favors));
+      const vagueBinaryOutcome = outcomes.some((outcome) =>
+        /^(?:success|failure|succeeds?|fails?|works?|does not work|improves?|no change)[.!:]?$/i.test(
+          outcome.outcome.trim(),
+        ),
+      );
+      const missingOutcomeReason = outcomes.some(
+        (outcome) => !outcome.outcome.trim() || !outcome.because.trim(),
+      );
+      const unobservableOutcome = outcomes.some(
+        (outcome) =>
+          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|minute|day|week|task|output|action|session|application|interview|message|draft|charge|anxiety|distress|rating|score)\b/i.test(
+            outcome.outcome,
+          ),
+      );
+      const distinctReasons = new Set(
+        outcomes.map((outcome) => normalize(outcome.because)),
+      );
+      if (
+        outcomes.length < 2 ||
+        favoredIds.size < 2 ||
+        !favoredIds.has(hypothesisTested) ||
+        !competingHypothesisIds.some((id) => favoredIds.has(id)) ||
+        invalidOutcomeIds.length > 0 ||
+        vagueBinaryOutcome ||
+        missingOutcomeReason ||
+        unobservableOutcome ||
+        distinctReasons.size < 2
+      ) {
+        failures.push(
+          `${title}: outcomeInterpretations must give at least two observable, non-success/failure outcomes that favor different live explanations for stated reasons`,
+        );
+      }
+
+      const experimentText = `${title} ${action} ${manipulatedVariable} ${observations.join(" ")}`;
+      const exposureClaim = /\b(?:exposure|visible|visibility|public|publish|audience|outreach)\b/i.test(
+        experimentText,
+      );
+      if (exposureClaim) {
+        const variesExposure =
+          /\b(?:exposure|visible|visibility|public|publish|audience|outreach)\b/i.test(
+            manipulatedVariable,
+          ) &&
+          /\b(?:vary|change|increase|decrease|more|less|visible|private|public|publish|send|outreach)\b/i.test(
+            action,
+          );
+        const rivalText = state.hypotheses
+          .filter((hypothesis) => competingHypothesisIds.includes(hypothesis.id))
+          .map((hypothesis) => `${hypothesis.title} ${hypothesis.observedPattern}`)
+          .join(" ");
+        const rivalTokens = contentTokens(rivalText);
+        const stabilizesRival = heldConstant.some((constant) =>
+          [...contentTokens(constant)].some((token) => rivalTokens.has(token)),
+        );
+        if (!variesExposure || !stabilizesRival) {
+          failures.push(
+            `${title}: an exposure experiment must vary exposure and hold the main rival explanation stable`,
+          );
+        }
+      }
     }
 
     if (kind === "imaginal") {

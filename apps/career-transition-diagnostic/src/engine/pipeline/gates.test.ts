@@ -247,10 +247,10 @@ describe("experiment binding gate", () => {
         title: "Structure test",
         hypothesisTested: "hyp-structure",
         action:
-          "Add external accountability while leaving the task unchanged.",
+          "Add external accountability while holding task difficulty unchanged.",
         duration: "2 weeks",
         whatToObserve:
-          ["Whether execution changes under added structure."],
+          ["Number of five planned task attempts completed under accountability."],
         resultSupportingHypothesis:
           "Execution improves materially.",
         resultWeakeningHypothesis:
@@ -259,14 +259,62 @@ describe("experiment binding gate", () => {
         practicalRequirements: [],
         competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external accountability",
-        heldConstant: ["task", "offer"],
-        outcomeInterpretations: [],
+        heldConstant: ["task difficulty"],
+        outcomeInterpretations: [
+          {
+            outcome: "At least four of five planned attempts are completed under accountability.",
+            favors: "hyp-structure",
+            because: "Execution changed when structure changed while task difficulty stayed stable.",
+          },
+          {
+            outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
+            favors: "hyp-skill",
+            because: "Persistent task-specific errors fit limited experience better than missing structure.",
+          },
+        ],
       },
     ];
 
     expect(
       experimentBoundToHypothesis(state).passed,
     ).toBe(true);
+  });
+
+  it("rejects a behavioral experiment whose manipulated variable is irrelevant to its action", () => {
+    const state = experimentState();
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Irrelevant manipulation",
+        hypothesisTested: "hyp-structure",
+        action: "Change external coffee brands while completing the same outreach task.",
+        duration: "2 weeks",
+        whatToObserve: ["Completed outreach attempts under each coffee brand."],
+        resultSupportingHypothesis: "Execution improves with structure.",
+        resultWeakeningHypothesis: "Execution does not improve.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: ["hyp-skill"],
+        manipulatedVariable: "external accountability",
+        heldConstant: ["outreach task", "time available"],
+        outcomeInterpretations: [
+          {
+            outcome: "Four of five outreach attempts are completed with accountability.",
+            favors: "hyp-structure",
+            because: "The changed structure altered execution while the task stayed stable.",
+          },
+          {
+            outcome: "Completion remains low and errors cluster around unfamiliar task steps.",
+            favors: "hyp-skill",
+            because: "Stable difficulty despite structure would fit a skill gap better.",
+          },
+        ],
+      },
+    ];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/manipulatedVariable.*action/i);
   });
 
   it("passes when hypothesisTested exactly matches an open fork id", () => {
@@ -289,10 +337,21 @@ describe("experiment binding gate", () => {
           "Execution does not improve.",
         riskLevel: "low",
         practicalRequirements: [],
-        competingHypothesisIds: [],
+        competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external structure",
         heldConstant: ["task difficulty"],
-        outcomeInterpretations: [],
+        outcomeInterpretations: [
+          {
+            outcome: "At least four of five planned attempts are completed with external structure.",
+            favors: "container_loss_vs_capacity",
+            because: "Changing structure changed execution while task difficulty stayed stable.",
+          },
+          {
+            outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
+            favors: "hyp-skill",
+            because: "Task-specific errors despite structure fit the skill explanation better.",
+          },
+        ],
       },
     ];
 
@@ -366,6 +425,138 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(
       /unknown competingHypothesisIds/i,
     );
+  });
+
+  it("rejects outcomes that all favor the same hypothesis", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "One-sided outcome map",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed attempts and task-specific errors."],
+      resultSupportingHypothesis: "Completion rises.",
+      resultWeakeningHypothesis: "Completion stays low.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Four of five attempts are completed.",
+          favors: "hyp-structure",
+          because: "Added structure coincided with more execution.",
+        },
+        {
+          outcome: "One of five attempts is completed.",
+          favors: "hyp-structure",
+          because: "The structure dose may have been too weak.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/different live explanations/i);
+  });
+
+  it("rejects success-versus-failure labels without observable outcomes", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Binary labels",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed attempts."],
+      resultSupportingHypothesis: "Success.",
+      resultWeakeningHypothesis: "Failure.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        { outcome: "Success", favors: "hyp-structure", because: "The test worked." },
+        { outcome: "Failure", favors: "hyp-skill", because: "The test failed." },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/non-success\/failure outcomes/i);
+  });
+
+  it("rejects outcome mappings without a stated reason", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Missing rationale",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed attempts and task-specific errors."],
+      resultSupportingHypothesis: "Completion rises.",
+      resultWeakeningHypothesis: "Task-specific errors persist.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Four of five attempts are completed.",
+          favors: "hyp-structure",
+          because: "Execution changed under added structure.",
+        },
+        {
+          outcome: "Errors persist in unfamiliar task steps.",
+          favors: "hyp-skill",
+          because: "",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/for stated reasons/i);
+  });
+
+  it("rejects a false exposure experiment that varies structure instead of exposure", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Public exposure test",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Whether public visibility changes completion."],
+      resultSupportingHypothesis: "Completion rises.",
+      resultWeakeningHypothesis: "Completion stays low.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Four of five visible attempts are completed.",
+          favors: "hyp-structure",
+          because: "Execution improved under added accountability.",
+        },
+        {
+          outcome: "Errors persist in unfamiliar task steps.",
+          favors: "hyp-skill",
+          because: "Stable errors fit limited experience better.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/must vary exposure/i);
   });
 
   it("requires at least one behavioral experiment", () => {
