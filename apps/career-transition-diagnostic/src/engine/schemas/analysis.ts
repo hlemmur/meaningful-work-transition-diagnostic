@@ -118,6 +118,54 @@ export const imageVoteSchema = z.object({
     z.array(z.string()).default([]),
 });
 
+export const groundedSymbolicObservationSchema = z.object({
+  text: z.string().trim().min(1),
+  evidenceRefs: z.array(z.string()).min(1),
+});
+
+export const plausibleSymbolicReadingSchema = z
+  .object({
+    interpretation: z.string().trim().min(1),
+    supportsHypothesisIds: z.array(z.string()).default([]),
+    weakensHypothesisIds: z.array(z.string()).default([]),
+    evidenceRefs: z.array(z.string()).min(1),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.supportsHypothesisIds.length && !value.weakensHypothesisIds.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "A plausible symbolic reading must support or weaken at least one live hypothesis",
+      });
+    }
+  });
+
+export const symbolicImageAnalysisSchema = z.object({
+  literalFacts: z.array(groundedSymbolicObservationSchema).default([]),
+  personalAssociations: z.array(groundedSymbolicObservationSchema).default([]),
+  plausibleReadings: z.array(plausibleSymbolicReadingSchema).default([]),
+  unresolvedSymbolicQuestion: z.string().trim().min(1).optional(),
+});
+
+export const projectionInterpretationSchema = z
+  .object({
+    projectionEvidenceRefs: z.array(z.string()).min(1),
+    possibleDisownedValue: z.string().trim().min(1).optional(),
+    literalEnactmentRisk: z.string().trim().min(1).optional(),
+    matureExpression: z.string().trim().min(1).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      !value.possibleDisownedValue &&
+      !value.literalEnactmentRisk &&
+      !value.matureExpression
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "A projection interpretation must add at least one tentative interpretive field",
+      });
+    }
+  });
+
 export const hiddenPositionSchema = z.object({
   consciousPosition: z.string(),
   observedPattern: z.string(),
@@ -384,6 +432,8 @@ export const reportSchema = z.object({
 export type Contradiction = z.infer<typeof contradictionSchema>;
 export type Hypothesis = z.infer<typeof hypothesisSchema>;
 export type ImageVote = z.infer<typeof imageVoteSchema>;
+export type SymbolicImageAnalysis = z.infer<typeof symbolicImageAnalysisSchema>;
+export type ProjectionInterpretation = z.infer<typeof projectionInterpretationSchema>;
 export type HiddenPosition = z.infer<typeof hiddenPositionSchema>;
 export type JungianLens = z.infer<typeof jungianLensSchema>;
 export type RealityCheck = z.infer<typeof realityCheckSchema>;

@@ -5,6 +5,7 @@ import { collectCanonicalEvidenceIds } from "./evidence-ids";
 import { questions } from "@/questionnaire/questionnaire.v2";
 import {
   CANONICAL_PEEL_TITLES,
+  hasRichImageAssociations,
   imageVoteAdequate,
   isParaphraseOf,
   throwGate,
@@ -232,6 +233,130 @@ export function applyImageVotes(
     });
   }
 
+  const allowedEvidenceRefs = new Set(collectCanonicalEvidenceIds(state));
+  const normalize = (value: string) =>
+    value.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  const literalSymbolic = new Map<string, Set<string>>();
+  const associatedSymbolic = new Map<string, Set<string>>();
+  const addSymbolic = (
+    target: Map<string, Set<string>>,
+    value: string | string[] | undefined,
+    questionId: string,
+  ) => {
+    const values = Array.isArray(value) ? value : value ? [value] : [];
+    for (const item of values) {
+      const key = normalize(item);
+      const refs = target.get(key) ?? new Set<string>();
+      refs.add(`${state.assessmentId}:${questionId}`);
+      target.set(key, refs);
+    }
+  };
+  addSymbolic(literalSymbolic, state.symbolicMaterial.scene, "Q10.1");
+  addSymbolic(literalSymbolic, state.symbolicMaterial.surroundings, "Q10.2");
+  addSymbolic(literalSymbolic, state.symbolicMaterial.obstacle, "Q10.3");
+  addSymbolic(literalSymbolic, state.symbolicMaterial.ahead, "Q10.4");
+  addSymbolic(literalSymbolic, state.symbolicMaterial.figures, "Q10.5");
+  addSymbolic(associatedSymbolic, state.symbolicMaterial.obstacleSpeech, "Q10.6");
+  addSymbolic(associatedSymbolic, state.symbolicMaterial.obstacleWant, "Q10.7");
+  addSymbolic(associatedSymbolic, state.symbolicMaterial.ifNotRemoved, "Q10.8");
+
+  const validateObservations = (
+    observations: typeof output.imageAnalysis.literalFacts,
+    supplied: Map<string, Set<string>>,
+    label: string,
+  ) => {
+    for (const observation of observations) {
+      const expectedRefs = supplied.get(normalize(observation.text));
+      if (
+        !expectedRefs ||
+        observation.evidenceRefs.some((ref) => !expectedRefs.has(ref))
+      ) {
+        throwGate({
+          id: "symbolic-material-provenance",
+          passed: false,
+          detail: `Pass 5 ${label} is not exact supplied client material with matching provenance: ${observation.text}`,
+        });
+      }
+    }
+  };
+  validateObservations(output.imageAnalysis.literalFacts, literalSymbolic, "literal fact");
+  validateObservations(
+    output.imageAnalysis.personalAssociations,
+    associatedSymbolic,
+    "personal association",
+  );
+
+  for (const vote of output.votes) {
+    if (
+      vote.evidenceRefs.some((ref) => !allowedEvidenceRefs.has(ref)) ||
+      vote.exactClientMaterialUsed.some(
+        (ref) => !allowedEvidenceRefs.has(ref) || !/:Q10\./.test(ref),
+      ) ||
+      (vote.verdict !== "insufficient" &&
+        !vote.evidenceRefs.some((ref) => /:Q10\./.test(ref)))
+    ) {
+      throwGate({
+        id: "image-vote-evidence-integrity",
+        passed: false,
+        detail: "Pass 5 image votes must use valid supplied evidence and ground substantive verdicts in Q10 material.",
+      });
+    }
+  }
+
+  for (const reading of output.imageAnalysis.plausibleReadings) {
+    const referencedHypotheses = [
+      ...reading.supportsHypothesisIds,
+      ...reading.weakensHypothesisIds,
+    ];
+    const invalidHypothesisId = referencedHypotheses.find((id) => !byId.has(id));
+    if (invalidHypothesisId) {
+      throwGate({
+        id: "symbolic-reading-referential-integrity",
+        passed: false,
+        detail: `Pass 5 symbolic reading references non-live hypothesis ${invalidHypothesisId}.`,
+      });
+    }
+    if (
+      reading.evidenceRefs.some((ref) => !allowedEvidenceRefs.has(ref)) ||
+      !reading.evidenceRefs.some((ref) => /:Q10\./.test(ref))
+    ) {
+      throwGate({
+        id: "symbolic-reading-evidence-integrity",
+        passed: false,
+        detail: "Pass 5 symbolic reading must cite valid supplied symbolic evidence.",
+      });
+    }
+  }
+
+  const projectionRefs = new Set(
+    [...state.projections.admiredFigures, ...state.projections.rejectedFigures]
+      .flatMap((item) => item.evidenceRefs),
+  );
+  for (const interpretation of output.projectionInterpretations) {
+    if (
+      interpretation.projectionEvidenceRefs.some((ref) => !projectionRefs.has(ref))
+    ) {
+      throwGate({
+        id: "projection-interpretation-provenance",
+        passed: false,
+        detail: "Pass 5 projection interpretation must reference raw supplied projection evidence.",
+      });
+    }
+  }
+
+  if (
+    !hasRichImageAssociations(state) &&
+    (output.imageAnalysis.plausibleReadings.length > 0 ||
+      Boolean(output.imageAnalysis.unresolvedSymbolicQuestion) ||
+      output.votes.some((vote) => vote.verdict !== "insufficient"))
+  ) {
+    throwGate({
+      id: "symbolic-material-insufficient",
+      passed: false,
+      detail: "Thin symbolic material must remain explicitly insufficient.",
+    });
+  }
+
   for (const vote of output.votes) {
     const hypothesis = byId.get(
       vote.hypothesisId,
@@ -280,6 +405,8 @@ export function applyImageVotes(
 
   state.imageVotes =
     output.votes;
+  state.imageAnalysis = output.imageAnalysis;
+  state.projectionInterpretations = output.projectionInterpretations;
 
   state.hypotheses = [
     ...state.hypotheses,

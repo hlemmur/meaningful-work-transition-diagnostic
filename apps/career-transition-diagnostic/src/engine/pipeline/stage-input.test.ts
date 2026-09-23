@@ -134,6 +134,50 @@ function seededCase(assessmentId = "a1"): CaseState {
 }
 
 describe("buildStageLlmInput", () => {
+  it("carries unresolved symbolic readings and projection interpretations into later snapshots", () => {
+    const state = seededCase();
+    state.imageAnalysis = {
+      literalFacts: [{ text: "A locked gate.", evidenceRefs: ["a1:Q10.1"] }],
+      personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
+      plausibleReadings: [
+        {
+          interpretation: "The gate may concern permission.",
+          supportsHypothesisIds: ["hyp-depth"],
+          weakensHypothesisIds: [],
+          evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+        },
+        {
+          interpretation: "The gate may concern route clarity.",
+          supportsHypothesisIds: ["hyp-practical"],
+          weakensHypothesisIds: [],
+          evidenceRefs: ["a1:Q10.1"],
+        },
+      ],
+      unresolvedSymbolicQuestion: "Permission or route clarity?",
+    };
+    state.projectionInterpretations = [{
+      projectionEvidenceRefs: ["a1:Q5.1"],
+      possibleDisownedValue: "Decisiveness may be a value to reclaim.",
+      literalEnactmentRisk: "Do not copy the figure literally.",
+      matureExpression: "Test one bounded decisive action.",
+    }];
+
+    const input = buildStageLlmInput({
+      stage: "pass9",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: state,
+      answers: {},
+    }) as { caseSnapshot: {
+      imageAnalysis: { plausibleReadings: unknown[]; unresolvedSymbolicQuestion?: string };
+      projectionInterpretations: unknown[];
+    } };
+
+    expect(input.caseSnapshot.imageAnalysis.plausibleReadings).toHaveLength(2);
+    expect(input.caseSnapshot.imageAnalysis.unresolvedSymbolicQuestion).toMatch(/permission/i);
+    expect(input.caseSnapshot.projectionInterpretations).toHaveLength(1);
+  });
+
   it("carries a resolved maintaining loop into report-stage snapshots", () => {
     const state = seededCase();
     state.finalFormulation = {

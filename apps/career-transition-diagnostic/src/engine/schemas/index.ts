@@ -6,6 +6,8 @@ export {
   hiddenPositionLlmSchema,
   hypothesisSchema,
   imageVoteSchema,
+  projectionInterpretationSchema,
+  symbolicImageAnalysisSchema,
   jungianLensSchema,
   realityCheckSchema,
   reportSchema,

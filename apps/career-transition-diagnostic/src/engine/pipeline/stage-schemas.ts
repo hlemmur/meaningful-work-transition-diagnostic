@@ -8,6 +8,8 @@ import {
   hypothesisCritiqueSchema,
   hypothesisSchema,
   imageVoteSchema,
+  projectionInterpretationSchema,
+  symbolicImageAnalysisSchema,
   jungianLensSchema,
   realityCheckSchema,
   reportSectionSchema,
@@ -43,6 +45,8 @@ export const pass4OutputSchema = z.object({
 
 export const pass5OutputSchema = z.object({
   votes: z.array(imageVoteSchema).min(1),
+  imageAnalysis: symbolicImageAnalysisSchema,
+  projectionInterpretations: z.array(projectionInterpretationSchema).default([]),
   overallNote: z.string(),
 });
 
