@@ -886,8 +886,11 @@ export function questionsAndCloseAdequate(
   const liveHypotheses = new Set(state?.hypotheses.map((hypothesis) => hypothesis.id) ?? []);
   const liveForks = new Set(state?.forkResolutions.map((fork) => fork.forkId) ?? []);
   const leading = /\b(?:why do you|what makes you|don't you|isn't it|wouldn't you|surely)\b/i;
+  const renderedQuestions = (questions.body.match(/[^?]+\?/g) ?? []).map((question) =>
+    normalize(question.replace(/^\s*\d+[.)]\s*/, "")),
+  );
+  const intentQuestions = intents.map((intent) => normalize(intent.question));
   const invalidIntent = intents.some((intent) =>
-    !questions.body.includes(intent.question) ||
     !/\b(?:you|your)\b/i.test(intent.question) ||
     leading.test(intent.question) ||
     (intent.relatedHypothesisId !== undefined && state !== undefined && !liveHypotheses.has(intent.relatedHypothesisId)) ||
@@ -896,6 +899,9 @@ export function questionsAndCloseAdequate(
   if (
     state !== undefined &&
     (intents.length !== 3 ||
+      new Set(intentQuestions).size !== 3 ||
+      new Set(renderedQuestions).size !== 3 ||
+      intentQuestions.some((question) => !renderedQuestions.includes(question)) ||
       invalidIntent ||
       !intents.some((intent) => intent.couldWeakenSelectedFormulation))
   ) {
@@ -934,10 +940,12 @@ export function epistemicallyUncalibratedSectionIds(
 ) {
   return sections.flatMap((section) => {
     const sentences = section.body.split(/(?<=[.!?])\s+/);
-    const unsupported = sentences.some(
-      (sentence) =>
-        CERTAIN_PSYCHOLOGICAL_PREDICATE.test(sentence) &&
-        !EPISTEMIC_HEDGE.test(sentence),
+    const unsupported = sentences.some((sentence) =>
+      sentence.split(/\s+(?:but|yet|however)\s+|[;—]/i).some(
+        (clause) =>
+          CERTAIN_PSYCHOLOGICAL_PREDICATE.test(clause) &&
+          !EPISTEMIC_HEDGE.test(clause),
+      ),
     );
     return unsupported ? [section.id] : [];
   });
@@ -945,9 +953,12 @@ export function epistemicallyUncalibratedSectionIds(
 
 function mentionsSource(body: string, source: string) {
   const bodyTokens = contentTokens(body);
-  return [...contentTokens(source)].some(
-    (token) => token.length >= 5 && bodyTokens.has(token),
+  const generic = new Set(["pattern", "practical", "change", "stall", "working", "formulation", "hypothesis"]);
+  const sourceTokens = [...contentTokens(source)].filter(
+    (token) => token.length >= 4 && !generic.has(token),
   );
+  const matches = sourceTokens.filter((token) => bodyTokens.has(token)).length;
+  return sourceTokens.length > 0 && matches >= Math.min(2, sourceTokens.length);
 }
 
 export function closeSynthesisAdequate(

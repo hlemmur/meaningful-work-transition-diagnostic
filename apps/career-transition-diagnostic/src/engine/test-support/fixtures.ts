@@ -162,7 +162,7 @@ function ensureQuestionsAndClose(
         id: "close",
         title: "A working formulation",
         body:
-          "You can treat the working maintenance hypothesis as the possibility that the stall may protect a not-yet-incarnated way of working, or that freedom without an internalized container and capacity stalls action. Your strongest practical alternative is that constraints and missing infrastructure may be enough to explain the stall. Important unknowns remain, and evidence from your experiment should update or revise this formulation rather than turn it into a verdict.",
+          "You can treat the working maintenance hypothesis as the possibility that the stall may be protecting a not-yet-incarnated way of working, or that freedom without an internalized container and capacity stalls action. Your strongest practical alternative is that constraints and missing infrastructure may be enough to explain the stall. Important unknowns remain, and evidence from your experiment should update or revise this formulation rather than turn it into a verdict.",
         evidenceRefs: [
           ctx.evidenceRef,
         ],

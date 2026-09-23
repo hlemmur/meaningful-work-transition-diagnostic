@@ -1564,6 +1564,12 @@ describe("questions and close gate", () => {
     ]);
   });
 
+  it("does not let a hedge in one clause mask certainty in another", () => {
+    expect(epistemicallyUncalibratedSectionIds([
+      section("contradiction", "A practical mismatch may matter, but secretly you fear success.", ["a1:Q1.1"]),
+    ])).toEqual(["contradiction"]);
+  });
+
   it("passes exactly three questions and a close", () => {
     const sections = [
       reportSectionSchema.parse({
@@ -1628,6 +1634,22 @@ describe("questions and close gate", () => {
     expect(questionsAndCloseAdequate([questions, section("close", "A working formulation.", ["a1:Q1.1"])], state).passed).toBe(false);
   });
 
+  it("rejects duplicate intents that leave a rendered question unvalidated", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    const repeated = "What evidence would weaken this formulation for you?";
+    const questions = reportSectionSchema.parse({
+      id: "questions", title: "questions",
+      body: `${repeated} Why do you avoid commitment? What remains unknown for you?`,
+      evidenceRefs: ["a1:Q1.1"],
+      questionIntents: [
+        { question: repeated, targetUncertainty: "Fit", couldWeakenSelectedFormulation: true },
+        { question: repeated, targetUncertainty: "Action", couldWeakenSelectedFormulation: false },
+        { question: repeated, targetUncertainty: "Unknowns", couldWeakenSelectedFormulation: false },
+      ],
+    });
+    expect(questionsAndCloseAdequate([questions, section("close", "A working formulation.", ["a1:Q1.1"])], state).passed).toBe(false);
+  });
+
   it("rejects a close that omits the rival, unknowns, and updating evidence", () => {
     const state = extractCaseStateFull("a1", originAnswers);
     state.finalFormulation = {
@@ -1640,6 +1662,20 @@ describe("questions and close gate", () => {
     };
     expect(closeSynthesisAdequate([
       section("close", "You can treat certainty as a working formulation.", ["a1:Q1.1"]),
+    ], state).passed).toBe(false);
+  });
+
+  it("rejects generic token overlap as a substitute for synthesis", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "A recurring pattern delays visible commitment.",
+      maintenanceMechanism: { trigger: "Visibility", response: "Delay", shortTermFunction: "Relief", longTermCost: "No learning", reinforcingConsequence: "Uncertainty continues" },
+      whyItFits: ["It recurs"], whatItDoesNotExplain: ["Fit"],
+      strongestAlternative: "Practical market uncertainty may explain the pause.", unresolvedForks: [],
+    };
+    expect(closeSynthesisAdequate([
+      section("close", "The pattern and practical unknowns remain; evidence could change it.", ["a1:Q1.1"]),
     ], state).passed).toBe(false);
   });
 });
