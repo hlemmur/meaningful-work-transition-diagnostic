@@ -282,6 +282,74 @@ describe("experiment binding gate", () => {
     ).toBe(true);
   });
 
+  it("accepts concrete artifact and action outcomes outside the original keyword list", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Artifact comparison",
+      hypothesisTested: "hyp-structure",
+      action: "Change external accountability while holding prototype scope unchanged.",
+      duration: "2 weeks",
+      whatToObserve: ["Prototype revisions and sharing behavior."],
+      resultSupportingHypothesis: "The prototype is finished and shared.",
+      resultWeakeningHypothesis: "Domain-specific defects persist.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["prototype scope"],
+      outcomeInterpretations: [
+        {
+          outcome: "A private prototype is finished and shared without repeated revision.",
+          favors: "hyp-structure",
+          because: "Finishing the stable artifact after accountability changes favors structure.",
+        },
+        {
+          outcome: "The same prototype retains domain-specific defects despite stable support.",
+          favors: "hyp-skill",
+          because: "Persistent defects in the unchanged artifact favor the skill explanation.",
+        },
+      ],
+    }];
+
+    expect(experimentBoundToHypothesis(state).passed).toBe(true);
+  });
+
+  it("rejects vague internal-state outcomes without a measure or observable action", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Internal impression",
+      hypothesisTested: "hyp-structure",
+      action: "Change external accountability while holding task difficulty unchanged.",
+      duration: "2 weeks",
+      whatToObserve: ["Whether the experience feels different."],
+      resultSupportingHypothesis: "The experience feels easier.",
+      resultWeakeningHypothesis: "The experience feels harder.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Confidence feels stronger and uncertainty feels lighter.",
+          favors: "hyp-structure",
+          because: "The subjective shift could fit added structure.",
+        },
+        {
+          outcome: "Confidence feels weaker and uncertainty feels heavier.",
+          favors: "hyp-skill",
+          because: "The subjective shift could fit limited experience.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/observable/i);
+  });
+
   it("rejects a behavioral experiment whose manipulated variable is irrelevant to its action", () => {
     const state = experimentState();
     state.experiments = [

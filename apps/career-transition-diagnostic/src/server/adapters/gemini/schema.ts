@@ -60,9 +60,33 @@ export function jsonSchemaForStage(stage: string) {
   }
   if (stage in passOutputSchemas) {
     const schema = z.toJSONSchema(passOutputSchemas[stage as keyof typeof passOutputSchemas]) as JsonSchema;
-    return stage === "pass5" ? requireNullableProjectionInterpretationFields(schema) : schema;
+    if (stage === "pass5") {
+      return requireNullableProjectionInterpretationFields(schema);
+    }
+    if (stage === "pass8") {
+      return requireNullablePass8ManipulatedVariable(schema);
+    }
+    return schema;
   }
   return z.toJSONSchema(z.object({ ok: z.boolean() })) as JsonSchema;
+}
+
+function requireNullablePass8ManipulatedVariable(schema: JsonSchema) {
+  const properties = schema.properties as JsonSchema | undefined;
+  const experiments = properties?.experiments as JsonSchema | undefined;
+  const item = experiments?.items as JsonSchema | undefined;
+  const itemProperties = item?.properties as JsonSchema | undefined;
+  const fieldSchema = itemProperties?.manipulatedVariable;
+  if (!item || !itemProperties || !fieldSchema || typeof fieldSchema !== "object") {
+    return schema;
+  }
+  itemProperties.manipulatedVariable = {
+    ...(fieldSchema as JsonSchema),
+    nullable: true,
+  };
+  const required = Array.isArray(item.required) ? item.required as string[] : [];
+  item.required = [...new Set([...required, "manipulatedVariable"])] as string[];
+  return schema;
 }
 
 function requireNullableProjectionInterpretationFields(schema: JsonSchema) {
