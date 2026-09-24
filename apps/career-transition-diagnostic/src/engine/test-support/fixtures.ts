@@ -134,6 +134,7 @@ function hyp(
 
 function ensureQuestionsAndClose(
   sections: ReportSection[],
+  fixture: AnalysisFixture,
   ctx: {
     assessmentId: string;
     evidenceRef: string;
@@ -178,8 +179,9 @@ function ensureQuestionsAndClose(
       reportSectionSchema.parse({
         id: "close",
         title: "A working formulation",
-        body:
-          "You can treat the working maintenance hypothesis as the possibility that the stall may be protecting a not-yet-incarnated way of working, or that freedom without an internalized container and capacity stalls action. Your strongest practical alternative is that constraints and missing infrastructure may be enough to explain the stall. When warranted, the developmental task may integrate freedom with dependable structure. Important unknowns remain, and evidence from your experiment should update or revise this formulation rather than turn it into a verdict.",
+        body: PRACTICAL_ONLY_FIXTURES.has(fixture)
+          ? "The working maintenance hypothesis is that current constraints and missing infrastructure may be enough to explain the stall. Your reported role history, body responses, and emotions remain relevant observations, but they do not by themselves establish a hidden cause. A practical benefit of staying with the current arrangement is conserving limited resources; that does not establish a hidden motive. A stronger opportunity fit or more usable structure would weaken this explanation. Important unknowns remain, and evidence from your experiment should update or revise the formulation rather than turn it into a verdict."
+          : "You can treat the working maintenance hypothesis as the possibility that the stall may be protecting a not-yet-incarnated way of working, or that freedom without an internalized container and capacity stalls action. Your strongest practical alternative is that constraints and missing infrastructure may be enough to explain the stall. When warranted, the developmental task may integrate freedom with dependable structure. Important unknowns remain, and evidence from your experiment should update or revise this formulation rather than turn it into a verdict.",
         evidenceRefs: [
           ctx.evidenceRef,
         ],
@@ -946,16 +948,16 @@ function finalFormulationFor(
       selected.id,
 
     maintenanceFormulation:
-      fixture === "critic-constraints-win"
+      PRACTICAL_ONLY_FIXTURES.has(fixture)
         ? "The current stall may be sufficiently explained by practical constraints and missing infrastructure."
         : selected.observedPattern,
 
     maintenanceMechanism: {
       trigger: "A concrete next step or self-directed work period begins.",
-      response: fixture === "critic-constraints-win"
+      response: PRACTICAL_ONLY_FIXTURES.has(fixture)
         ? "Action narrows around the available practical constraints."
         : "The next step is deferred while more certainty or external structure is sought.",
-      shortTermFunction: fixture === "critic-constraints-win"
+      shortTermFunction: PRACTICAL_ONLY_FIXTURES.has(fixture)
         ? "Conserves limited resources."
         : "Avoids premature commitment and exposure.",
       longTermCost: "Direct evidence about fit and capacity accumulates slowly.",
@@ -1515,6 +1517,7 @@ export function passOutputFor(
             fixture,
             ctx,
           ),
+          fixture,
           ctx,
         ),
       };
@@ -1535,6 +1538,7 @@ export function passOutputFor(
         : fixture,
       ctx,
     ),
+    fixture === "starved-case-report" ? "default" : fixture,
     ctx,
   );
       return {
