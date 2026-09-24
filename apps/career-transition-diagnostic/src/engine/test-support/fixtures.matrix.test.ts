@@ -6,6 +6,7 @@ import { mockLlmAdapter } from "@/server/adapters/openai/mock";
 import type { LlmAdapter } from "@/server/adapters/types";
 import { evaluateReport } from "@/eval/rubric";
 import { evaluateFrameworkFidelity } from "@/eval/framework-fidelity";
+import { evaluateDevelopmentalQualification } from "@/eval/developmental-qualification";
 import { executeAnalysis } from "@/engine/pipeline/run";
 import { inferAnalysisFixture, type AnalysisFixture } from "./fixtures";
 import { pass8OutputSchema } from "@/engine/pipeline/stage-schemas";
@@ -62,6 +63,51 @@ async function runFixture(
 }
 
 describe("negative and positive mock fixtures", () => {
+  it.each([
+    ["labor-market-only", "LABOR_MARKET_ONLY"],
+    ["job-shape-mismatch", "JOB_SHAPE_MISMATCH"],
+    ["ordinary-structure", "ORDINARY_STRUCTURE"],
+  ] as const)("keeps %s practical without developmental formulation", async (_name, marker) => {
+    const result = await runFixture(inferAnalysisFixture({ "Q1.1": marker }), {
+      "Q1.1": marker,
+      "Q0.5": "Hiring demand and role conditions explain the pause.",
+      "Q10.1": "",
+    });
+    expect(result.status).toBe("completed");
+    expect(result.caseState.finalFormulation?.developmentalFormulation).toBeUndefined();
+    expect(result.report?.sections.some((section) => section.id === "developmental")).toBe(false);
+    expect(evaluateDevelopmentalQualification(result.caseState, result.report?.sections ?? []).hardPassed).toBe(true);
+  });
+
+  it("grounds cross-domain polarity in a developmental formulation", async () => {
+    const result = await runFixture(inferAnalysisFixture({ "Q1.1": "CROSS_DOMAIN_POLARITY" }), {
+      "Q1.1": "CROSS_DOMAIN_POLARITY",
+      "Q2.1": "I repeatedly leave structure to recover freedom.",
+      "Q6.1": "I reject rigid people but also need dependable form.",
+    });
+    expect(result.status).toBe("completed");
+    expect(result.caseState.finalFormulation?.developmentalFormulation?.evidenceRefs).toEqual(
+      expect.arrayContaining(["fx-1:Q2.1", "fx-1:Q6.1"]),
+    );
+    expect(result.report?.sections.some((section) => section.id === "developmental")).toBe(true);
+    expect(evaluateDevelopmentalQualification(result.caseState, result.report?.sections ?? []).hardPassed).toBe(true);
+  });
+
+  it("preserves split symbolic readings and unresolved ambiguity", async () => {
+    const result = await runFixture(inferAnalysisFixture({ "Q1.1": "SYMBOL_SPLIT_LEAD" }), {
+      "Q1.1": "SYMBOL_SPLIT_LEAD",
+      "Q10.1": "A gate opens toward a road while shelter remains behind.",
+      "Q10.2": "Both directions feel equally alive.",
+    });
+    expect(result.status).toBe("completed");
+    expect(result.caseState.imageAnalysis?.plausibleReadings.length).toBeGreaterThanOrEqual(2);
+    expect(result.caseState.imageAnalysis?.unresolvedSymbolicQuestion).toBeTruthy();
+    expect(result.caseState.finalFormulation?.unresolvedForks.length).toBeGreaterThan(0);
+    expect(result.report?.sections.map((section) => section.body).join("\n")).toMatch(
+      /authorization.*route-clarity.*unresolved/i,
+    );
+  });
+
   it("completes the default mock pipeline when rich image material requires a substantive vote", async () => {
     const result = await runFixture("default", {
       "Q10.1": "A fictional traveler stands at a locked garden gate.",
