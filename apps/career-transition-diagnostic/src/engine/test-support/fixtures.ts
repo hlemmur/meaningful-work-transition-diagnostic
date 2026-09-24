@@ -886,7 +886,7 @@ function groundedReportSections(
       }),
     );
   }
-  if (fixture !== "empty-jungian") {
+  if (fixture !== "empty-jungian" && !PRACTICAL_ONLY_FIXTURES.has(fixture)) {
     sections.push(
       reportSectionSchema.parse({
         id: "jungian",

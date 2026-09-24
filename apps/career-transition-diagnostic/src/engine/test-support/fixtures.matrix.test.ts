@@ -76,9 +76,10 @@ describe("negative and positive mock fixtures", () => {
     expect(result.status, JSON.stringify(result.error)).toBe("completed");
     expect(result.caseState.finalFormulation?.developmentalFormulation).toBeUndefined();
     expect(result.report?.sections.some((section) => section.id === "developmental")).toBe(false);
+    expect(result.report?.sections.some((section) => section.id === "jungian")).toBe(false);
     expect(result.caseState.finalFormulation?.maintenanceMechanism.shortTermFunction).toBe("Conserves limited resources.");
     expect(result.report?.sections.map((section) => section.body).join("\n")).not.toMatch(
-      /not-yet-incarnated|internalized container|developmental task|avoids? (?:premature )?commitment|exposure/i,
+      /not-yet-incarnated|internalized container|developmental task|compensation|avoids? (?:premature )?commitment|exposure/i,
     );
     expect(evaluateDevelopmentalQualification(result.caseState, result.report?.sections ?? []).hardPassed).toBe(true);
   });
