@@ -159,6 +159,16 @@ export const pass9OutputSchema = z.object({
           message: `Report evidenceRefs must cite at least ${MIN_DISTINCT_EVIDENCE_QUESTION_IDS} distinct question ids`,
         });
       }
+      const questions = sections.find((section) => section.id === "questions");
+      if (
+        questions?.questionIntents?.length !== 3 ||
+        !questions.questionIntents.some((intent) => intent.couldWeakenSelectedFormulation)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Questions must include exactly three structured intents and at least one disconfirming intent",
+        });
+      }
       const order = [
         "problem", "reality", "contradiction", "hidden", "developmental",
         "alternative", "experiment", "jungian", "questions", "close",

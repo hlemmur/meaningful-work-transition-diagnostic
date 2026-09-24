@@ -23,6 +23,8 @@ import {
   somaticProvenance,
   questionsAndCloseAdequate,
   developmentalSectionAdequate,
+  epistemicallyUncalibratedSectionIds,
+  closeSynthesisAdequate,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -247,10 +249,10 @@ describe("experiment binding gate", () => {
         title: "Structure test",
         hypothesisTested: "hyp-structure",
         action:
-          "Add external accountability while leaving the task unchanged.",
+          "Add external accountability while holding task difficulty unchanged.",
         duration: "2 weeks",
         whatToObserve:
-          ["Whether execution changes under added structure."],
+          ["Number of five planned task attempts completed under accountability."],
         resultSupportingHypothesis:
           "Execution improves materially.",
         resultWeakeningHypothesis:
@@ -259,14 +261,62 @@ describe("experiment binding gate", () => {
         practicalRequirements: [],
         competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external accountability",
-        heldConstant: ["task", "offer"],
-        outcomeInterpretations: [],
+        heldConstant: ["task difficulty"],
+        outcomeInterpretations: [
+          {
+            outcome: "At least four of five planned attempts are completed under accountability.",
+            favors: "hyp-structure",
+            because: "Execution changed when structure changed while task difficulty stayed stable.",
+          },
+          {
+            outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
+            favors: "hyp-skill",
+            because: "Persistent task-specific errors fit limited experience better than missing structure.",
+          },
+        ],
       },
     ];
 
     expect(
       experimentBoundToHypothesis(state).passed,
     ).toBe(true);
+  });
+
+  it("rejects a behavioral experiment whose manipulated variable is irrelevant to its action", () => {
+    const state = experimentState();
+    state.experiments = [
+      {
+        kind: "behavioral",
+        title: "Irrelevant manipulation",
+        hypothesisTested: "hyp-structure",
+        action: "Change external coffee brands while completing the same outreach task.",
+        duration: "2 weeks",
+        whatToObserve: ["Completed outreach attempts under each coffee brand."],
+        resultSupportingHypothesis: "Execution improves with structure.",
+        resultWeakeningHypothesis: "Execution does not improve.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: ["hyp-skill"],
+        manipulatedVariable: "external accountability",
+        heldConstant: ["outreach task", "time available"],
+        outcomeInterpretations: [
+          {
+            outcome: "Four of five outreach attempts are completed with accountability.",
+            favors: "hyp-structure",
+            because: "The changed structure altered execution while the task stayed stable.",
+          },
+          {
+            outcome: "Completion remains low and errors cluster around unfamiliar task steps.",
+            favors: "hyp-skill",
+            because: "Stable difficulty despite structure would fit a skill gap better.",
+          },
+        ],
+      },
+    ];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/manipulatedVariable.*action/i);
   });
 
   it("passes when hypothesisTested exactly matches an open fork id", () => {
@@ -289,10 +339,21 @@ describe("experiment binding gate", () => {
           "Execution does not improve.",
         riskLevel: "low",
         practicalRequirements: [],
-        competingHypothesisIds: [],
+        competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external structure",
         heldConstant: ["task difficulty"],
-        outcomeInterpretations: [],
+        outcomeInterpretations: [
+          {
+            outcome: "At least four of five planned attempts are completed with external structure.",
+            favors: "container_loss_vs_capacity",
+            because: "Changing structure changed execution while task difficulty stayed stable.",
+          },
+          {
+            outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
+            favors: "hyp-skill",
+            because: "Task-specific errors despite structure fit the skill explanation better.",
+          },
+        ],
       },
     ];
 
@@ -366,6 +427,171 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(
       /unknown competingHypothesisIds/i,
     );
+  });
+
+  it("rejects outcomes that all favor the same hypothesis", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "One-sided outcome map",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed attempts and task-specific errors."],
+      resultSupportingHypothesis: "Completion rises.",
+      resultWeakeningHypothesis: "Completion stays low.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Four of five attempts are completed.",
+          favors: "hyp-structure",
+          because: "Added structure coincided with more execution.",
+        },
+        {
+          outcome: "One of five attempts is completed.",
+          favors: "hyp-structure",
+          because: "The structure dose may have been too weak.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/different live explanations/i);
+  });
+
+  it("rejects success-versus-failure labels without observable outcomes", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Binary labels",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed attempts."],
+      resultSupportingHypothesis: "Success.",
+      resultWeakeningHypothesis: "Failure.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        { outcome: "Success", favors: "hyp-structure", because: "The test worked." },
+        { outcome: "Failure", favors: "hyp-skill", because: "The test failed." },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/non-success\/failure outcomes/i);
+  });
+
+  it("rejects outcome mappings without a stated reason", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Missing rationale",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed attempts and task-specific errors."],
+      resultSupportingHypothesis: "Completion rises.",
+      resultWeakeningHypothesis: "Task-specific errors persist.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Four of five attempts are completed.",
+          favors: "hyp-structure",
+          because: "Execution changed under added structure.",
+        },
+        {
+          outcome: "Errors persist in unfamiliar task steps.",
+          favors: "hyp-skill",
+          because: "",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/for stated reasons/i);
+  });
+
+  it("rejects a false exposure experiment that varies structure instead of exposure", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Public exposure test",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Whether public visibility changes completion."],
+      resultSupportingHypothesis: "Completion rises.",
+      resultWeakeningHypothesis: "Completion stays low.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Four of five visible attempts are completed.",
+          favors: "hyp-structure",
+          because: "Execution improved under added accountability.",
+        },
+        {
+          outcome: "Errors persist in unfamiliar task steps.",
+          favors: "hyp-skill",
+          because: "Stable errors fit limited experience better.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/must vary exposure/i);
+  });
+
+  it("allows an accountability experiment whose stable task happens to be outreach", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Accountability on a stable outreach task",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding outreach task difficulty stable.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed outreach attempts out of five and task-specific errors."],
+      resultSupportingHypothesis: "Completion rises under accountability.",
+      resultWeakeningHypothesis: "Task-specific errors persist.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["outreach task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "At least four of five outreach attempts are completed.",
+          favors: "hyp-structure",
+          because: "Execution changed under accountability while the outreach task stayed stable.",
+        },
+        {
+          outcome: "Completion stays low and errors cluster in unfamiliar outreach steps.",
+          favors: "hyp-skill",
+          because: "Persistent task-specific errors fit limited experience better.",
+        },
+      ],
+    }];
+
+    expect(experimentBoundToHypothesis(state).passed).toBe(true);
   });
 
   it("requires at least one behavioral experiment", () => {
@@ -1319,13 +1545,50 @@ describe("somatic provenance gate", () => {
   });
 });
 describe("questions and close gate", () => {
-  it("passes exactly three questions and a close", () => {
+  it("identifies only the section with an unsupported certain psychological claim", () => {
     const sections = [
       section(
-        "questions",
-        "1. What happens when you test this? 2. What would weaken the hypothesis? 3. What remains unexplained?",
+        "contradiction",
+        "You unconsciously avoid committing because success would expose you.",
         ["a1:Q1.1"],
       ),
+      section(
+        "alternative",
+        "A practical job-shape mismatch may also explain the delay.",
+        ["a1:Q0.5"],
+      ),
+    ];
+
+    expect(epistemicallyUncalibratedSectionIds(sections)).toEqual([
+      "contradiction",
+    ]);
+  });
+
+  it("does not let a hedge in one clause mask certainty in another", () => {
+    expect(epistemicallyUncalibratedSectionIds([
+      section("contradiction", "A practical mismatch may matter, but secretly you fear success.", ["a1:Q1.1"]),
+    ])).toEqual(["contradiction"]);
+  });
+
+  it("does not treat unresolved question text as a declarative certainty claim", () => {
+    expect(epistemicallyUncalibratedSectionIds([
+      section("questions", "When do you avoid taking the next step? What do you fear losing? What evidence would change your view?", ["a1:Q1.1"]),
+    ])).toEqual([]);
+  });
+
+  it("passes exactly three questions and a close", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. What happens when you test this? 2. What evidence would weaken the hypothesis for you? 3. What remains unexplained for you?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          { question: "What happens when you test this?", targetUncertainty: "Whether behavior changes", couldWeakenSelectedFormulation: false },
+          { question: "What evidence would weaken the hypothesis for you?", targetUncertainty: "Whether the formulation fits", couldWeakenSelectedFormulation: true },
+          { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
+        ],
+      }),
       section(
         "close",
         "You can treat this as a working formulation rather than a verdict.",
@@ -1359,5 +1622,66 @@ describe("questions and close gate", () => {
         sections,
       ).passed,
     ).toBe(false);
+  });
+
+  it("rejects leading questions and preloaded answers", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    const questions = reportSectionSchema.parse({
+      id: "questions",
+      title: "questions",
+      body: "Why do you avoid commitment? What do you notice? What remains unknown for you?",
+      evidenceRefs: ["a1:Q1.1"],
+      questionIntents: [
+        { question: "Why do you avoid commitment?", targetUncertainty: "Commitment", couldWeakenSelectedFormulation: true },
+        { question: "What do you notice?", targetUncertainty: "Observation", couldWeakenSelectedFormulation: false },
+        { question: "What remains unknown for you?", targetUncertainty: "Unknowns", couldWeakenSelectedFormulation: false },
+      ],
+    });
+    expect(questionsAndCloseAdequate([questions, section("close", "A working formulation.", ["a1:Q1.1"])], state).passed).toBe(false);
+  });
+
+  it("rejects duplicate intents that leave a rendered question unvalidated", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    const repeated = "What evidence would weaken this formulation for you?";
+    const questions = reportSectionSchema.parse({
+      id: "questions", title: "questions",
+      body: `${repeated} Why do you avoid commitment? What remains unknown for you?`,
+      evidenceRefs: ["a1:Q1.1"],
+      questionIntents: [
+        { question: repeated, targetUncertainty: "Fit", couldWeakenSelectedFormulation: true },
+        { question: repeated, targetUncertainty: "Action", couldWeakenSelectedFormulation: false },
+        { question: repeated, targetUncertainty: "Unknowns", couldWeakenSelectedFormulation: false },
+      ],
+    });
+    expect(questionsAndCloseAdequate([questions, section("close", "A working formulation.", ["a1:Q1.1"])], state).passed).toBe(false);
+  });
+
+  it("rejects a close that omits the rival, unknowns, and updating evidence", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "Waiting for certainty sustains delay.",
+      maintenanceMechanism: {
+        trigger: "A visible next step appears.", response: "Action pauses.", shortTermFunction: "Uncertainty falls.", longTermCost: "Evidence stays scarce.", reinforcingConsequence: "More certainty feels necessary.",
+      },
+      whyItFits: ["Delay recurs."], whatItDoesNotExplain: ["Market fit."], strongestAlternative: "The role may simply be a poor job-shape match.", unresolvedForks: [],
+    };
+    expect(closeSynthesisAdequate([
+      section("close", "You can treat certainty as a working formulation.", ["a1:Q1.1"]),
+    ], state).passed).toBe(false);
+  });
+
+  it("rejects generic token overlap as a substitute for synthesis", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "A recurring pattern delays visible commitment.",
+      maintenanceMechanism: { trigger: "Visibility", response: "Delay", shortTermFunction: "Relief", longTermCost: "No learning", reinforcingConsequence: "Uncertainty continues" },
+      whyItFits: ["It recurs"], whatItDoesNotExplain: ["Fit"],
+      strongestAlternative: "Practical market uncertainty may explain the pause.", unresolvedForks: [],
+    };
+    expect(closeSynthesisAdequate([
+      section("close", "The pattern and practical unknowns remain; evidence could change it.", ["a1:Q1.1"]),
+    ], state).passed).toBe(false);
   });
 });

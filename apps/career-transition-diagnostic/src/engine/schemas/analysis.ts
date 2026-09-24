@@ -376,17 +376,17 @@ export const experimentSchema = z.object({
     z.array(z.string()).default([]),
 
   manipulatedVariable:
-    z.string().optional(),
+    z.string().trim().min(1).optional(),
 
   heldConstant:
-    z.array(z.string()).default([]),
+    z.array(z.string().trim().min(1)).default([]),
 
   outcomeInterpretations:
     z.array(
       z.object({
-        outcome: z.string(),
-        favors: z.string(),
-        because: z.string(),
+        outcome: z.string().trim().min(1),
+        favors: z.string().trim().min(1),
+        because: z.string().trim().min(1),
       }),
     ).default([]),
 });
@@ -403,6 +403,14 @@ export const reportSectionIdSchema = z.enum([
   "questions",
   "close",
 ]);
+
+export const unresolvedQuestionIntentSchema = z.object({
+  question: z.string().trim().min(1),
+  targetUncertainty: z.string().trim().min(1),
+  relatedHypothesisId: z.string().trim().min(1).optional(),
+  relatedForkId: forkIdSchema.optional(),
+  couldWeakenSelectedFormulation: z.boolean(),
+});
 
 export const REQUIRED_PEEL_SECTION_IDS = [
   "problem",
@@ -421,6 +429,8 @@ export const reportSectionSchema = z.object({
   title: z.string(),
   body: z.string(),
   evidenceRefs: z.array(z.string()),
+  // Optional at the durable report boundary for legacy engine.v2 reports.
+  questionIntents: z.array(unresolvedQuestionIntentSchema).optional(),
 });
 
 export const reportSchema = z.object({

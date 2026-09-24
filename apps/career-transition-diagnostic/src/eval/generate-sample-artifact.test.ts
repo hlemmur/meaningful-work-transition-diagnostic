@@ -61,6 +61,7 @@ describe("generate sample eval artifact", () => {
       caseState: result.caseState,
       report: result.report!,
       models: ["mock-cheap", "mock-strong"],
+      savedAt: "2026-01-01T00:00:00.000Z",
     });
     const fidelity = evaluateFrameworkFidelity(artifact);
     expect(fidelity.hardPassed).toBe(true);

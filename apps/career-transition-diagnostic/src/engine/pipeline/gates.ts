@@ -322,6 +322,10 @@ export function experimentBoundToHypothesis(
       hypothesisTested?: unknown;
       action?: unknown;
       competingHypothesisIds?: unknown;
+      manipulatedVariable?: unknown;
+      heldConstant?: unknown;
+      whatToObserve?: unknown;
+      outcomeInterpretations?: unknown;
     };
 
     const title =
@@ -389,6 +393,141 @@ export function experimentBoundToHypothesis(
       failures.push(
         `${title}: hypothesisTested must not also be listed as a competing hypothesis`,
       );
+    }
+
+    if (kind === "behavioral" && hasNewBindingField) {
+      const manipulatedVariable =
+        typeof experiment.manipulatedVariable === "string"
+          ? experiment.manipulatedVariable.trim()
+          : "";
+      const heldConstant = Array.isArray(experiment.heldConstant)
+        ? experiment.heldConstant.filter(
+            (item): item is string => typeof item === "string" && item.trim().length > 0,
+          )
+        : [];
+      const observations = Array.isArray(experiment.whatToObserve)
+        ? experiment.whatToObserve.filter((item): item is string => typeof item === "string")
+        : [];
+      const action = typeof experiment.action === "string" ? experiment.action : "";
+      const actionAndObservationTokens = contentTokens(
+        `${action} ${observations.join(" ")}`,
+      );
+      const manipulatedTokens = contentTokens(manipulatedVariable);
+      const genericVariableTokens = new Set([
+        "external",
+        "internal",
+        "level",
+        "amount",
+        "degree",
+        "condition",
+        "variable",
+      ]);
+      const variableAppearsInTest = [...manipulatedTokens].some(
+        (token) =>
+          !genericVariableTokens.has(token) && actionAndObservationTokens.has(token),
+      );
+
+      if (!manipulatedVariable || !variableAppearsInTest) {
+        failures.push(
+          `${title}: manipulatedVariable must name the variable actually changed in the action or observations`,
+        );
+      }
+
+      const actionTokens = contentTokens(action);
+      const constantsAppearInAction = heldConstant.every((constant) =>
+        [...contentTokens(constant)].some((token) => actionTokens.has(token)),
+      );
+      if (
+        !heldConstant.length ||
+        !constantsAppearInAction ||
+        !/\b(?:hold|held|keep|kept|same|unchanged|stable|constant|leav(?:e|ing))\b/i.test(action)
+      ) {
+        failures.push(
+          `${title}: heldConstant must name a meaningful factor explicitly kept stable in the action`,
+        );
+      }
+
+      if (!competingHypothesisIds.length) {
+        failures.push(
+          `${title}: a discriminating behavioral experiment requires at least one live competing hypothesis id`,
+        );
+      }
+
+      const outcomes = Array.isArray(experiment.outcomeInterpretations)
+        ? experiment.outcomeInterpretations.filter(
+            (item): item is { outcome: string; favors: string; because: string } =>
+              Boolean(item) &&
+              typeof item === "object" &&
+              typeof (item as { outcome?: unknown }).outcome === "string" &&
+              typeof (item as { favors?: unknown }).favors === "string" &&
+              typeof (item as { because?: unknown }).because === "string",
+          )
+        : [];
+      const allowedOutcomeIds = new Set([hypothesisTested, ...competingHypothesisIds]);
+      const invalidOutcomeIds = outcomes
+        .map((outcome) => outcome.favors)
+        .filter((id) => !allowedOutcomeIds.has(id));
+      const favoredIds = new Set(outcomes.map((outcome) => outcome.favors));
+      const vagueBinaryOutcome = outcomes.some((outcome) =>
+        /^(?:success|failure|succeeds?|fails?|works?|does not work|improves?|no change)[.!:]?$/i.test(
+          outcome.outcome.trim(),
+        ),
+      );
+      const missingOutcomeReason = outcomes.some(
+        (outcome) => !outcome.outcome.trim() || !outcome.because.trim(),
+      );
+      const unobservableOutcome = outcomes.some(
+        (outcome) =>
+          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|minute|day|week|task|output|action|session|application|interview|message|draft|charge|anxiety|distress|rating|score)\b/i.test(
+            outcome.outcome,
+          ),
+      );
+      const distinctReasons = new Set(
+        outcomes.map((outcome) => normalize(outcome.because)),
+      );
+      if (
+        outcomes.length < 2 ||
+        favoredIds.size < 2 ||
+        !favoredIds.has(hypothesisTested) ||
+        !competingHypothesisIds.some((id) => favoredIds.has(id)) ||
+        invalidOutcomeIds.length > 0 ||
+        vagueBinaryOutcome ||
+        missingOutcomeReason ||
+        unobservableOutcome ||
+        distinctReasons.size < 2
+      ) {
+        failures.push(
+          `${title}: outcomeInterpretations must give at least two observable, non-success/failure outcomes that favor different live explanations for stated reasons`,
+        );
+      }
+
+      const exposureClaim =
+        /\b(?:exposure|visibility|audience(?:\s+size)?)\b/i.test(manipulatedVariable) ||
+        /\b(?:exposure|visibility|audience(?:\s+size)?)\s+(?:test|experiment)\b|\b(?:test|vary|change|increase|decrease|compare)\w*\s+(?:public\s+)?(?:exposure|visibility|audience(?:\s+size)?)\b/i.test(
+          `${title} ${action}`,
+        );
+      if (exposureClaim) {
+        const variesExposure =
+          /\b(?:exposure|visible|visibility|public|publish|audience|outreach)\b/i.test(
+            manipulatedVariable,
+          ) &&
+          /\b(?:vary|change|increase|decrease|more|less|visible|private|public|publish|send|outreach)\b/i.test(
+            action,
+          );
+        const rivalText = state.hypotheses
+          .filter((hypothesis) => competingHypothesisIds.includes(hypothesis.id))
+          .map((hypothesis) => `${hypothesis.title} ${hypothesis.observedPattern}`)
+          .join(" ");
+        const rivalTokens = contentTokens(rivalText);
+        const stabilizesRival = heldConstant.some((constant) =>
+          [...contentTokens(constant)].some((token) => rivalTokens.has(token)),
+        );
+        if (!variesExposure || !stabilizesRival) {
+          failures.push(
+            `${title}: an exposure experiment must vary exposure and hold the main rival explanation stable`,
+          );
+        }
+      }
     }
 
     if (kind === "imaginal") {
@@ -712,6 +851,7 @@ export function senexScoldOnly(
 
 export function questionsAndCloseAdequate(
   sections: ReportSection[],
+  state?: CaseState,
 ): GateFinding {
   const questions = sections.find(
     (section) => section.id === "questions",
@@ -742,6 +882,36 @@ export function questionsAndCloseAdequate(
     };
   }
 
+  const intents = questions.questionIntents ?? [];
+  const liveHypotheses = new Set(state?.hypotheses.map((hypothesis) => hypothesis.id) ?? []);
+  const liveForks = new Set(state?.forkResolutions.map((fork) => fork.forkId) ?? []);
+  const leading = /\b(?:why do you|what makes you|don't you|isn't it|wouldn't you|surely)\b/i;
+  const renderedQuestions = (questions.body.match(/[^?]+\?/g) ?? []).map((question) =>
+    normalize(question.replace(/^\s*\d+[.)]\s*/, "")),
+  );
+  const intentQuestions = intents.map((intent) => normalize(intent.question));
+  const invalidIntent = intents.some((intent) =>
+    !/\b(?:you|your)\b/i.test(intent.question) ||
+    leading.test(intent.question) ||
+    (intent.relatedHypothesisId !== undefined && state !== undefined && !liveHypotheses.has(intent.relatedHypothesisId)) ||
+    (intent.relatedForkId !== undefined && state !== undefined && !liveForks.has(intent.relatedForkId)),
+  );
+  if (
+    state !== undefined &&
+    (intents.length !== 3 ||
+      new Set(intentQuestions).size !== 3 ||
+      new Set(renderedQuestions).size !== 3 ||
+      intentQuestions.some((question) => !renderedQuestions.includes(question)) ||
+      invalidIntent ||
+      !intents.some((intent) => intent.couldWeakenSelectedFormulation))
+  ) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail: "Questions require three personalized, non-leading structured intents, including one that could weaken the selected formulation.",
+    };
+  }
+
   if (!close.body.trim()) {
     return {
       id: "questions-close",
@@ -756,6 +926,66 @@ export function questionsAndCloseAdequate(
     passed: true,
     detail:
       "Report ends with exactly three questions and a working formulation.",
+  };
+}
+
+const CERTAIN_PSYCHOLOGICAL_PREDICATE =
+  /\b(?:unconsciously|secretly|the real reason|you (?:avoid|fear|refuse)|you are driven by|this protects you from)\b/i;
+const EPISTEMIC_HEDGE =
+  /\b(?:may|might|could|perhaps|possibly|seems?|suggests?|working (?:hypothesis|formulation)|one possibility|it is possible)\b/i;
+
+/** Return only sections containing an unhedged psychological inference. */
+export function epistemicallyUncalibratedSectionIds(
+  sections: ReportSection[],
+) {
+  return sections.flatMap((section) => {
+    if (section.id === "questions") {
+      return [];
+    }
+    const sentences = section.body.split(/(?<=[.!?])\s+/);
+    const unsupported = sentences.some((sentence) =>
+      sentence.split(/\s+(?:but|yet|however)\s+|[;—]/i).some(
+        (clause) =>
+          CERTAIN_PSYCHOLOGICAL_PREDICATE.test(clause) &&
+          !EPISTEMIC_HEDGE.test(clause),
+      ),
+    );
+    return unsupported ? [section.id] : [];
+  });
+}
+
+function mentionsSource(body: string, source: string) {
+  const bodyTokens = contentTokens(body);
+  const generic = new Set(["pattern", "practical", "change", "stall", "working", "formulation", "hypothesis"]);
+  const sourceTokens = [...contentTokens(source)].filter(
+    (token) => token.length >= 4 && !generic.has(token),
+  );
+  const matches = sourceTokens.filter((token) => bodyTokens.has(token)).length;
+  return sourceTokens.length > 0 && matches >= Math.min(2, sourceTokens.length);
+}
+
+export function closeSynthesisAdequate(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const close = sections.find((section) => section.id === "close");
+  const formulation = state.finalFormulation;
+  if (!close || !formulation) {
+    return { id: "close-synthesis", passed: Boolean(close), detail: close ? "No resolved formulation to synthesize." : "Close section is missing." };
+  }
+  const body = close.body;
+  const complete =
+    mentionsSource(body, formulation.maintenanceFormulation) &&
+    mentionsSource(body, formulation.strongestAlternative) &&
+    (!formulation.developmentalFormulation || mentionsSource(body, formulation.developmentalFormulation.possibleDevelopmentalTask)) &&
+    /\b(?:unknown|unresolved|uncertain|remains?)\b/i.test(body) &&
+    /\b(?:evidence|update|revise|weaken|change)\b/i.test(body);
+  return {
+    id: "close-synthesis",
+    passed: complete,
+    detail: complete
+      ? "Close synthesizes the working formulation, rival, warranted development, unknowns, and updating evidence."
+      : "Close must synthesize maintenance, the strongest alternative, warranted development, remaining unknowns, and evidence that would update the formulation.",
   };
 }
 
@@ -963,11 +1193,15 @@ export function assertPeelHardGates(sections: ReportSection[], state: CaseState)
     throwGate(somatic);
   }
   const questionsClose =
-  questionsAndCloseAdequate(sections);
+  questionsAndCloseAdequate(sections, state);
 
 if (!questionsClose.passed) {
   throwGate(questionsClose);
 }
+  const closeSynthesis = closeSynthesisAdequate(sections, state);
+  if (!closeSynthesis.passed) {
+    throwGate(closeSynthesis);
+  }
   const inflation = antiInflationDiagnosis(body);
   if (!inflation.passed) {
     throwGate(inflation);
