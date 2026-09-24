@@ -64,17 +64,18 @@ async function runFixture(
 
 describe("negative and positive mock fixtures", () => {
   it.each([
-    ["labor-market-only", "LABOR_MARKET_ONLY"],
-    ["job-shape-mismatch", "JOB_SHAPE_MISMATCH"],
-    ["ordinary-structure", "ORDINARY_STRUCTURE"],
-  ] as const)("keeps %s practical without developmental formulation", async (_name, marker) => {
+    ["labor-market-only", "LABOR_MARKET_ONLY", "Hiring demand is weak in my target market.", "hiring conditions"],
+    ["job-shape-mismatch", "JOB_SHAPE_MISMATCH", "The open roles combine responsibilities that do not fit the work I want.", "role shape"],
+    ["ordinary-structure", "ORDINARY_STRUCTURE", "I make progress when I put the task on the calendar with a clear deadline.", "planning structure"],
+  ] as const)("keeps %s practical without developmental formulation", async (_name, marker, practicalAnswer, expectedFormulation) => {
     const result = await runFixture(inferAnalysisFixture({ "Q1.1": marker }), {
       "Q1.1": marker,
-      "Q0.5": "Hiring demand and role conditions explain the pause.",
+      "Q0.5": practicalAnswer,
       "Q10.1": "",
     });
     expect(result.status, JSON.stringify(result.error)).toBe("completed");
     expect(result.caseState.finalFormulation?.developmentalFormulation).toBeUndefined();
+    expect(result.caseState.finalFormulation?.maintenanceFormulation).toContain(expectedFormulation);
     expect(result.report?.sections.some((section) => section.id === "developmental")).toBe(false);
     expect(result.report?.sections.some((section) => section.id === "jungian")).toBe(false);
     expect(result.caseState.finalFormulation?.maintenanceMechanism.shortTermFunction).toBe("Conserves limited resources.");

@@ -943,14 +943,18 @@ function finalFormulationFor(
   fixture: AnalysisFixture,
   assessmentId: string,
 ) {
+  const practicalFormulations: Partial<Record<AnalysisFixture, string>> = {
+    "critic-constraints-win": "The current stall may be sufficiently explained by practical constraints and missing infrastructure.",
+    "labor-market-only": "Current hiring conditions may be sufficient to explain the pause.",
+    "job-shape-mismatch": "A mismatch between the available role shape and the work sought may be sufficient to explain the pause.",
+    "ordinary-structure": "An ordinary planning structure gap may be sufficient to explain the stall.",
+  };
   return {
     selectedHypothesisId:
       selected.id,
 
     maintenanceFormulation:
-      PRACTICAL_ONLY_FIXTURES.has(fixture)
-        ? "The current stall may be sufficiently explained by practical constraints and missing infrastructure."
-        : selected.observedPattern,
+      practicalFormulations[fixture] ?? selected.observedPattern,
 
     maintenanceMechanism: {
       trigger: "A concrete next step or self-directed work period begins.",
