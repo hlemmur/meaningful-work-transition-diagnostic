@@ -36,7 +36,12 @@ export type AnalysisFixture =
   | "aim-missing-peel"
   | "speech-without-imaginal"
   | "becoming-inflation-peel"
-  | "non-origin-soft-mini";
+  | "non-origin-soft-mini"
+  | "labor-market-only"
+  | "job-shape-mismatch"
+  | "ordinary-structure"
+  | "cross-domain-polarity"
+  | "symbol-split-lead";
 
 const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
   { marker: "FORCE_SCHEMA_FAILURE", fixture: "schema-fail" },
@@ -61,7 +66,19 @@ const FIXTURE_MARKERS: Array<{ marker: string; fixture: AnalysisFixture }> = [
   { marker: "SPEECH_WITHOUT_IMAGINAL", fixture: "speech-without-imaginal" },
   { marker: "BECOMING_INFLATION_PEEL", fixture: "becoming-inflation-peel" },
   { marker: "NON_ORIGIN_SOFT_MINI", fixture: "non-origin-soft-mini" },
+  { marker: "LABOR_MARKET_ONLY", fixture: "labor-market-only" },
+  { marker: "JOB_SHAPE_MISMATCH", fixture: "job-shape-mismatch" },
+  { marker: "ORDINARY_STRUCTURE", fixture: "ordinary-structure" },
+  { marker: "CROSS_DOMAIN_POLARITY", fixture: "cross-domain-polarity" },
+  { marker: "SYMBOL_SPLIT_LEAD", fixture: "symbol-split-lead" },
 ];
+
+const PRACTICAL_ONLY_FIXTURES = new Set<AnalysisFixture>([
+  "critic-constraints-win",
+  "labor-market-only",
+  "job-shape-mismatch",
+  "ordinary-structure",
+]);
 
 export function inferAnalysisFixture(answers: Record<string, unknown>): AnalysisFixture {
   const blob = JSON.stringify(answers);
@@ -117,6 +134,7 @@ function hyp(
 
 function ensureQuestionsAndClose(
   sections: ReportSection[],
+  fixture: AnalysisFixture,
   ctx: {
     assessmentId: string;
     evidenceRef: string;
@@ -161,8 +179,9 @@ function ensureQuestionsAndClose(
       reportSectionSchema.parse({
         id: "close",
         title: "A working formulation",
-        body:
-          "You can treat the working maintenance hypothesis as the possibility that the stall may be protecting a not-yet-incarnated way of working, or that freedom without an internalized container and capacity stalls action. Your strongest practical alternative is that constraints and missing infrastructure may be enough to explain the stall. Important unknowns remain, and evidence from your experiment should update or revise this formulation rather than turn it into a verdict.",
+        body: PRACTICAL_ONLY_FIXTURES.has(fixture)
+          ? "The working maintenance hypothesis is that current constraints and missing infrastructure may be enough to explain the stall. Your reported role history, body responses, and emotions remain relevant observations, but they do not by themselves establish a hidden cause. A practical benefit of staying with the current arrangement is conserving limited resources; that does not establish a hidden motive. A stronger opportunity fit or more usable structure would weaken this explanation. Important unknowns remain, and evidence from your experiment should update or revise the formulation rather than turn it into a verdict."
+          : "You can treat the working maintenance hypothesis as the possibility that the stall may be protecting a not-yet-incarnated way of working, or that freedom without an internalized container and capacity stalls action. Your strongest practical alternative is that constraints and missing infrastructure may be enough to explain the stall. When warranted, the developmental task may integrate freedom with dependable structure. Important unknowns remain, and evidence from your experiment should update or revise this formulation rather than turn it into a verdict.",
         evidenceRefs: [
           ctx.evidenceRef,
         ],
@@ -840,19 +859,34 @@ function groundedReportSections(
       evidenceRefs: [q("Q1.1")],
     }),
   ];
-  if (fixture !== "critic-constraints-win") {
+  if (!PRACTICAL_ONLY_FIXTURES.has(fixture)) {
     sections.splice(
       3,
       0,
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis is that your protection keeps possibility intact while the developmental aim may be structure in service of aliveness — without collapsing into grind-only identity. Ask what the image's voice wants at the scene you keep circling.",
+        body: fixture === "symbol-split-lead"
+          ? "Your protection may keep possibility intact while the developmental aim may be structure in service of aliveness. The gate image supports both an authorization reading and an ordinary route-clarity reading, so its meaning remains unresolved rather than settled."
+          : "One hypothesis is that your protection keeps possibility intact while the developmental aim may be structure in service of aliveness — without collapsing into grind-only identity. Ask what the image's voice wants at the scene you keep circling.",
         evidenceRefs: [q("Q1.3"), q("Q2.1"), q("Q10.1")],
       }),
     );
   }
-  if (fixture !== "empty-jungian") {
+  if (fixture === "cross-domain-polarity") {
+    const hiddenIndex = sections.findIndex((section) => section.id === "hidden");
+    sections.splice(
+      hiddenIndex + 1,
+      0,
+      reportSectionSchema.parse({
+        id: "developmental",
+        title: "The developmental tension",
+        body: "You may be working with a recurring opposition between freedom and dependable structure; the developmental task may be to integrate both without forcing either pole.",
+        evidenceRefs: [q("Q2.1"), q("Q6.1")],
+      }),
+    );
+  }
+  if (fixture !== "empty-jungian" && !PRACTICAL_ONLY_FIXTURES.has(fixture)) {
     sections.push(
       reportSectionSchema.parse({
         id: "jungian",
@@ -878,12 +912,14 @@ function forkResolutionFor(
     "history_vs_stated_cause";
 
   const practicalWins =
-    fixture === "critic-constraints-win";
+    PRACTICAL_ONLY_FIXTURES.has(fixture);
 
   return {
     forkId,
 
-    status: practicalWins
+    status: fixture === "symbol-split-lead"
+      ? ("unresolved" as const)
+      : practicalWins
       ? ("leans_b" as const)
       : ("leans_a" as const),
 
@@ -905,22 +941,27 @@ function finalFormulationFor(
   selected: Hypothesis,
   practical: Hypothesis,
   fixture: AnalysisFixture,
+  assessmentId: string,
 ) {
+  const practicalFormulations: Partial<Record<AnalysisFixture, string>> = {
+    "critic-constraints-win": "The current stall may be sufficiently explained by practical constraints and missing infrastructure.",
+    "labor-market-only": "Current hiring conditions may be sufficient to explain the pause.",
+    "job-shape-mismatch": "A mismatch between the available role shape and the work sought may be sufficient to explain the pause.",
+    "ordinary-structure": "An ordinary planning structure gap may be sufficient to explain the stall.",
+  };
   return {
     selectedHypothesisId:
       selected.id,
 
     maintenanceFormulation:
-      fixture === "critic-constraints-win"
-        ? "The current stall may be sufficiently explained by practical constraints and missing infrastructure."
-        : selected.observedPattern,
+      practicalFormulations[fixture] ?? selected.observedPattern,
 
     maintenanceMechanism: {
       trigger: "A concrete next step or self-directed work period begins.",
-      response: fixture === "critic-constraints-win"
+      response: PRACTICAL_ONLY_FIXTURES.has(fixture)
         ? "Action narrows around the available practical constraints."
         : "The next step is deferred while more certainty or external structure is sought.",
-      shortTermFunction: fixture === "critic-constraints-win"
+      shortTermFunction: PRACTICAL_ONLY_FIXTURES.has(fixture)
         ? "Conserves limited resources."
         : "Avoids premature commitment and exposure.",
       longTermCost: "Direct evidence about fit and capacity accumulates slowly.",
@@ -944,7 +985,20 @@ function finalFormulationFor(
     strongestAlternative:
       practical.observedPattern,
 
-    unresolvedForks: [],
+    ...(fixture === "cross-domain-polarity" ? {
+      developmentalFormulation: {
+        consciousPole: "freedom without imposed form",
+        compensatingPole: "dependable structure and commitment",
+        coreOpposition: "freedom versus dependable structure",
+        possibleDevelopmentalTask: "Integrate freedom with dependable structure.",
+        uncertainty: "The practical explanation remains live.",
+        evidenceRefs: [`${assessmentId}:Q2.1`, `${assessmentId}:Q6.1`],
+      },
+    } : {}),
+
+    unresolvedForks: fixture === "symbol-split-lead"
+      ? [selected.originForks[0] ?? "history_vs_stated_cause"]
+      : [],
   };
 }
 
@@ -1202,7 +1256,7 @@ export function passOutputFor(
 
     case "pass6": {
       const selected =
-        fixture === "critic-constraints-win"
+        PRACTICAL_ONLY_FIXTURES.has(fixture)
           ? practical
           : fixture === "image-weakens"
             ? practical
@@ -1221,11 +1275,11 @@ export function passOutputFor(
           selected,
           practical,
           fixture,
+          ctx.assessmentId,
         );
 
       if (
-        fixture ===
-        "critic-constraints-win"
+        PRACTICAL_ONLY_FIXTURES.has(fixture)
       ) {
         return {
           selectedHypothesisId:
@@ -1467,6 +1521,7 @@ export function passOutputFor(
             fixture,
             ctx,
           ),
+          fixture,
           ctx,
         ),
       };
@@ -1487,6 +1542,7 @@ export function passOutputFor(
         : fixture,
       ctx,
     ),
+    fixture === "starved-case-report" ? "default" : fixture,
     ctx,
   );
       return {

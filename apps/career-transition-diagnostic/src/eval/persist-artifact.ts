@@ -24,10 +24,11 @@ export function buildScoreableArtifact(input: {
   report: Report;
   analysisRuns?: unknown[];
   models?: string[];
+  savedAt?: string;
 }): ScoreableArtifact {
   return {
     meta: {
-      savedAt: new Date().toISOString(),
+      savedAt: input.savedAt ?? new Date().toISOString(),
       assessmentId: input.assessmentId,
       label: input.label,
       models: input.models,
