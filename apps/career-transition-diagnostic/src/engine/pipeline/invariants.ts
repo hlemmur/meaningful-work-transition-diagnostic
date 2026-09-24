@@ -261,6 +261,12 @@ export function applyImageVotes(
       const snapshotQuote = trimText(item, STAGE_INPUT_TRIM.maxQuoteChars);
       if (typeof snapshotQuote === "string") {
         register(snapshotQuote);
+        if (
+          item.trim().length > STAGE_INPUT_TRIM.maxQuoteChars &&
+          snapshotQuote.endsWith("…")
+        ) {
+          register(snapshotQuote.slice(0, -1));
+        }
       }
       const snapshotAnswer = trimText(item, STAGE_INPUT_TRIM.maxAnswerChars);
       if (typeof snapshotAnswer === "string") {

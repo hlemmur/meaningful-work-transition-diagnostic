@@ -10,7 +10,7 @@ import {
 } from "@/engine/schemas/analysis";
 import { CANONICAL_PEEL_TITLES } from "./gates";
 import { applyImageVotes, applyResolution, sanitizeReportSections } from "./invariants";
-import { buildCaseSnapshot, STAGE_INPUT_TRIM } from "./stage-input";
+import { buildCaseSnapshot, STAGE_INPUT_TRIM, trimText } from "./stage-input";
 import { pass6OutputSchema } from "./stage-schemas";
 
 function hypothesis(id: string) {
@@ -181,6 +181,101 @@ describe("applyImageVotes", () => {
 
     expect(state.imageAnalysis?.literalFacts[0]?.text).toBe(snapshotScene);
     expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(snapshotSpeech);
+  });
+
+  it("accepts snapshot-trimmed Q10 text when Gemini omits the truncation marker", () => {
+    const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
+    const speech = `Wait until the ground is yours. ${"Do not step until the crossing is finished. ".repeat(16)}`;
+    const answers = {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": scene,
+      "Q10.6": speech,
+    };
+    const state = extractCaseStateFull("a1", answers);
+    state.hypotheses = [hypothesis("hyp-live")];
+    const snapshot = buildCaseSnapshot({ caseState: state, answers });
+    const snapshotScene = String(snapshot.signals.symbolicMaterial.scene);
+    const snapshotSpeech = String(snapshot.signals.symbolicMaterial.obstacleSpeech);
+    expect(snapshotScene.endsWith("…")).toBe(true);
+    expect(snapshotSpeech.endsWith("…")).toBe(true);
+
+    applyImageVotes(state, {
+      votes: [{
+        hypothesisId: "hyp-live",
+        verdict: "supports",
+        interpretation: "The supplied threshold image fits the stall.",
+        evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+        exactClientMaterialUsed: ["a1:Q10.1", "a1:Q10.6"],
+      }],
+      imageAnalysis: {
+        literalFacts: [{ text: snapshotScene.slice(0, -1), evidenceRefs: ["a1:Q10.1"] }],
+        personalAssociations: [{ text: snapshotSpeech.slice(0, -1), evidenceRefs: ["a1:Q10.6"] }],
+        plausibleReadings: [],
+      },
+      projectionInterpretations: [],
+      overallNote: "Synthetic.",
+    });
+
+    expect(state.imageAnalysis?.literalFacts[0]?.text).toBe(snapshotScene.slice(0, -1));
+    expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(snapshotSpeech.slice(0, -1));
+  });
+
+  it("rejects marker-free text from outside the Pass 5 symbolic snapshot boundary", () => {
+    const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": scene,
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+    const markerFreeAnswerPrefix = String(
+      trimText(scene, STAGE_INPUT_TRIM.maxAnswerChars),
+    ).slice(0, -1);
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: markerFreeAnswerPrefix, evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/not exact supplied client material/i);
+  });
+
+  it("preserves a literal ellipsis in short supplied symbolic material", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A tunnel that keeps going…",
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "A tunnel that keeps going", evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/not exact supplied client material/i);
   });
 
   it("still accepts exact full-length supplied symbolic text", () => {
