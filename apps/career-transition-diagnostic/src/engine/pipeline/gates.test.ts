@@ -333,12 +333,12 @@ describe("experiment binding gate", () => {
       heldConstant: ["task difficulty"],
       outcomeInterpretations: [
         {
-          outcome: "Confidence feels stronger and uncertainty feels lighter.",
+          outcome: "Focus feels stronger and continuing feels easier.",
           favors: "hyp-structure",
           because: "The subjective shift could fit added structure.",
         },
         {
-          outcome: "Confidence feels weaker and uncertainty feels heavier.",
+          outcome: "Focus feels weaker and continuing feels harder.",
           favors: "hyp-skill",
           because: "The subjective shift could fit limited experience.",
         },
@@ -348,6 +348,41 @@ describe("experiment binding gate", () => {
     const finding = experimentBoundToHypothesis(state);
     expect(finding.passed).toBe(false);
     expect(finding.detail).toMatch(/observable/i);
+  });
+
+  it("rejects success and failure paraphrases with generic experiment wording", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Generic result wording",
+      hypothesisTested: "hyp-structure",
+      action: "Change external accountability while holding task difficulty unchanged.",
+      duration: "2 weeks",
+      whatToObserve: ["Completed attempts and task-specific errors."],
+      resultSupportingHypothesis: "The experiment works well.",
+      resultWeakeningHypothesis: "The experiment does not work well.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "The experiment works well.",
+          favors: "hyp-structure",
+          because: "The test appears successful.",
+        },
+        {
+          outcome: "The experiment does not work well.",
+          favors: "hyp-skill",
+          because: "The test appears unsuccessful.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/non-success\/failure outcomes/i);
   });
 
   it("rejects a behavioral experiment whose manipulated variable is irrelevant to its action", () => {
