@@ -10,6 +10,7 @@ import {
 } from "@/engine/schemas/analysis";
 import { CANONICAL_PEEL_TITLES } from "./gates";
 import { applyImageVotes, applyResolution, sanitizeReportSections } from "./invariants";
+import { buildCaseSnapshot, STAGE_INPUT_TRIM } from "./stage-input";
 import { pass6OutputSchema } from "./stage-schemas";
 
 function hypothesis(id: string) {
@@ -135,6 +136,110 @@ describe("applyImageVotes", () => {
     expect(state.projectionInterpretations).toHaveLength(1);
     expect(state.projections.admiredFigures[0]?.figure).toMatch(/founders/i);
     expect(state.projections.admiredFigures[0]).not.toHaveProperty("matureExpression");
+  });
+
+  it("accepts snapshot-trimmed Q10 text that the model actually sees", () => {
+    const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
+    const speech = `Wait until the ground is yours. ${"Do not step until the crossing is finished. ".repeat(16)}`;
+    expect(scene.length).toBeGreaterThan(STAGE_INPUT_TRIM.maxQuoteChars);
+    expect(speech.length).toBeGreaterThan(STAGE_INPUT_TRIM.maxAnswerChars);
+
+    const answers = {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": scene,
+      "Q10.6": speech,
+    };
+    const state = extractCaseStateFull("a1", answers);
+    state.hypotheses = [hypothesis("hyp-live")];
+    const snapshot = buildCaseSnapshot({ caseState: state, answers });
+    const snapshotScene = String(snapshot.signals.symbolicMaterial.scene);
+    const snapshotSpeech = String(snapshot.signals.symbolicMaterial.obstacleSpeech);
+    expect(snapshotScene).not.toBe(scene);
+    expect(snapshotSpeech).not.toBe(speech);
+
+    applyImageVotes(state, {
+      votes: [{
+        hypothesisId: "hyp-live",
+        verdict: "supports",
+        interpretation: "The supplied threshold image fits the stall.",
+        evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+        exactClientMaterialUsed: ["a1:Q10.1", "a1:Q10.6"],
+      }],
+      imageAnalysis: {
+        literalFacts: [{ text: snapshotScene, evidenceRefs: ["a1:Q10.1"] }],
+        personalAssociations: [{ text: snapshotSpeech, evidenceRefs: ["a1:Q10.6"] }],
+        plausibleReadings: [{
+          interpretation: "The gate may represent waiting for authorization.",
+          supportsHypothesisIds: ["hyp-live"],
+          weakensHypothesisIds: [],
+          evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+        }],
+      },
+      projectionInterpretations: [],
+      overallNote: "Synthetic.",
+    });
+
+    expect(state.imageAnalysis?.literalFacts[0]?.text).toBe(snapshotScene);
+    expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(snapshotSpeech);
+  });
+
+  it("still accepts exact full-length supplied symbolic text", () => {
+    const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
+    const speech = `Wait until the ground is yours. ${"Do not step until the crossing is finished. ".repeat(16)}`;
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": scene,
+      "Q10.6": speech,
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    applyImageVotes(state, {
+      votes: [{
+        hypothesisId: "hyp-live",
+        verdict: "supports",
+        interpretation: "The supplied threshold image fits the stall.",
+        evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+        exactClientMaterialUsed: ["a1:Q10.1", "a1:Q10.6"],
+      }],
+      imageAnalysis: {
+        literalFacts: [{ text: scene, evidenceRefs: ["a1:Q10.1"] }],
+        personalAssociations: [{ text: speech, evidenceRefs: ["a1:Q10.6"] }],
+        plausibleReadings: [],
+      },
+      projectionInterpretations: [],
+      overallNote: "Synthetic.",
+    });
+
+    expect(state.imageAnalysis?.literalFacts[0]?.text).toBe(scene);
+  });
+
+  it("still rejects invented symbolic text when the supplied Q10 material is long", () => {
+    const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
+    const speech = `Wait until the ground is yours. ${"Do not step until the crossing is finished. ".repeat(16)}`;
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": scene,
+      "Q10.6": speech,
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "A completely invented forest scene.", evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [{ text: speech, evidenceRefs: ["a1:Q10.6"] }],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/not exact supplied client material/i);
   });
 
   it("rejects invented personal associations", () => {

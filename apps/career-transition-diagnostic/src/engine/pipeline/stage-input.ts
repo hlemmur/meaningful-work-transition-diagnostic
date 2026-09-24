@@ -48,7 +48,7 @@ const IMAGE_FIELD_TO_QUESTION: Array<{
   { field: "ifNotRemoved", questionId: "Q10.8" },
 ];
 
-function trimText(value: unknown, max: number = STAGE_INPUT_TRIM.maxAnswerChars) {
+export function trimText(value: unknown, max: number = STAGE_INPUT_TRIM.maxAnswerChars) {
   if (typeof value === "string") {
     const trimmed = value.trim();
     return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
