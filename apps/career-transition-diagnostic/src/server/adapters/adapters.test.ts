@@ -264,6 +264,42 @@ describe("mock vendor adapters", () => {
     expect(item.properties.matureExpression.nullable).toBe(true);
   });
 
+  it("requests a nullable Pass 8 manipulated variable and omits null from imaginal output", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.LLM_MODE = "live";
+    process.env.GEMINI_API_KEY = "gemini-test";
+    const fetchSpy = vi.fn(async () =>
+      new Response(JSON.stringify({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                experiments: [{
+                  kind: "imaginal",
+                  manipulatedVariable: null,
+                }],
+              }),
+            }],
+          },
+        }],
+      }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const adapters = createVendorAdapters();
+    const result = await adapters.llm.completeStructured({
+      stage: "pass8",
+      input: { assessmentId: "a1" },
+    });
+
+    expect(result.output.experiments).toEqual([{ kind: "imaginal" }]);
+    const [, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    const item = body.generationConfig.responseSchema.properties.experiments.items;
+    expect(item.required).toContain("manipulatedVariable");
+    expect(item.properties.manipulatedVariable.nullable).toBe(true);
+  });
+
   it("ignores leftover OpenAI model ids and still posts to Gemini", async () => {
     process.env.APP_MODE = "mock";
     process.env.LLM_MODE = "live";

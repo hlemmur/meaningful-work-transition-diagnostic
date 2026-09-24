@@ -82,6 +82,18 @@ describe("Gemini schema sanitizer", () => {
     expect(properties.literalEnactmentRisk).toEqual(expect.objectContaining({ nullable: true }));
     expect(properties.matureExpression).toEqual(expect.objectContaining({ nullable: true }));
   });
+
+  it("keeps the Pass 8 manipulated variable as a required nullable Gemini property", () => {
+    const pass8 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass8")).properties);
+    const experiments = asObject(pass8.experiments);
+    const item = asObject(experiments.items);
+    const properties = asObject(item.properties);
+
+    expect(item.required).toContain("manipulatedVariable");
+    expect(properties.manipulatedVariable).toEqual(
+      expect.objectContaining({ nullable: true }),
+    );
+  });
 });
 
 describe("coerceLiveStructuredOutput", () => {

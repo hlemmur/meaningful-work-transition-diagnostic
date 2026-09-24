@@ -469,7 +469,7 @@ export function experimentBoundToHypothesis(
         .filter((id) => !allowedOutcomeIds.has(id));
       const favoredIds = new Set(outcomes.map((outcome) => outcome.favors));
       const vagueBinaryOutcome = outcomes.some((outcome) =>
-        /^(?:success|failure|succeeds?|fails?|works?|does not work|improves?|no change)[.!:]?$/i.test(
+        /^(?:(?:(?:the|this|an?)\s+)?(?:experiment|test|action|approach|plan|prototype|task)\s+)?(?:success|failure|succeeds?|fails?|works?|does not work|improves?|does not improve|no change)(?:\s+(?:well|poorly|better|worse))?[.!:]?$/i.test(
           outcome.outcome.trim(),
         ),
       );
@@ -478,7 +478,7 @@ export function experimentBoundToHypothesis(
       );
       const unobservableOutcome = outcomes.some(
         (outcome) =>
-          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|minute|day|week|task|output|action|session|application|interview|message|draft|charge|anxiety|distress|rating|score)\b/i.test(
+          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|minute|day|week|task|output|action|session|application|interview|message|draft|prototype|document|note|plan|artifact|revision|defect|mistake|charge|anxiety|distress|rating|score)\w*\b/i.test(
             outcome.outcome,
           ),
       );
