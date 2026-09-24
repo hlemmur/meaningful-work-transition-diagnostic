@@ -204,4 +204,60 @@ describe("tracer repository", () => {
     const reloaded = await new TableTracerRepository(db).begin();
     expect(reloaded.assessments.map((item) => item.id).sort()).toEqual(["a1", "a2"]);
   });
+
+  it("commits a retried failure without wiping other rows when idempotency keys collide", async () => {
+    const seenKeys: string[] = [];
+    const db = {
+      async loadAll() {
+        return (await new MemoryTracerDb().loadAll());
+      },
+      async replaceAll(tables: Awaited<ReturnType<MemoryTracerDb["loadAll"]>>) {
+        const keys = tables.analysis_runs.map((row) => String(row.idempotency_key));
+        seenKeys.push(...keys);
+        if (new Set(keys).size !== keys.length) {
+          throw new Error(
+            'duplicate key value violates unique constraint "analysis_runs_idempotency_key_key"',
+          );
+        }
+        await new MemoryTracerDb().replaceAll(tables);
+      },
+    };
+    const writer = new TableTracerRepository(db);
+    const store = createEmptyTracerStore();
+    store.assessments.push({
+      id: "a1",
+      email: "buyer@example.com",
+      accessTokenHash: "hash",
+      accessExpiresAt: Date.now() + 60_000,
+      status: "review_pending",
+      answers: { "Q1.1": "I stall" },
+    });
+    store.analysisRuns.push(
+      {
+        assessmentId: "a1",
+        stage: "pass3",
+        attempt: 1,
+        promptVersion: "pass-3",
+        model: "mock",
+        status: "failure",
+        error: "first",
+        idempotencyKey: "a1:pass3:failure",
+        createdAt: "2026-09-24T00:00:00.000Z",
+      },
+      {
+        assessmentId: "a1",
+        stage: "pass3",
+        attempt: 2,
+        promptVersion: "pass-3",
+        model: "mock",
+        status: "failure",
+        error: "second",
+        idempotencyKey: "a1:pass3:failure",
+        createdAt: "2026-09-24T00:01:00.000Z",
+      },
+    );
+
+    await expect(writer.commit(store)).resolves.toBeUndefined();
+    expect(seenKeys).toEqual(["a1:pass3:failure"]);
+  });
 });
