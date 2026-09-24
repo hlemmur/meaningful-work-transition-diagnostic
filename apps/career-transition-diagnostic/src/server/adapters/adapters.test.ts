@@ -221,6 +221,49 @@ describe("mock vendor adapters", () => {
     expect(result.output.scoring).toEqual({ evidenceCoverage: 0.4 });
   });
 
+  it("requests nullable Pass 5 projection fields and omits an all-null interpretation", async () => {
+    process.env.APP_MODE = "mock";
+    process.env.LLM_MODE = "live";
+    process.env.GEMINI_API_KEY = "gemini-test";
+    const fetchSpy = vi.fn(async () =>
+      new Response(JSON.stringify({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                projectionInterpretations: [{
+                  projectionEvidenceRefs: ["a1:Q5.1"],
+                  possibleDisownedValue: null,
+                  literalEnactmentRisk: null,
+                  matureExpression: null,
+                }],
+              }),
+            }],
+          },
+        }],
+      }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const adapters = createVendorAdapters();
+    const result = await adapters.llm.completeStructured({
+      stage: "pass5",
+      input: { assessmentId: "a1" },
+    });
+
+    expect(result.output.projectionInterpretations).toEqual([]);
+    const [, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    const item = body.generationConfig.responseSchema.properties.projectionInterpretations.items;
+    expect(item.required).toEqual([
+      "projectionEvidenceRefs",
+      "possibleDisownedValue",
+      "literalEnactmentRisk",
+      "matureExpression",
+    ]);
+    expect(item.properties.matureExpression.nullable).toBe(true);
+  });
+
   it("ignores leftover OpenAI model ids and still posts to Gemini", async () => {
     process.env.APP_MODE = "mock";
     process.env.LLM_MODE = "live";

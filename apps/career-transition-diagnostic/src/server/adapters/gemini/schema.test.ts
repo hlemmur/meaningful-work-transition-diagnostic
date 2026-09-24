@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { forkIdSchema } from "@/engine/schemas/analysis";
-import { pass3OutputSchema } from "@/engine/pipeline/stage-schemas";
+import { pass3OutputSchema, pass5OutputSchema } from "@/engine/pipeline/stage-schemas";
 import {
   coerceLiveStructuredOutput,
   jsonSchemaForStage,
@@ -65,9 +65,71 @@ describe("Gemini schema sanitizer", () => {
     const pass8 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass8")).properties);
     expect(asObject(pass8.experiments).minItems).toBeUndefined();
   });
+
+  it("keeps Pass 5 projection fields as required nullable Gemini properties", () => {
+    const pass5 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass5")).properties);
+    const interpretations = asObject(pass5.projectionInterpretations);
+    const item = asObject(interpretations.items);
+    const properties = asObject(item.properties);
+
+    expect(item.required).toEqual([
+      "projectionEvidenceRefs",
+      "possibleDisownedValue",
+      "literalEnactmentRisk",
+      "matureExpression",
+    ]);
+    expect(properties.possibleDisownedValue).toEqual(expect.objectContaining({ nullable: true }));
+    expect(properties.literalEnactmentRisk).toEqual(expect.objectContaining({ nullable: true }));
+    expect(properties.matureExpression).toEqual(expect.objectContaining({ nullable: true }));
+  });
 });
 
 describe("coerceLiveStructuredOutput", () => {
+  it("omits evidence-only projection records so optional interpretation cannot fail Pass 5", () => {
+    const coerced = coerceLiveStructuredOutput({
+      votes: [{
+        hypothesisId: "h1",
+        verdict: "insufficient",
+        evidenceRefs: ["a1:Q10.1"],
+        exactClientMaterialUsed: ["a1:Q10.1"],
+      }],
+      imageAnalysis: {
+        literalFacts: [],
+        personalAssociations: [],
+        plausibleReadings: [],
+      },
+      projectionInterpretations: [
+        { projectionEvidenceRefs: ["a1:Q5.1"] },
+        {
+          projectionEvidenceRefs: ["a1:Q6.1"],
+          possibleDisownedValue: null,
+          literalEnactmentRisk: null,
+          matureExpression: null,
+        },
+      ],
+      overallNote: "The image is insufficient.",
+    });
+
+    expect(coerced.projectionInterpretations).toEqual([]);
+    expect(pass5OutputSchema.safeParse(coerced).success).toBe(true);
+  });
+
+  it("preserves projection records that contain a warranted interpretive field", () => {
+    const substantive = {
+      projectionEvidenceRefs: ["a1:Q5.1"],
+      matureExpression: "Try the admired quality in one bounded experiment.",
+    };
+
+    const coerced = coerceLiveStructuredOutput({
+      projectionInterpretations: [
+        { projectionEvidenceRefs: ["a1:Q6.1"] },
+        substantive,
+      ],
+    });
+
+    expect(coerced.projectionInterpretations).toEqual([substantive]);
+  });
+
   it("omits null optional strings but keeps a null hiddenPosition", () => {
     const coerced = coerceLiveStructuredOutput({
       hypotheses: [{ id: "h1", consciousPosition: null, observedPattern: "pattern" }],

@@ -59,9 +59,33 @@ export function jsonSchemaForStage(stage: string) {
     return z.toJSONSchema(checkpointLlmOutputSchema) as JsonSchema;
   }
   if (stage in passOutputSchemas) {
-    return z.toJSONSchema(passOutputSchemas[stage as keyof typeof passOutputSchemas]) as JsonSchema;
+    const schema = z.toJSONSchema(passOutputSchemas[stage as keyof typeof passOutputSchemas]) as JsonSchema;
+    return stage === "pass5" ? requireNullableProjectionInterpretationFields(schema) : schema;
   }
   return z.toJSONSchema(z.object({ ok: z.boolean() })) as JsonSchema;
+}
+
+function requireNullableProjectionInterpretationFields(schema: JsonSchema) {
+  const properties = schema.properties as JsonSchema | undefined;
+  const interpretations = properties?.projectionInterpretations as JsonSchema | undefined;
+  const item = interpretations?.items as JsonSchema | undefined;
+  const itemProperties = item?.properties as JsonSchema | undefined;
+  if (!item || !itemProperties) {
+    return schema;
+  }
+  const interpretiveFields = [
+    "possibleDisownedValue",
+    "literalEnactmentRisk",
+    "matureExpression",
+  ];
+  for (const field of interpretiveFields) {
+    const fieldSchema = itemProperties[field];
+    if (fieldSchema && typeof fieldSchema === "object") {
+      itemProperties[field] = { ...(fieldSchema as JsonSchema), nullable: true };
+    }
+  }
+  item.required = ["projectionEvidenceRefs", ...interpretiveFields];
+  return schema;
 }
 
 export function sanitizeGeminiSchema(schema: JsonSchema): JsonSchema {
@@ -184,7 +208,21 @@ function coerceValue(value: unknown, key?: string): unknown {
     if (key === "originForks" || key === "openForks") {
       return value.filter((item): item is string => typeof item === "string" && FORK_IDS.has(item));
     }
-    return value.map((item) => coerceValue(item));
+    const coerced = value.map((item) => coerceValue(item));
+    if (key === "projectionInterpretations") {
+      return coerced.filter((item) => {
+        if (!item || typeof item !== "object") {
+          return true;
+        }
+        const interpretation = item as Record<string, unknown>;
+        return [
+          interpretation.possibleDisownedValue,
+          interpretation.literalEnactmentRisk,
+          interpretation.matureExpression,
+        ].some((field) => typeof field === "string" && field.trim().length > 0);
+      });
+    }
+    return coerced;
   }
   if (!value || typeof value !== "object") {
     if (key && SCORE_KEYS.has(key) && typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
