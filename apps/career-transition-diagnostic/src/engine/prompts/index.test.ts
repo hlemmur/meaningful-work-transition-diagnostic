@@ -114,6 +114,9 @@ expectMentions(promptRegistry.pass5.text, [
   "matureExpression",
   "overallNote",
 ]);
+expect(promptRegistry.pass5.text).toMatch(
+  /omit the projection interpretation record when no interpretive field is warranted/i,
+);
     // pass6
 expectMentions(promptRegistry.pass6.text, [
   "selectedHypothesisId",
