@@ -10,7 +10,7 @@ import {
 } from "@/engine/schemas/analysis";
 import { CANONICAL_PEEL_TITLES } from "./gates";
 import { applyImageVotes, applyResolution, sanitizeReportSections } from "./invariants";
-import { buildCaseSnapshot, STAGE_INPUT_TRIM } from "./stage-input";
+import { buildCaseSnapshot, STAGE_INPUT_TRIM, trimText } from "./stage-input";
 import { pass6OutputSchema } from "./stage-schemas";
 
 function hypothesis(id: string) {
@@ -218,6 +218,37 @@ describe("applyImageVotes", () => {
 
     expect(state.imageAnalysis?.literalFacts[0]?.text).toBe(snapshotScene.slice(0, -1));
     expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(snapshotSpeech.slice(0, -1));
+  });
+
+  it("rejects marker-free text from outside the Pass 5 symbolic snapshot boundary", () => {
+    const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": scene,
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+    const markerFreeAnswerPrefix = String(
+      trimText(scene, STAGE_INPUT_TRIM.maxAnswerChars),
+    ).slice(0, -1);
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: markerFreeAnswerPrefix, evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/not exact supplied client material/i);
   });
 
   it("still accepts exact full-length supplied symbolic text", () => {
