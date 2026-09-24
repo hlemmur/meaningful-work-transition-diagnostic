@@ -251,6 +251,33 @@ describe("applyImageVotes", () => {
     ).toThrow(/not exact supplied client material/i);
   });
 
+  it("preserves a literal ellipsis in short supplied symbolic material", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": "A tunnel that keeps going…",
+      "Q10.6": "Wait here.",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "supports",
+          evidenceRefs: ["a1:Q10.1"],
+          exactClientMaterialUsed: ["a1:Q10.1"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "A tunnel that keeps going", evidenceRefs: ["a1:Q10.1"] }],
+          personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/not exact supplied client material/i);
+  });
+
   it("still accepts exact full-length supplied symbolic text", () => {
     const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
     const speech = `Wait until the ground is yours. ${"Do not step until the crossing is finished. ".repeat(16)}`;
