@@ -3,6 +3,9 @@ import { defineConfig, devices } from "@playwright/test";
 const useDevServer = process.env.PLAYWRIGHT_DEV === "1";
 const testPort = process.env.PLAYWRIGHT_PORT ?? "3000";
 const baseURL = `http://127.0.0.1:${testPort}`;
+const ipv4NodeOptions = [process.env.NODE_OPTIONS, "--dns-result-order=ipv4first"]
+  .filter(Boolean)
+  .join(" ");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -26,7 +29,7 @@ export default defineConfig({
   ],
   webServer: {
     command: useDevServer
-      ? `bun run dev -- --hostname 127.0.0.1 --port ${testPort}`
+      ? `bun run dev -- --webpack --hostname localhost --port ${testPort}`
       : `bun run start -- --hostname 127.0.0.1 --port ${testPort}`,
     url: baseURL,
     reuseExistingServer: false,
@@ -34,6 +37,7 @@ export default defineConfig({
     env: {
       ...process.env,
       APP_MODE: "mock",
+      ...(useDevServer ? { NODE_OPTIONS: ipv4NodeOptions } : {}),
       // Local .env.local may set LLM_MODE=live; e2e must stay on fixtures.
       LLM_MODE: "",
     },

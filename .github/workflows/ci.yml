@@ -25,3 +25,8 @@ jobs:
       - run: bun run test:e2e
         env:
           APP_MODE: mock
+      - run: bun run test:e2e -- e2e/analysis.spec.ts --grep "pending state"
+        env:
+          APP_MODE: mock
+          PLAYWRIGHT_DEV: "1"
+          PLAYWRIGHT_PORT: "3013"

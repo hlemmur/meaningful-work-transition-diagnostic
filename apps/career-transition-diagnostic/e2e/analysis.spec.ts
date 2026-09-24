@@ -38,3 +38,52 @@ test("admin can run the analysis pipeline without delivering a report", async ({
   await page.goto("/mock/outbox");
   await expect(page.getByText("Your report is ready")).toHaveCount(0);
 });
+
+test("analysis form shows a pending state while its real server action is in flight", async ({
+  page,
+}) => {
+  const assessmentId = "pending-state-regression";
+  const restored = await page.request.post("/api/mock/restore-case", {
+    data: {
+      accessToken: "pending-state-access-token",
+      assessmentId,
+      email: "buyer@example.com",
+      answers: {
+        "Q1.1": "A fictional submitted case for the pending-state browser regression.",
+      },
+    },
+  });
+  expect(restored.ok()).toBe(true);
+
+  await adminLogin(page);
+  await page.goto(`/admin/${assessmentId}`);
+
+  const submit = page.locator("[data-analysis-submit]");
+  await expect(submit).toHaveText("Run analysis");
+  let releaseRequest!: () => void;
+  const requestCanFinish = new Promise<void>((resolve) => {
+    releaseRequest = resolve;
+  });
+
+  const actionUrl = page.url();
+  await page.route(actionUrl, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    await requestCanFinish;
+    await route.continue();
+  });
+
+  const submission = submit.click();
+  try {
+    await expect(submit).toHaveText("Analysis running…");
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAttribute("aria-busy", "true");
+  } finally {
+    releaseRequest();
+    await submission;
+    await expect(page.getByText("Analysis: Completed")).toBeVisible();
+    await page.unroute(actionUrl);
+  }
+});
