@@ -183,6 +183,43 @@ describe("applyImageVotes", () => {
     expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(snapshotSpeech);
   });
 
+  it("accepts snapshot-trimmed Q10 text when Gemini omits the truncation marker", () => {
+    const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
+    const speech = `Wait until the ground is yours. ${"Do not step until the crossing is finished. ".repeat(16)}`;
+    const answers = {
+      "Q1.1": "I keep stalling.",
+      "Q10.1": scene,
+      "Q10.6": speech,
+    };
+    const state = extractCaseStateFull("a1", answers);
+    state.hypotheses = [hypothesis("hyp-live")];
+    const snapshot = buildCaseSnapshot({ caseState: state, answers });
+    const snapshotScene = String(snapshot.signals.symbolicMaterial.scene);
+    const snapshotSpeech = String(snapshot.signals.symbolicMaterial.obstacleSpeech);
+    expect(snapshotScene.endsWith("…")).toBe(true);
+    expect(snapshotSpeech.endsWith("…")).toBe(true);
+
+    applyImageVotes(state, {
+      votes: [{
+        hypothesisId: "hyp-live",
+        verdict: "supports",
+        interpretation: "The supplied threshold image fits the stall.",
+        evidenceRefs: ["a1:Q10.1", "a1:Q10.6"],
+        exactClientMaterialUsed: ["a1:Q10.1", "a1:Q10.6"],
+      }],
+      imageAnalysis: {
+        literalFacts: [{ text: snapshotScene.slice(0, -1), evidenceRefs: ["a1:Q10.1"] }],
+        personalAssociations: [{ text: snapshotSpeech.slice(0, -1), evidenceRefs: ["a1:Q10.6"] }],
+        plausibleReadings: [],
+      },
+      projectionInterpretations: [],
+      overallNote: "Synthetic.",
+    });
+
+    expect(state.imageAnalysis?.literalFacts[0]?.text).toBe(snapshotScene.slice(0, -1));
+    expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(snapshotSpeech.slice(0, -1));
+  });
+
   it("still accepts exact full-length supplied symbolic text", () => {
     const scene = `A locked garden gate at dusk. ${"The path keeps going past the trees. ".repeat(20)}`;
     const speech = `Wait until the ground is yours. ${"Do not step until the crossing is finished. ".repeat(16)}`;

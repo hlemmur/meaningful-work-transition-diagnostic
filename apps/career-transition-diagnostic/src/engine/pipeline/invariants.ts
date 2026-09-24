@@ -261,10 +261,16 @@ export function applyImageVotes(
       const snapshotQuote = trimText(item, STAGE_INPUT_TRIM.maxQuoteChars);
       if (typeof snapshotQuote === "string") {
         register(snapshotQuote);
+        if (snapshotQuote.endsWith("…")) {
+          register(snapshotQuote.slice(0, -1));
+        }
       }
       const snapshotAnswer = trimText(item, STAGE_INPUT_TRIM.maxAnswerChars);
       if (typeof snapshotAnswer === "string") {
         register(snapshotAnswer);
+        if (snapshotAnswer.endsWith("…")) {
+          register(snapshotAnswer.slice(0, -1));
+        }
       }
     }
   };
