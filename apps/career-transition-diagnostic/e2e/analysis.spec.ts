@@ -75,9 +75,6 @@ test("analysis form shows a pending state while its real server action is in fli
     await route.continue();
   });
 
-  const actionResponse = page.waitForResponse(
-    (response) => response.url() === actionUrl && response.request().method() === "POST",
-  );
   const submission = submit.click();
   try {
     await expect(submit).toHaveText("Analysis running…");
@@ -85,9 +82,8 @@ test("analysis form shows a pending state while its real server action is in fli
     await expect(submit).toHaveAttribute("aria-busy", "true");
   } finally {
     releaseRequest();
-    const response = await actionResponse;
-    await response.finished();
     await submission;
+    await expect(page.getByText("Analysis: Completed")).toBeVisible();
     await page.unroute(actionUrl);
   }
 });
