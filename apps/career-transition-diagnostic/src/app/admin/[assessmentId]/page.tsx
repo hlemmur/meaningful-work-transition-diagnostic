@@ -13,6 +13,7 @@ import { CaseAnswers } from "../case-answers";
 import { ConfirmDeleteAccess } from "../confirm-delete-access";
 import { FailedAnalysisNotice } from "../failed-analysis-notice";
 import { humanAnalysisStatus, humanSafetyLevel, humanStatus } from "../operator-copy";
+import { AnalysisSubmitButton } from "../analysis-submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -54,12 +55,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
 
       {pending ? (
         <form action={run}>
-          <button
-            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper"
-            type="submit"
-          >
-            {failedStage ? "Resume analysis" : "Run analysis"}
-          </button>
+          <AnalysisSubmitButton resume={Boolean(failedStage)} />
         </form>
       ) : null}
 
