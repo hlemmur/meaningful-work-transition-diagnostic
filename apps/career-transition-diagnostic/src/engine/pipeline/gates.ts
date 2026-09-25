@@ -517,6 +517,68 @@ export function experimentBoundToHypothesis(
         /\b(?:exposure|visibility|audience(?:\s+size)?)\s+(?:test|experiment)\b|\b(?:test|vary|change|increase|decrease|compare)\w*\s+(?:public\s+)?(?:exposure|visibility|audience(?:\s+size)?)\b/i.test(
           `${title} ${action}`,
         );
+      const experimentText = JSON.stringify(rawExperiment);
+      if (
+        /proves an unconscious|isolates the real cause|therefore primary|therefore proven|disproves all depth/i.test(
+          experimentText,
+        )
+      ) {
+        failures.push(
+          `${title}: no outcome proves a motive or turns a weakened explanation into a primary one`,
+        );
+      }
+      const inventedLocation = ["chest", "shoulder", "throat", "stomach", "jaw", "gut", "belly"].find(
+        (location) =>
+          new RegExp(`\\b${location}\\b`, "i").test(experimentText) &&
+          !state.affect.bodyResponses.some((item) =>
+            new RegExp(`\\b${location}\\b`, "i").test(`${item.rawQuote ?? ""} ${item.normalizedMeaning}`),
+          ),
+      );
+      if (inventedLocation) {
+        failures.push(`${title}: invents a ${inventedLocation} sensation that was not supplied`);
+      }
+      const bounded = rawExperiment as {
+        sessionMinutes?: unknown;
+        audienceCount?: unknown;
+        exposure?: unknown;
+        largerActionJustification?: unknown;
+        outcomeInterpretations?: unknown;
+      };
+      const declaresBounds =
+        typeof bounded.sessionMinutes === "number" ||
+        typeof bounded.audienceCount === "number" ||
+        typeof bounded.exposure === "string";
+      if (declaresBounds) {
+        const minutes = typeof bounded.sessionMinutes === "number" ? bounded.sessionMinutes : 0;
+        const audience = typeof bounded.audienceCount === "number" ? bounded.audienceCount : 0;
+        const exposure = typeof bounded.exposure === "string" ? bounded.exposure : "private";
+        const justified = typeof bounded.largerActionJustification === "string" &&
+          bounded.largerActionJustification.trim().length > 0;
+        if ((minutes > 30 || audience > 1 || exposure === "public") && !justified) {
+          failures.push(
+            `${title}: a session over 30 minutes, more than one recipient, or public exposure needs a case-specific justification`,
+          );
+        }
+        const updates = (Array.isArray(bounded.outcomeInterpretations) ? bounded.outcomeInterpretations : [])
+          .flatMap((item) => {
+            const layers = (item as { layerUpdates?: unknown }).layerUpdates;
+            return Array.isArray(layers) ? layers : [];
+          })
+          .filter((item): item is { layer: string; effect: string } =>
+            Boolean(item) && typeof item === "object" && typeof (item as { effect?: unknown }).effect === "string",
+          );
+        const layers = new Set(updates.map((item) => item.layer));
+        if (
+          !updates.some((item) => item.effect === "inconclusive" || item.effect === "new_unknown") ||
+          !layers.has("practical") ||
+          !layers.has("psychological")
+        ) {
+          failures.push(
+            `${title}: layer updates must cover practical and psychological layers independently and include an inconclusive path`,
+          );
+        }
+      }
+
       if (exposureClaim) {
         const variesExposure =
           /\b(?:exposure|visible|visibility|public|publish|audience|outreach)\b/i.test(
@@ -979,6 +1041,38 @@ function mentionsSource(body: string, source: string) {
   return sourceTokens.length > 0 && matches >= Math.min(2, sourceTokens.length);
 }
 
+const RECIPIENT_COUNT: Record<string, number> = { one: 1, two: 2, three: 3, four: 4 };
+
+function recipientCount(text: string) {
+  const match = text.match(/\b(one|two|three|four)\b(?=[^.]*\b(?:recipients?|persons?|people|colleagues?|prospects?)\b)/i);
+  return match ? RECIPIENT_COUNT[match[1].toLocaleLowerCase()] : undefined;
+}
+
+export function experimentCopyAgrees(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const section = sections.find((item) => item.id === "experiment");
+  const action = state.experiments.map((item) => item.action).join(" ");
+  if (!section || !action.trim()) {
+    return {
+      id: "experiment-copy",
+      passed: true,
+      detail: "No structured experiment action to compare with customer copy.",
+    };
+  }
+  const stateCount = recipientCount(action);
+  const reportCount = recipientCount(section.body);
+  const agreed = !stateCount || !reportCount || stateCount === reportCount;
+  return {
+    id: "experiment-copy",
+    passed: agreed,
+    detail: agreed
+      ? "Customer experiment copy does not contradict the structured audience."
+      : "Customer experiment copy names a different recipient count than the structured action.",
+  };
+}
+
 export function closeSynthesisAdequate(
   sections: ReportSection[],
   state: CaseState,
@@ -989,6 +1083,13 @@ export function closeSynthesisAdequate(
     return { id: "close-synthesis", passed: Boolean(close), detail: close ? "No resolved formulation to synthesize." : "Close section is missing." };
   }
   const body = close.body;
+  if (/failed,\s+therefore|therefore\s+(?:\w+\s+){0,6}(?:primary|proven|proves)/i.test(body)) {
+    return {
+      id: "close-synthesis",
+      passed: false,
+      detail: "The close must not treat a weakened explanation as proof that another is primary.",
+    };
+  }
   const complete =
     mentionsSource(body, formulation.maintenanceFormulation) &&
     mentionsSource(body, formulation.strongestAlternative) &&
@@ -1217,6 +1318,10 @@ if (!questionsClose.passed) {
   const closeSynthesis = closeSynthesisAdequate(sections, state);
   if (!closeSynthesis.passed) {
     throwGate(closeSynthesis);
+  }
+  const experimentCopy = experimentCopyAgrees(sections, state);
+  if (!experimentCopy.passed) {
+    throwGate(experimentCopy);
   }
   const inflation = antiInflationDiagnosis(body);
   if (!inflation.passed) {

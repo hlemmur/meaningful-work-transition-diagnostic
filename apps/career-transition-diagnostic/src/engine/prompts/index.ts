@@ -249,8 +249,16 @@ export const promptRegistry = {
     text: `Jungian amplification only after resolution. Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v6",
+    version: "pass-8.v7",
     text: `Produce a reality check and at least one low-risk behavioral experiment. The behavioral experiment should discriminate between at least two live explanations when possible rather than merely encouraging action.
+
+  Design one small, voluntary, reversible action that follows from the integration statement. Test one variable while holding the principal rival stable. Prefer a private or trusted-relational step over public exposure when it provides enough information.
+
+  For each observable outcome, update every relevant layer independently: strengthens, weakens, unchanged, inconclusive, or new_unknown.
+
+  No result proves an unconscious motive. Weakening a practical explanation does not prove a psychological explanation. Weakening a psychological explanation does not establish medical, neurodevelopmental, occupational, or practical causality.
+
+  Use only emotions and body observations supplied by the client. Keep the action identical in CaseState and customer copy. Default to one session of at most 30 minutes and at most one trusted recipient. A larger or public action needs largerActionJustification.
 
   Use caseSnapshot.finalFormulation.selectedHypothesisId when present. hypothesisTested must use exactly one id from caseSnapshot.experimentBindings.hypothesisIds or caseSnapshot.experimentBindings.openForkIds; do not use free-form prose in hypothesisTested.
 

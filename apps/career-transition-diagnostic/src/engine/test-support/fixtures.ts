@@ -1506,16 +1506,38 @@ export function passOutputFor(
               ? "mentor feedback"
               : "external deadline and accountability",
             heldConstant: ["task difficulty"],
+            sessionMinutes: 30,
+            audienceCount: 1,
+            exposure: "private",
+            reversible: true,
             outcomeInterpretations: [
               {
                 outcome: "At least three of four planned attempts are completed under the added deadline.",
                 favors: hypothesisTested,
                 because: "Execution changed when the named variable changed while task difficulty stayed stable.",
+                layerUpdates: [
+                  { layer: "practical", effect: "strengthens" },
+                  { layer: "psychological", effect: "unchanged" },
+                ],
               },
               {
                 outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
                 favors: competingHypothesisId,
                 because: "Persistent task-specific errors fit the live rival better than the selected explanation.",
+                layerUpdates: [
+                  { layer: "practical", effect: "weakens" },
+                  { layer: "psychological", effect: "unchanged" },
+                ],
+              },
+              {
+                outcome: "Neither private nor slightly more visible conditions change the number of completed drafts.",
+                favors: hypothesisTested,
+                because: "No change leaves the practical contribution and the psychological charge inconclusive.",
+                layerUpdates: [
+                  { layer: "practical", effect: "inconclusive" },
+                  { layer: "psychological", effect: "new_unknown" },
+                  { layer: "developmental", effect: "unchanged" },
+                ],
               },
             ],
           }),

@@ -18,6 +18,7 @@ import {
   imaginalWhenSpeech,
   antiInflationDiagnosis,
   experimentBoundToHypothesis,
+  experimentCopyAgrees,
   imageVoteAdequate,
   senexScoldOnly,
   somaticProvenance,
@@ -280,6 +281,187 @@ describe("experiment binding gate", () => {
     expect(
       experimentBoundToHypothesis(state).passed,
     ).toBe(true);
+  });
+
+  it("accepts a ten-minute private draft whose layers update independently", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Private draft",
+      hypothesisTested: "hyp-structure",
+      action: "Write one ten-minute private draft and optionally show it to one trusted person, holding task difficulty unchanged.",
+      duration: "10 minutes",
+      whatToObserve: ["Whether one draft is completed."],
+      resultSupportingHypothesis: "The draft is completed.",
+      resultWeakeningHypothesis: "The draft is not completed.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "private structure",
+      heldConstant: ["task difficulty"],
+      sessionMinutes: 10,
+      audienceCount: 1,
+      exposure: "private",
+      reversible: true,
+      outcomeInterpretations: [
+        {
+          outcome: "One ten-minute draft is completed in private.",
+          favors: "hyp-structure",
+          because: "A bounded private structure was enough to produce the draft.",
+          layerUpdates: [
+            { layer: "practical", effect: "strengthens" },
+            { layer: "psychological", effect: "unchanged" },
+          ],
+        },
+        {
+          outcome: "The private draft is completed and a visible send still freezes.",
+          favors: "hyp-skill",
+          because: "Visibility stays charged after the private action improves.",
+          layerUpdates: [
+            { layer: "practical", effect: "unchanged" },
+            { layer: "psychological", effect: "strengthens" },
+          ],
+        },
+        {
+          outcome: "Neither the private draft nor the trusted share changes completed attempts.",
+          favors: "hyp-structure",
+          because: "No change leaves both layers inconclusive.",
+          layerUpdates: [
+            { layer: "practical", effect: "inconclusive" },
+            { layer: "psychological", effect: "new_unknown" },
+          ],
+        },
+      ],
+    }];
+    expect(experimentBoundToHypothesis(state).passed).toBe(true);
+  });
+
+  it("rejects oversized, inverse-proof, and invented-body experiments", () => {
+    const cases: Array<{ patch: Record<string, unknown>; pattern: RegExp }> = [
+      {
+        patch: { sessionMinutes: 90, audienceCount: 3, exposure: "public" },
+        pattern: /justification/i,
+      },
+      {
+        patch: {
+          sessionMinutes: 10,
+          audienceCount: 1,
+          exposure: "private",
+          outcomeInterpretations: [
+            {
+              outcome: "The structure test failed, therefore shadow protection is primary.",
+              favors: "hyp-structure",
+              because: "Failure isolates the real cause.",
+              layerUpdates: [
+                { layer: "practical", effect: "weakens" },
+                { layer: "psychological", effect: "inconclusive" },
+              ],
+            },
+            {
+              outcome: "Four of five attempts are completed.",
+              favors: "hyp-skill",
+              because: "Completion changed with the variable.",
+              layerUpdates: [
+                { layer: "practical", effect: "strengthens" },
+                { layer: "psychological", effect: "unchanged" },
+              ],
+            },
+          ],
+        },
+        pattern: /proves a motive|primary/i,
+      },
+      {
+        patch: {
+          action: "Notice tightness in your chest during one ten-minute private draft while holding task difficulty unchanged.",
+          sessionMinutes: 10,
+          audienceCount: 1,
+          exposure: "private",
+          outcomeInterpretations: [
+            {
+              outcome: "One draft is completed.",
+              favors: "hyp-structure",
+              because: "The private step changed output.",
+              layerUpdates: [
+                { layer: "practical", effect: "strengthens" },
+                { layer: "psychological", effect: "unchanged" },
+              ],
+            },
+            {
+              outcome: "Errors stay in unfamiliar task steps.",
+              favors: "hyp-skill",
+              because: "Task errors fit the rival.",
+              layerUpdates: [
+                { layer: "practical", effect: "inconclusive" },
+                { layer: "psychological", effect: "unchanged" },
+              ],
+            },
+          ],
+        },
+        pattern: /chest/i,
+      },
+    ];
+    for (const { patch, pattern } of cases) {
+      const state = experimentState();
+      state.experiments = [{
+        kind: "behavioral",
+        title: "Structure test",
+        hypothesisTested: "hyp-structure",
+        action: "Add external accountability while holding task difficulty unchanged.",
+        duration: "10 minutes",
+        whatToObserve: ["Completed drafts."],
+        resultSupportingHypothesis: "Output rises.",
+        resultWeakeningHypothesis: "Output stays low.",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: ["hyp-skill"],
+        manipulatedVariable: "external accountability",
+        heldConstant: ["task difficulty"],
+        outcomeInterpretations: [
+          {
+            outcome: "Four of five planned attempts are completed.",
+            favors: "hyp-structure",
+            because: "Execution changed when structure changed.",
+          },
+          {
+            outcome: "Errors cluster in unfamiliar task steps.",
+            favors: "hyp-skill",
+            because: "Task-specific errors fit the rival.",
+          },
+        ],
+        ...patch,
+      }];
+      const result = experimentBoundToHypothesis(state);
+      expect(result.passed, pattern.source).toBe(false);
+      expect(result.detail, pattern.source).toMatch(pattern);
+    }
+  });
+
+  it("rejects a report that turns one trusted recipient into three", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Private share",
+      hypothesisTested: "hyp-structure",
+      action: "Show one private draft to one trusted person while holding task difficulty unchanged.",
+      duration: "10 minutes",
+      whatToObserve: ["Whether the draft is completed."],
+      resultSupportingHypothesis: "The draft is completed.",
+      resultWeakeningHypothesis: "The draft is not completed.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "trusted feedback",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [],
+    }];
+    const mismatch = experimentCopyAgrees([
+      section("experiment", "Send the draft to three colleagues this week.", ["exp:Q1.1"]),
+    ], state);
+    expect(mismatch.passed).toBe(false);
+    const match = experimentCopyAgrees([
+      section("experiment", "Show the draft to one trusted person.", ["exp:Q1.1"]),
+    ], state);
+    expect(match.passed).toBe(true);
   });
 
   it("accepts concrete artifact and action outcomes outside the original keyword list", () => {
@@ -1967,5 +2149,29 @@ describe("questions and close gate", () => {
     expect(closeSynthesisAdequate([
       section("close", "The pattern and practical unknowns remain; evidence could change it.", ["a1:Q1.1"]),
     ], state).passed).toBe(false);
+  });
+
+  it("rejects a close that treats a failed practical test as proof of a psychological primary", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "Waiting for certainty sustains delay.",
+      maintenanceMechanism: {
+        trigger: "A visible next step appears.", response: "Action pauses.", shortTermFunction: "Uncertainty falls.", longTermCost: "Evidence stays scarce.", reinforcingConsequence: "More certainty feels necessary.",
+      },
+      whyItFits: ["Delay recurs."],
+      whatItDoesNotExplain: ["Market fit."],
+      strongestAlternative: "The role may simply be a poor job-shape match.",
+      unresolvedForks: [],
+    };
+    const result = closeSynthesisAdequate([
+      section(
+        "close",
+        "Waiting for certainty sustains delay, and a poor job-shape match remains possible. Unknowns remain, and new evidence can update the formulation. Structure failed, therefore persona protection is primary.",
+        ["a1:Q1.1"],
+      ),
+    ], state);
+    expect(result.passed).toBe(false);
+    expect(result.detail).toMatch(/proof that another is primary/i);
   });
 });

@@ -403,8 +403,30 @@ export const experimentSchema = z.object({
         outcome: z.string().trim().min(1),
         favors: z.string().trim().min(1),
         because: z.string().trim().min(1),
+        layerUpdates: z.array(
+          z.object({
+            layer: z.enum(["practical", "psychological", "developmental"]),
+            effect: z.enum([
+              "strengthens",
+              "weakens",
+              "unchanged",
+              "inconclusive",
+              "new_unknown",
+            ]),
+          }),
+        ).optional(),
       }),
     ).default([]),
+
+  sessionMinutes: z.number().int().positive().max(180).optional(),
+
+  audienceCount: z.number().int().nonnegative().max(20).optional(),
+
+  exposure: z.enum(["private", "trusted", "public"]).optional(),
+
+  reversible: z.boolean().optional(),
+
+  largerActionJustification: z.string().trim().min(1).optional(),
 });
 
 export const reportSectionIdSchema = z.enum([
