@@ -123,21 +123,12 @@ export const groundedSymbolicObservationSchema = z.object({
   evidenceRefs: z.array(z.string()).min(1),
 });
 
-export const plausibleSymbolicReadingSchema = z
-  .object({
-    interpretation: z.string().trim().min(1),
-    supportsHypothesisIds: z.array(z.string()).default([]),
-    weakensHypothesisIds: z.array(z.string()).default([]),
-    evidenceRefs: z.array(z.string()).min(1),
-  })
-  .superRefine((value, ctx) => {
-    if (!value.supportsHypothesisIds.length && !value.weakensHypothesisIds.length) {
-      ctx.addIssue({
-        code: "custom",
-        message: "A plausible symbolic reading must support or weaken at least one live hypothesis",
-      });
-    }
-  });
+export const plausibleSymbolicReadingSchema = z.object({
+  interpretation: z.string().trim().min(1),
+  supportsHypothesisIds: z.array(z.string()).default([]),
+  weakensHypothesisIds: z.array(z.string()).default([]),
+  evidenceRefs: z.array(z.string()).min(1),
+});
 
 export const symbolicImageAnalysisSchema = z.object({
   literalFacts: z.array(groundedSymbolicObservationSchema).default([]),
@@ -448,6 +439,7 @@ export const unresolvedQuestionIntentSchema = z.object({
   relatedHypothesisId: z.string().trim().min(1).optional(),
   relatedForkId: forkIdSchema.optional(),
   couldWeakenSelectedFormulation: z.boolean(),
+  couldInvalidateWholeFormulation: z.boolean().optional(),
 });
 
 export const REQUIRED_PEEL_SECTION_IDS = [

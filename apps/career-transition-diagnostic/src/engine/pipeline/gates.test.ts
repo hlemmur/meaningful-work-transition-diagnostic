@@ -2054,7 +2054,7 @@ describe("questions and close gate", () => {
         body: "Stay with these questions as inquiry tools rather than seeking immediate answers: 1. If you were guaranteed respect, would your execution freeze? 2. When you notice the pattern, what boundary feels adult to you? 3. What remains unexplained for you?",
         evidenceRefs: ["a1:Q1.1"],
         questionIntents: [
-          { question: "If you were guaranteed respect, would your execution freeze?", targetUncertainty: "Whether respect removes the freeze", couldWeakenSelectedFormulation: true },
+          { question: "If you were guaranteed respect, would your execution freeze?", targetUncertainty: "Whether respect removes the freeze", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: true },
           { question: "When you notice the pattern, what boundary feels adult to you?", targetUncertainty: "Which boundary is at stake", couldWeakenSelectedFormulation: false },
           { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
         ],
@@ -2068,6 +2068,27 @@ describe("questions and close gate", () => {
 
     const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
     expect(questionsAndCloseAdequate(sections, state).passed).toBe(true);
+  });
+
+  it("rejects questions that only choose among supplied explanations", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. Which of your two explanations do you prefer? 2. Which hypothesis feels closer to you? 3. What would you test next?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          { question: "Which of your two explanations do you prefer?", targetUncertainty: "Preference", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: false },
+          { question: "Which hypothesis feels closer to you?", targetUncertainty: "Fit", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: false },
+          { question: "What would you test next?", targetUncertainty: "Action", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: false },
+        ],
+      }),
+      section("close", "You can treat this as a working formulation.", ["a1:Q1.1"]),
+    ];
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    const result = questionsAndCloseAdequate(sections, state);
+    expect(result.passed).toBe(false);
+    expect(result.detail).toMatch(/whole formulation/i);
   });
 
   it("fails when the questions section has fewer than three questions", () => {
