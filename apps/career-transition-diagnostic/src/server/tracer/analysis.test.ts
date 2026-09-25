@@ -16,6 +16,13 @@ import {
 } from "./service";
 import { REQUIRED_PEEL_SECTION_IDS } from "@/engine/schemas/analysis";
 import { collectCanonicalEvidenceIds } from "@/engine/pipeline/evidence-ids";
+import type { TracerTables } from "./mapper";
+import {
+  MemoryTracerDb,
+  TableTracerRepository,
+  bindTracerRepository,
+  resetRepositoryBinding,
+} from "./repository";
 
 function llmForFixture(
   fixture: AnalysisFixture,
@@ -198,6 +205,52 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     );
     expect(pass3Failures).toHaveLength(2);
     expect(pass3Failures.every((item) => item.error?.match(/hypotheses/i))).toBe(true);
+  });
+
+  it("reloads the assessment, answers, and both failure records from a fresh table repository", async () => {
+    const persisted = new MemoryTracerDb();
+    const db = {
+      loadAll: () => persisted.loadAll(),
+      async replaceAll(tables: TracerTables) {
+        const keys = tables.analysis_runs.map((row) => String(row.idempotency_key));
+        if (new Set(keys).size !== keys.length) {
+          throw new Error(
+            'duplicate key value violates unique constraint "analysis_runs_idempotency_key_key"',
+          );
+        }
+        await persisted.replaceAll(tables);
+      },
+    };
+    bindTracerRepository(new TableTracerRepository(db));
+
+    try {
+      const { assessmentId } = await submittedAssessment({
+        "Q1.1": "I stall",
+      });
+      const first = await runAnalysisPipeline(assessmentId, {
+        llm: llmForFixture("schema-fail"),
+      });
+      const second = await runAnalysisPipeline(assessmentId, {
+        llm: llmForFixture("schema-fail"),
+      });
+
+      expect(first.status).toBe("failed");
+      expect(second.status).toBe("failed");
+
+      const reloaded = await new TableTracerRepository(persisted).begin();
+      const assessment = reloaded.assessments.find((item) => item.id === assessmentId);
+      expect(assessment?.answers["Q1.1"]).toBe("I stall");
+      expect(assessment?.status).toBe("review_pending");
+      expect(reloaded.purchases.some((item) => item.assessmentId === assessmentId)).toBe(true);
+
+      const failures = reloaded.analysisRuns.filter(
+        (item) => item.assessmentId === assessmentId && item.stage === "pass3" && item.status === "failure",
+      );
+      expect(failures).toHaveLength(2);
+      expect(new Set(failures.map((item) => item.idempotencyKey)).size).toBe(2);
+    } finally {
+      resetRepositoryBinding();
+    }
   });
 
   it("includes a practical rival when constraints warrant it", async () => {
