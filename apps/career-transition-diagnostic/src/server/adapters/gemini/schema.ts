@@ -27,6 +27,8 @@ const ARRAY_KEYS = new Set([
   "critiques",
   "votes",
   "evidenceRefs",
+  "practicalHypothesisIds",
+  "psychologicalHypothesisIds",
   "counterEvidenceRefs",
   "protectiveFunction",
   "threatenedByChange",
@@ -63,12 +65,27 @@ export function jsonSchemaForStage(stage: string) {
     if (stage === "pass5") {
       return requireNullableProjectionInterpretationFields(schema);
     }
+    if (stage === "pass6") {
+      return requirePass6LayerRelationship(schema);
+    }
     if (stage === "pass8") {
       return requireNullablePass8ManipulatedVariable(schema);
     }
     return schema;
   }
   return z.toJSONSchema(z.object({ ok: z.boolean() })) as JsonSchema;
+}
+
+function requirePass6LayerRelationship(schema: JsonSchema) {
+  const properties = schema.properties as JsonSchema | undefined;
+  const formulation = properties?.finalFormulation as JsonSchema | undefined;
+  const formulationProperties = formulation?.properties as JsonSchema | undefined;
+  if (!formulation || !formulationProperties?.layerRelationship) {
+    return schema;
+  }
+  const required = Array.isArray(formulation.required) ? formulation.required as string[] : [];
+  formulation.required = [...new Set([...required, "layerRelationship"])];
+  return schema;
 }
 
 function requireNullablePass8ManipulatedVariable(schema: JsonSchema) {

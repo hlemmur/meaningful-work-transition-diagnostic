@@ -269,5 +269,12 @@ expectMentions(promptRegistry.pass8.text, [
 
     expect(promptRegistry.pass10.version).toBe("pass-10.v13");
     expect(promptRegistry.pass8.version).toBe("pass-8.v6");
+    expect(promptRegistry.pass6.version).toBe("pass-6.v8");
+    expect(promptRegistry.pass6.text).toMatch(/practical_primary/);
+    expect(promptRegistry.pass6.text).toMatch(/psychological_primary/);
+    expect(promptRegistry.pass6.text).toMatch(/layered/);
+    expect(promptRegistry.pass6.text).toMatch(/unresolved/);
+    expect(promptRegistry.pass6.text).toMatch(/Do not manufacture balance/i);
+    expect(promptRegistry.pass6.text).not.toMatch(/either practical or psychological/i);
   });
 });

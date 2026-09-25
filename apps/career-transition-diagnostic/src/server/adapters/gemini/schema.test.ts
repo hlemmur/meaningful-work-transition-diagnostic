@@ -51,6 +51,21 @@ describe("Gemini schema sanitizer", () => {
     expect(item.properties).not.toHaveProperty("developmentalTension");
   });
 
+  it("requires layerRelationship on the Pass 6 Gemini formulation", () => {
+    const pass6 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass6")).properties);
+    const formulation = asObject(pass6.finalFormulation);
+    expect(formulation.required).toContain("layerRelationship");
+    const layer = asObject(asObject(formulation.properties).layerRelationship);
+    expect(asObject(layer.properties).mode).toEqual(expect.objectContaining({
+      enum: expect.arrayContaining([
+        "practical_primary",
+        "psychological_primary",
+        "layered",
+        "unresolved",
+      ]),
+    }));
+  });
+
   it("strips min/max item counts that inflate Gemini schema complexity", () => {
     const pass2 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass2")).properties);
     expect(asObject(pass2.contradictions).minItems).toBeUndefined();

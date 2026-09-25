@@ -149,8 +149,22 @@ export const promptRegistry = {
   }. Return at least 1 vote. ${EMPTY_ARRAYS}`,
   },
   pass6: {
-    version: "pass-6.v7",
+    version: "pass-6.v8",
     text: `Resolve the case after contradiction generation, competing hypotheses, adversarial critique, and image voting. Do not restart the analysis from scratch.
+
+  Resolve practical and psychological contributions independently. Do not make one layer defeat the other merely because one hypothesis is selected.
+
+  First establish practical and biological reality. Then identify the supplied trigger, emotion, and body status. Distinguish the conscious ego position from a possible persona stance. Treat projection, protective function, resistance, compensation, and developmental meaning as separate tentative inferences.
+
+  Do not infer a developmental task from dysfunction, contradiction, or practical failure alone. Establish the conscious position, then ask whether an independently evidenced counter-position appears through behavior/history, affect, charged projection, spontaneous image, or enactment.
+
+  Allowed modes:
+  - practical_primary
+  - psychological_primary
+  - layered
+  - unresolved
+
+  Do not manufacture balance, integration, compromise, or a third. Record possibleThird only when supplied material contains an emergent image, action, or formulation not reducible to either pole. Practical and biological realities remain fully true in every mode.
 
   Choose selectedHypothesisId from the hypotheses present in caseSnapshot. Resolve each materially relevant open fork rather than silently ignoring it. A fork may lean one way, remain both, remain unresolved, or be not relevant. Preserve competing imageAnalysis.plausibleReadings and unresolvedSymbolicQuestion when symbolic material splits the leading explanations; do not force one symbolic meaning to manufacture resolution.
 
@@ -198,6 +212,14 @@ export const promptRegistry = {
         coreOpposition,
         possibleDevelopmentalTask,
         possibleThird?,
+        uncertainty,
+        evidenceRefs
+      },
+      layerRelationship?: {
+        mode: "practical_primary"|"psychological_primary"|"layered"|"unresolved",
+        practicalHypothesisIds,
+        psychologicalHypothesisIds,
+        relationship,
         uncertainty,
         evidenceRefs
       },
