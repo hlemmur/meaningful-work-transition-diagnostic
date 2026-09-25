@@ -258,7 +258,12 @@ describe("evaluateFrameworkFidelity", () => {
   });
 
   it("fails beta-shaped Q11.3 / grind report", () => {
-    const caseState = extractCaseStateFull("beta", originAnswers) as CaseState;
+    const answers = {
+      ...originAnswers,
+      "Q11.3":
+        "I want to distinguish practical constraints from fear of visible experimentation",
+    };
+    const caseState = extractCaseStateFull("beta", answers) as CaseState;
     caseState.contradictions = [
       {
         id: "c1",
@@ -339,7 +344,7 @@ describe("evaluateFrameworkFidelity", () => {
     ];
 
     const result = evaluateFrameworkFidelity({
-      answers: originAnswers,
+      answers,
       caseState,
       report: betaShapedReport("beta"),
     });
