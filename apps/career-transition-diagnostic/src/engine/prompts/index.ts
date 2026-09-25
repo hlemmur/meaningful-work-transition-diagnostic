@@ -304,7 +304,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v15",
+    version: "pass-9.v16",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
@@ -372,8 +372,9 @@ export const promptRegistry = {
   - Each question should genuinely arise from this person's evidence.
   - Do not answer those questions for the person.
   - Represent each question in questionIntents with its targetUncertainty, optional relatedHypothesisId or relatedForkId, couldWeakenSelectedFormulation, and couldInvalidateWholeFormulation.
+  - The questions section must return questionIntents. Do not omit them.
   - At least one question must be capable of weakening the selected formulation.
-  - At least one question must be capable of invalidating the whole formulation, not only choosing among the supplied explanations. Avoid leading forms that preload a motive or answer.
+  - At least one question must be capable of invalidating the whole formulation, not only choosing among the supplied explanations. Set couldInvalidateWholeFormulation true on that question. Avoid leading forms that preload a motive or answer.
 
   Close:
   - End with a short working formulation.
@@ -386,7 +387,7 @@ export const promptRegistry = {
       title,
       body,
       evidenceRefs,
-      questionIntents?: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation, couldInvalidateWholeFormulation }]
+      questionIntents: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation, couldInvalidateWholeFormulation }]
     }
   }.
 
