@@ -139,6 +139,7 @@ describe("deterministic gate retry", () => {
     expect(calls).toHaveLength(2);
     expect(calls[1]?.input.gateIssues).toEqual([
       expect.stringMatching(/not exact supplied client material/i),
+      expect.stringMatching(/only exact copies of obstacleSpeech/i),
       expect.stringContaining(speech),
     ]);
     expect(result.caseState.imageAnalysis?.personalAssociations[0]?.text).toBe(speech);

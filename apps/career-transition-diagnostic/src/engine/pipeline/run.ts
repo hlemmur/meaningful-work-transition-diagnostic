@@ -158,6 +158,9 @@ export async function executeAnalysis(input: {
             );
             if (typeof speech === "string" && speech.trim()) {
               gateIssues.push(
+                "personalAssociations may contain only exact copies of obstacleSpeech, obstacleWant, and ifNotRemoved. Remove obstacle, scene, and surroundings text from that list.",
+              );
+              gateIssues.push(
                 `Copy this exact personalAssociations text and cite its Q10.6 evidence ref: ${speech}`,
               );
             }
