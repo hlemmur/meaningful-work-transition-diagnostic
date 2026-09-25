@@ -102,6 +102,7 @@ expectMentions(promptRegistry.pass5.text, [
   "exactClientMaterialUsed",
   "imageAnalysis",
   "literalFacts",
+  "fieldEvidenceRefs",
   "personalAssociations",
   "plausibleReadings",
   "supportsHypothesisIds",
