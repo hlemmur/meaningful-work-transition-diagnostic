@@ -1863,6 +1863,30 @@ describe("questions and close gate", () => {
     ).toBe(true);
   });
 
+  it("ignores a preamble before three numbered questions", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "Stay with these questions as inquiry tools rather than seeking immediate answers: 1. If you were guaranteed respect, would your execution freeze? 2. When you notice the pattern, what boundary feels adult to you? 3. What remains unexplained for you?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          { question: "If you were guaranteed respect, would your execution freeze?", targetUncertainty: "Whether respect removes the freeze", couldWeakenSelectedFormulation: true },
+          { question: "When you notice the pattern, what boundary feels adult to you?", targetUncertainty: "Which boundary is at stake", couldWeakenSelectedFormulation: false },
+          { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
+        ],
+      }),
+      section(
+        "close",
+        "You can treat this as a working formulation rather than a verdict.",
+        ["a1:Q1.1"],
+      ),
+    ];
+
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    expect(questionsAndCloseAdequate(sections, state).passed).toBe(true);
+  });
+
   it("fails when the questions section has fewer than three questions", () => {
     const sections = [
       section(

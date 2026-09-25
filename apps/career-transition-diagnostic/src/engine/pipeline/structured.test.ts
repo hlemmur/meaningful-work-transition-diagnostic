@@ -76,6 +76,35 @@ describe("runStructuredStage", () => {
       }),
     ).rejects.toThrow(/schema validation failed for pass3:[\s\S]*ok:/i);
   });
+
+  it("tells a Pass 9 retry to write three numbered questions", async () => {
+    const questionSchema = z.object({
+      questions: z.string().min(1, "Questions must include exactly three structured intents"),
+    });
+    const seen: Array<Record<string, unknown>> = [];
+    await runStructuredStage({
+      stage: "pass9",
+      schema: questionSchema,
+      input: {},
+      model: "mock-cheap",
+      llm: {
+        async completeStructured({ stage, input }) {
+          seen.push(input);
+          return {
+            stage,
+            fixture: "questions",
+            output: seen.length === 1 ? { questions: "" } : { questions: "1. What would you test?" },
+          };
+        },
+      },
+    });
+
+    expect(seen[1]?.schemaIssues).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/exactly three numbered questions/i),
+      ]),
+    );
+  });
 });
 
 describe("withQuestionIntents", () => {

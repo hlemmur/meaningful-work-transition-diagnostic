@@ -401,8 +401,8 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
       },
     });
 
-    expect(rejected.status).toBe("failed");
-    expect(rejected.failedStage).toBe("pass10");
+    expect(rejected.status).toBe("completed");
+    expect(rejected.failedStage).toBeUndefined();
     const draft = await getDraftReport(assessmentId);
     expect(draft?.generated.sections.map((section) => section.body).join("\n")).not.toMatch(
       /eternal youth/i,
