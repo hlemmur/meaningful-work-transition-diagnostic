@@ -833,7 +833,7 @@ function groundedReportSections(
       id: "reality",
       title: "What reality says",
       body: "Your practical constraints and missing structure are in the picture. When an image or scene arrives, it belongs here as material, not garnish.",
-      evidenceRefs: [q("Q0.4"), q("Q0.5"), q("Q10.1")],
+      evidenceRefs: [q("Q0.4"), q("Q0.5"), q("Q8.1"), q("Q10.1")],
     }),
     reportSectionSchema.parse({
       id: "contradiction",
@@ -844,6 +844,8 @@ function groundedReportSections(
         q("Q1.1"),
         q("Q1.3"),
         q("Q2.2"),
+        q("Q5.1"),
+        q("Q6.1"),
       ],
     }),
     reportSectionSchema.parse({

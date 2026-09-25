@@ -256,6 +256,21 @@ describe("negative and positive mock fixtures", () => {
     expect(result.error).toMatch(/projection|Q5|Q6|hooked/i);
   });
 
+  it("passes pass 9 for a practical-rival case that has projection figures", async () => {
+    const result = await executeAnalysis({
+      assessmentId: "origin",
+      answers: originAnswers,
+      completedStages: [],
+      llm: mockLlmAdapter,
+      persistRun() {},
+      persistCaseState() {},
+    });
+    expect(result.status, result.error).toBe("completed");
+    expect(result.failedStage).toBeUndefined();
+    const refs = result.report?.sections.flatMap((section) => section.evidenceRefs).join(" ") ?? "";
+    expect(refs).toMatch(/:Q5\.|:Q6\./);
+  });
+
   it("fails money-starved-peel when money Tier-A is omitted", async () => {
     const answers: Record<string, unknown> = {
       ...originAnswers,
