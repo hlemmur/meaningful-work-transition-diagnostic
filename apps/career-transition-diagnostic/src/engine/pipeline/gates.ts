@@ -700,7 +700,7 @@ export const CANONICAL_PEEL_TITLES: Record<string, string> = {
   contradiction: "The contradiction at the center",
   hidden: "A possible hidden position",
   developmental: "The developmental tension",
-  alternative: "Another plausible interpretation",
+  alternative: "What may also be true",
   experiment: "Your experiment",
   jungian: "A Jungian lens",
   questions: "Three questions to stay with",
@@ -717,7 +717,7 @@ const PLAIN_TITLE_BY_ID: Record<string, RegExp> = {
   contradiction: /^(the )?contradiction( at the center)?$/i,
   hidden: /^(the |a )?(possible )?hidden( position)?$/i,
   developmental: /^(the )?developmental tension$/i,
-  alternative: /^(the |another )?(plausible )?interpretation$|^(the )?alternative$/i,
+  alternative: /^(the |another )?(plausible )?interpretation$|^(the )?alternative$|^what may also be true$/i,
   experiment: /^(the |your )?experiment$/i,
   jungian: /^(the |a )?jungian lens$/i,
   questions: /^(three )?questions( to stay with)?$/i,
@@ -1105,6 +1105,61 @@ export function closeSynthesisAdequate(
   };
 }
 
+export function developmentalSectionQuality(
+  sections: ReportSection[],
+  state: CaseState,
+): GateFinding {
+  const formulation = state.finalFormulation?.developmentalFormulation;
+  const section = sections.find((item) => item.id === "developmental");
+  if (!formulation) {
+    return {
+      id: "developmental-quality",
+      passed: !section,
+      detail: section
+        ? "A practical-only case must stay depth-free."
+        : "No developmental section is required.",
+    };
+  }
+  if (!section) {
+    return {
+      id: "developmental-quality",
+      passed: true,
+      detail: "Developmental presence is checked separately.",
+    };
+  }
+  const body = section.body;
+  const problems: string[] = [];
+  if (!/not the whole of who you are/i.test(body)) {
+    problems.push("missing non-identification");
+  }
+  if (!formulation.possibleThird && !/not yet known/i.test(body)) {
+    problems.push("missing unknown third");
+  }
+  if (/childish|immature|more mature|more adult|more integrated/i.test(body)) {
+    problems.push("moral ranking of a pole");
+  }
+  if (/psyche wants|your psyche|individuation/i.test(body)) {
+    problems.push("directive or forced individuation");
+  }
+  if (/integrate both/i.test(body) && !formulation.possibleThird) {
+    problems.push("integrate both without emergence");
+  }
+  if (!/protect/i.test(body) || !/danger|hard to sustain|deadening|risk/i.test(body)) {
+    problems.push("both poles need value and danger");
+  }
+  const maintenance = state.finalFormulation?.maintenanceFormulation ?? "";
+  if (maintenance && body.trim() === maintenance.trim()) {
+    problems.push("developmental section repeats the maintenance cause");
+  }
+  return {
+    id: "developmental-quality",
+    passed: problems.length === 0,
+    detail: problems.length
+      ? `Developmental section must keep both poles provisional: ${problems.join("; ")}.`
+      : "Developmental section keeps both poles, non-identification, and an unknown or emergent third.",
+  };
+}
+
 export function developmentalSectionAdequate(
   sections: ReportSection[],
   state: CaseState,
@@ -1275,6 +1330,10 @@ export function assertPeelHardGates(sections: ReportSection[], state: CaseState)
   const developmental = developmentalSectionAdequate(sections, state);
   if (!developmental.passed) {
     throwGate(developmental);
+  }
+  const developmentalQuality = developmentalSectionQuality(sections, state);
+  if (!developmentalQuality.passed) {
+    throwGate(developmentalQuality);
   }
   const layers = reportLayerCoverage(sections, state);
   if (!layers.passed) {
