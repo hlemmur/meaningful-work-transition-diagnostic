@@ -237,7 +237,7 @@ describe("pass9OutputSchema", () => {
         evidenceRefs: [`a1:Q${index + 1}.1`],
         ...(id === "questions" ? {
           questionIntents: [
-            { question: "What evidence would weaken this formulation?", targetUncertainty: "Whether the formulation fits", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: true },
+            { question: "What evidence would weaken this formulation?", targetUncertainty: "Whether the formulation fits", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: true },
             { question: "What do you notice when you test it?", targetUncertainty: "What changes in action", relatedHypothesisId: "h2", couldWeakenSelectedFormulation: false },
             { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
           ],
@@ -245,6 +245,28 @@ describe("pass9OutputSchema", () => {
       })),
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("rejects questions that only choose among supplied explanations", () => {
+    const parsed = pass9OutputSchema.safeParse({
+      sections: REQUIRED_PEEL_SECTION_IDS.map((id, index) => ({
+        id,
+        title: id,
+        body: "A concrete evidence-backed paragraph about the stall.",
+        evidenceRefs: [`a1:Q${index + 1}.1`],
+        ...(id === "questions" ? {
+          questionIntents: [
+            { question: "Which of your two explanations do you prefer?", targetUncertainty: "Preference", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: false },
+            { question: "Which hypothesis feels closer to you?", targetUncertainty: "Fit", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: false },
+            { question: "What would you test next?", targetUncertainty: "Action", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: false },
+          ],
+        } : {}),
+      })),
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map((issue) => issue.message).join(" ")).toMatch(/whole formulation/i);
+    }
   });
 
   it("requires developmental to appear after hidden and before alternative", () => {

@@ -304,7 +304,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v14",
+    version: "pass-9.v15",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
@@ -371,8 +371,9 @@ export const promptRegistry = {
   - Each question must address the person directly using you/your.
   - Each question should genuinely arise from this person's evidence.
   - Do not answer those questions for the person.
-  - Represent each question in questionIntents with its targetUncertainty, optional relatedHypothesisId or relatedForkId, and couldWeakenSelectedFormulation.
-  - At least one question must be capable of weakening the selected formulation. Avoid leading forms that preload a motive or answer.
+  - Represent each question in questionIntents with its targetUncertainty, optional relatedHypothesisId or relatedForkId, couldWeakenSelectedFormulation, and couldInvalidateWholeFormulation.
+  - At least one question must be capable of weakening the selected formulation.
+  - At least one question must be capable of invalidating the whole formulation, not only choosing among the supplied explanations. Avoid leading forms that preload a motive or answer.
 
   Close:
   - End with a short working formulation.
@@ -385,7 +386,7 @@ export const promptRegistry = {
       title,
       body,
       evidenceRefs,
-      questionIntents?: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation }]
+      questionIntents?: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation, couldInvalidateWholeFormulation }]
     }
   }.
 
@@ -394,7 +395,7 @@ export const promptRegistry = {
   Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
-    version: "pass-10.v13",
+    version: "pass-10.v14",
     text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
 
   Fail a section when it:
@@ -431,7 +432,8 @@ export const promptRegistry = {
   - each question must address the person directly using you/your;
   - do not answer those questions for the person.
   - require structured questionIntents for all three questions, with target uncertainty and optional live hypothesis/fork relation;
-  - reject leading or preloaded questions and require at least one question that could weaken the selected formulation.
+  - reject leading or preloaded questions;
+  - require at least one question that could weaken the selected formulation and at least one that could invalidate the whole formulation, not only choose among the supplied explanations.
 
   Close section:
   - must contain a short provisional working formulation;
@@ -458,7 +460,7 @@ export const promptRegistry = {
         title,
         body,
         evidenceRefs,
-        questionIntents?: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation }]
+        questionIntents?: [{ question, targetUncertainty, relatedHypothesisId?, relatedForkId?, couldWeakenSelectedFormulation, couldInvalidateWholeFormulation }]
       }
     ]
   }.

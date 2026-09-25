@@ -209,7 +209,9 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v14");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v15");
+    expect(promptRegistry.pass9.text).toMatch(/couldInvalidateWholeFormulation/);
+    expect(promptRegistry.pass9.text).toMatch(/invalidat\w* the whole formulation/i);
     expect(promptRegistry.pass9.text).toMatch(/What may also be true/);
     expect(promptRegistry.pass9.text).not.toMatch(/Freedom is childish/i);
 
@@ -269,7 +271,9 @@ expectMentions(promptRegistry.pass8.text, [
       /you are a puer\/senex|archetypal identity/i,
     );
 
-    expect(promptRegistry.pass10.version).toBe("pass-10.v13");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v14");
+    expect(promptRegistry.pass10.text).toMatch(/couldInvalidateWholeFormulation/);
+    expect(promptRegistry.pass10.text).toMatch(/invalidat\w* the whole formulation/i);
     expect(promptRegistry.pass8.version).toBe("pass-8.v7");
     expect(promptRegistry.pass8.text).toMatch(/No result proves an unconscious motive/i);
     expect(promptRegistry.pass8.text).not.toMatch(/the result proves the unconscious motive/i);

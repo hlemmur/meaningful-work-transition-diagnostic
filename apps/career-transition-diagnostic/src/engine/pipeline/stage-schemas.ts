@@ -162,11 +162,12 @@ export const pass9OutputSchema = z.object({
       const questions = sections.find((section) => section.id === "questions");
       if (
         questions?.questionIntents?.length !== 3 ||
-        !questions.questionIntents.some((intent) => intent.couldWeakenSelectedFormulation)
+        !questions.questionIntents.some((intent) => intent.couldWeakenSelectedFormulation) ||
+        !questions.questionIntents.some((intent) => intent.couldInvalidateWholeFormulation)
       ) {
         ctx.addIssue({
           code: "custom",
-          message: "Questions must include exactly three structured intents and at least one disconfirming intent",
+          message: "Questions must include exactly three structured intents, at least one that could weaken the selected formulation, and at least one that could invalidate the whole formulation",
         });
       }
       const order = [
