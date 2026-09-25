@@ -180,11 +180,38 @@ export async function executeAnalysis(input: {
       }
 
       if (stage === "pass9") {
-        const sections = sanitizeReportSections(
-          passOutputSchemas.pass9.parse(result.output).sections,
-          caseState,
-        );
-        assertPeelHardGates(sections, caseState);
+        const acceptPass9 = (output: unknown) => {
+          const sections = sanitizeReportSections(
+            passOutputSchemas.pass9.parse(output).sections,
+            caseState,
+          );
+          assertPeelHardGates(sections, caseState);
+          return sections;
+        };
+        let sections;
+        try {
+          sections = acceptPass9(result.output);
+        } catch (error) {
+          if (!isGateError(error)) {
+            throw error;
+          }
+          result = await runStructuredStage({
+            stage,
+            schema: passOutputSchemas[stage],
+            model,
+            llm: input.llm,
+            input: {
+              ...stageInput,
+              gateIssues: [
+                error.message,
+                "Do not invent image speech, a reply, or a second turn of dialogue.",
+              ],
+            },
+          });
+          stageOutput = result.output;
+          caseState = applyStage(stage, caseState, result.output);
+          sections = acceptPass9(result.output);
+        }
         report = {
           assessmentId: input.assessmentId,
           engineVersion: ENGINE_VERSION,
