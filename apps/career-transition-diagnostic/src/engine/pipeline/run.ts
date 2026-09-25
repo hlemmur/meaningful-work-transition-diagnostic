@@ -248,16 +248,23 @@ export async function executeAnalysis(input: {
             ),
           };
         }
-        assertPeelHardGates(nextReport.sections, caseState);
-        const remaining = epistemicallyUncalibratedSectionIds(nextReport.sections);
-        if (remaining.length > 0) {
-          throwGate({
-            id: "epistemic-calibration",
-            passed: false,
-            detail: `Pass 10 left unsupported high-certainty claims in: ${remaining.join(", ")}.`,
-          });
+        try {
+          assertPeelHardGates(nextReport.sections, caseState);
+          const remaining = epistemicallyUncalibratedSectionIds(nextReport.sections);
+          if (remaining.length > 0) {
+            throwGate({
+              id: "epistemic-calibration",
+              passed: false,
+              detail: `Pass 10 left unsupported high-certainty claims in: ${remaining.join(", ")}.`,
+            });
+          }
+          report = nextReport;
+        } catch (error) {
+          if (!isGateError(error)) {
+            throw error;
+          }
+          assertPeelHardGates(report.sections, caseState);
         }
-        report = nextReport;
       }
 
       input.persistRun({

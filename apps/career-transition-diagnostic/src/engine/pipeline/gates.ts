@@ -897,7 +897,11 @@ export function questionsAndCloseAdequate(
   const liveHypotheses = new Set(state?.hypotheses.map((hypothesis) => hypothesis.id) ?? []);
   const liveForks = new Set(state?.forkResolutions.map((fork) => fork.forkId) ?? []);
   const leading = /\b(?:why do you|what makes you|don't you|isn't it|wouldn't you|surely)\b/i;
-  const renderedQuestions = (questions.body.match(/[^?]+\?/g) ?? []).map((question) =>
+  const numberedQuestions = questions.body.match(/\d+[.)]\s*[^?]+\?/g) ?? [];
+  const renderedQuestions = (numberedQuestions.length === 3
+    ? numberedQuestions
+    : questions.body.match(/[^?]+\?/g) ?? []
+  ).map((question) =>
     normalize(question.replace(/^\s*\d+[.)]\s*/, "")),
   );
   const intentQuestions = intents.map((intent) => normalize(intent.question));

@@ -106,6 +106,15 @@ export async function runStructuredStage(input: {
     }
     lastError = parsed.error;
     previousIssues = schemaIssueLines(parsed.error);
+    if (
+      input.stage === "pass9" &&
+      previousIssues.some((issue) => /question/i.test(issue))
+    ) {
+      previousIssues = [
+        ...previousIssues,
+        "The questions section body must contain exactly three numbered questions, each ending with a question mark. questionIntents must list those three questions, and at least one couldWeakenSelectedFormulation must be true.",
+      ];
+    }
   }
   throw new StructuredStageError(input.stage, 2, lastError, previousIssues, lastOutput);
 }

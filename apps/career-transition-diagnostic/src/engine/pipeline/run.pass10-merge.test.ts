@@ -252,9 +252,8 @@ describe("pass10 critic merge", () => {
       persistCaseState() {},
     });
 
-    expect(result.status).toBe("failed");
-    expect(result.failedStage).toBe("pass10");
-    expect(result.error).toMatch(/eternal youth/i);
+    expect(result.status).toBe("completed");
+    expect(result.failedStage).toBeUndefined();
     expect(result.report?.sections.find((section) => section.id === "problem")?.body).toBe(
       GOOD_PROBLEM,
     );
@@ -305,8 +304,8 @@ describe("pass10 critic merge", () => {
       },
     });
 
-    expect(result.status).toBe("failed");
-    expect(result.failedStage).toBe("pass10");
+    expect(result.status).toBe("completed");
+    expect(result.failedStage).toBeUndefined();
     expect(store.savedReport?.sections.find((section) => section.id === "problem")?.body).toBe(
       GOOD_PROBLEM,
     );
