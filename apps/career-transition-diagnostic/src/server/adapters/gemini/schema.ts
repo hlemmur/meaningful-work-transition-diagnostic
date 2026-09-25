@@ -69,7 +69,7 @@ export function jsonSchemaForStage(stage: string) {
       return requirePass6LayerRelationship(schema);
     }
     if (stage === "pass8") {
-      return requireNullablePass8ManipulatedVariable(schema);
+      return requirePass8LayerUpdates(requireNullablePass8ManipulatedVariable(schema));
     }
     return schema;
   }
@@ -85,6 +85,31 @@ function requirePass6LayerRelationship(schema: JsonSchema) {
   }
   const required = Array.isArray(formulation.required) ? formulation.required as string[] : [];
   formulation.required = [...new Set([...required, "layerRelationship"])];
+  return schema;
+}
+
+function requirePass8LayerUpdates(schema: JsonSchema) {
+  const properties = schema.properties as JsonSchema | undefined;
+  const experiments = properties?.experiments as JsonSchema | undefined;
+  const item = experiments?.items as JsonSchema | undefined;
+  const itemProperties = item?.properties as JsonSchema | undefined;
+  const outcomes = itemProperties?.outcomeInterpretations as JsonSchema | undefined;
+  const outcomeItem = outcomes?.items as JsonSchema | undefined;
+  const outcomeProperties = outcomeItem?.properties as JsonSchema | undefined;
+  if (!item || !itemProperties || !outcomeItem || !outcomeProperties?.layerUpdates) {
+    return schema;
+  }
+  const experimentRequired = Array.isArray(item.required) ? item.required as string[] : [];
+  item.required = [...new Set([
+    ...experimentRequired,
+    "sessionMinutes",
+    "audienceCount",
+    "exposure",
+    "reversible",
+    "outcomeInterpretations",
+  ])];
+  const outcomeRequired = Array.isArray(outcomeItem.required) ? outcomeItem.required as string[] : [];
+  outcomeItem.required = [...new Set([...outcomeRequired, "layerUpdates"])];
   return schema;
 }
 

@@ -98,6 +98,19 @@ describe("Gemini schema sanitizer", () => {
     expect(properties.matureExpression).toEqual(expect.objectContaining({ nullable: true }));
   });
 
+  it("requires independent layer updates on Pass 8 Gemini outcomes", () => {
+    const pass8 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass8")).properties);
+    const experiment = asObject(asObject(pass8.experiments).items);
+    expect(experiment.required).toEqual(expect.arrayContaining([
+      "sessionMinutes",
+      "audienceCount",
+      "exposure",
+      "reversible",
+    ]));
+    const outcome = asObject(asObject(asObject(experiment.properties).outcomeInterpretations).items);
+    expect(outcome.required).toContain("layerUpdates");
+  });
+
   it("keeps the Pass 8 manipulated variable as a required nullable Gemini property", () => {
     const pass8 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass8")).properties);
     const experiments = asObject(pass8.experiments);

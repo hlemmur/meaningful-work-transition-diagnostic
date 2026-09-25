@@ -268,7 +268,9 @@ expectMentions(promptRegistry.pass8.text, [
     );
 
     expect(promptRegistry.pass10.version).toBe("pass-10.v13");
-    expect(promptRegistry.pass8.version).toBe("pass-8.v6");
+    expect(promptRegistry.pass8.version).toBe("pass-8.v7");
+    expect(promptRegistry.pass8.text).toMatch(/No result proves an unconscious motive/i);
+    expect(promptRegistry.pass8.text).not.toMatch(/the result proves the unconscious motive/i);
     expect(promptRegistry.pass6.version).toBe("pass-6.v8");
     expect(promptRegistry.pass6.text).toMatch(/practical_primary/);
     expect(promptRegistry.pass6.text).toMatch(/psychological_primary/);
