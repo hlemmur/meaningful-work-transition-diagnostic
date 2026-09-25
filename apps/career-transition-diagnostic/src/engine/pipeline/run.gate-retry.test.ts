@@ -96,7 +96,7 @@ function pass8Output(action: string) {
   };
 }
 
-function llm(handler: (request: StructuredLlmRequest) => unknown): LlmAdapter {
+function llm(handler: (request: StructuredLlmRequest) => Record<string, unknown>): LlmAdapter {
   return {
     async completeStructured(request) {
       return {
@@ -168,6 +168,6 @@ describe("deterministic gate retry", () => {
     expect(result.failedStage).toBe("pass8");
     expect(result.error).toMatch(/heldConstant/i);
     expect(calls).toHaveLength(2);
-    expect(calls[1]?.input.gateIssues?.[0]).toMatch(/heldConstant/i);
+    expect((calls[1]?.input.gateIssues as string[])[0]).toMatch(/heldConstant/i);
   });
 });
