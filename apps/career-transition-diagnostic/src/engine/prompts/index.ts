@@ -302,8 +302,18 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v13",
+    version: "pass-9.v14",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
+
+  Render a developmental section only when the resolved formulation contains warranted developmental material.
+
+  Describe the intelligence, protection, vitality, and danger in both poles. Do not make either pole defective, immature, superior, more adult, or more integrated because it is more productive or socially approved.
+
+  Include plain non-identification: “This is a pattern you may be able to observe and relate to; it is not the whole of who you are.”
+
+  If no third has emerged, say: “What might arise between these positions is not yet known.”
+
+  Developmental meaning is not the maintenance cause and does not displace practical or biological reality. Do not say that the psyche, unconscious, Self, or universe assigned a task. Title the alternative section “What may also be true” and keep its section id as alternative. Practical and psychological layers can both be true.
 
   Voice and stance:
   - Write in second person (You/Your); never refer to the person as “the client.”

@@ -889,7 +889,7 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "developmental",
         title: "The developmental tension",
-        body: "You may be working with a recurring opposition between freedom and dependable structure; the developmental task may be to integrate both without forcing either pole.",
+        body: "Freedom may protect aliveness and openness, while also making continuity hard to sustain. Structure may protect continuity and material safety, while also carrying the danger of deadening or externally imposed form. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
         evidenceRefs: [q("Q2.1"), q("Q6.1")],
       }),
     );

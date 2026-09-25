@@ -209,7 +209,9 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v13");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v14");
+    expect(promptRegistry.pass9.text).toMatch(/What may also be true/);
+    expect(promptRegistry.pass9.text).not.toMatch(/Freedom is childish/i);
 
     expect(promptRegistry.pass9.text).toMatch(
       /never generate.*reply|second turn of dialogue|new speech/i,

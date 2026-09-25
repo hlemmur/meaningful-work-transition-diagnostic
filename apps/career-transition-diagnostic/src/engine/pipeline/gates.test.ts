@@ -24,6 +24,7 @@ import {
   somaticProvenance,
   questionsAndCloseAdequate,
   developmentalSectionAdequate,
+  developmentalSectionQuality,
   epistemicallyUncalibratedSectionIds,
   closeSynthesisAdequate,
 } from "./gates";
@@ -2148,6 +2149,50 @@ describe("questions and close gate", () => {
     };
     expect(closeSynthesisAdequate([
       section("close", "The pattern and practical unknowns remain; evidence could change it.", ["a1:Q1.1"]),
+    ], state).passed).toBe(false);
+  });
+
+  it("accepts a developmental section that keeps value, danger, and an unknown third", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "Waiting for certainty sustains delay.",
+      maintenanceMechanism: {
+        trigger: "A visible next step appears.", response: "Action pauses.", shortTermFunction: "Uncertainty falls.", longTermCost: "Evidence stays scarce.", reinforcingConsequence: "More certainty feels necessary.",
+      },
+      developmentalFormulation: {
+        consciousPole: "freedom",
+        compensatingPole: "structure",
+        coreOpposition: "freedom and structure",
+        possibleDevelopmentalTask: "Relate to freedom and structure without ranking either pole.",
+        uncertainty: "ADHD remains true.",
+        evidenceRefs: ["a1:Q2.1", "a1:Q6.1"],
+      },
+      whyItFits: ["Delay recurs."],
+      whatItDoesNotExplain: ["Market fit."],
+      strongestAlternative: "The role may simply be a poor job-shape match.",
+      unresolvedForks: [],
+    };
+    const good = "Freedom may protect aliveness and openness, while also making continuity hard to sustain. Structure may protect continuity and material safety, while also carrying the danger of deadening or externally imposed form. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.";
+    expect(developmentalSectionQuality([
+      section("developmental", good, ["a1:Q2.1"]),
+    ], state).passed).toBe(true);
+    for (const bad of [
+      "Freedom is childish; structure is mature. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
+      "Your psyche wants discipline. Freedom may protect aliveness while structure carries danger. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
+      "Integrate both. Freedom may protect aliveness while structure carries the danger of deadening. This is a pattern you may be able to observe and relate to; it is not the whole of who you are.",
+    ]) {
+      expect(developmentalSectionQuality([
+        section("developmental", bad, ["a1:Q2.1"]),
+      ], state).passed, bad).toBe(false);
+    }
+    state.finalFormulation = {
+      ...state.finalFormulation,
+      developmentalFormulation: undefined,
+    };
+    expect(developmentalSectionQuality([], state).passed).toBe(true);
+    expect(developmentalSectionQuality([
+      section("developmental", good, ["a1:Q2.1"]),
     ], state).passed).toBe(false);
   });
 
