@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forkIdSchema } from "@/engine/schemas/analysis";
+import { experimentSchema, forkIdSchema } from "@/engine/schemas/analysis";
 import { pass3OutputSchema, pass5OutputSchema } from "@/engine/pipeline/stage-schemas";
 import {
   coerceLiveStructuredOutput,
@@ -133,6 +133,34 @@ describe("Gemini schema sanitizer", () => {
     expect(properties.possibleDisownedValue).toEqual(expect.objectContaining({ nullable: true }));
     expect(properties.literalEnactmentRisk).toEqual(expect.objectContaining({ nullable: true }));
     expect(properties.matureExpression).toEqual(expect.objectContaining({ nullable: true }));
+  });
+
+  it("does not send exclusiveMinimum on the Pass 8 Gemini schema", () => {
+    const pass8 = sanitizeGeminiSchema(jsonSchemaForStage("pass8"));
+    expect(JSON.stringify(pass8)).not.toContain("exclusiveMinimum");
+    expect(JSON.stringify(pass8)).not.toContain("exclusiveMaximum");
+    const experiments = asObject(asObject(pass8.properties).experiments);
+    const properties = asObject(asObject(experiments.items).properties);
+    expect(properties.sessionMinutes).toEqual({
+      type: "integer",
+      minimum: 1,
+      maximum: 180,
+    });
+    expect(properties.audienceCount).toEqual({
+      type: "integer",
+      minimum: 0,
+      maximum: 20,
+    });
+  });
+
+  it("still rejects a non-positive or oversized session length in Zod", () => {
+    expect(experimentSchema.shape.sessionMinutes.safeParse(0).success).toBe(false);
+    expect(experimentSchema.shape.sessionMinutes.safeParse(181).success).toBe(false);
+    expect(experimentSchema.shape.sessionMinutes.safeParse(1).success).toBe(true);
+    expect(experimentSchema.shape.sessionMinutes.safeParse(180).success).toBe(true);
+    expect(experimentSchema.shape.audienceCount.safeParse(-1).success).toBe(false);
+    expect(experimentSchema.shape.audienceCount.safeParse(0).success).toBe(true);
+    expect(experimentSchema.shape.audienceCount.safeParse(20).success).toBe(true);
   });
 
   it("requires independent layer updates on Pass 8 Gemini outcomes", () => {

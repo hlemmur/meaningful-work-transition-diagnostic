@@ -235,7 +235,27 @@ function stripUnsupported(node: unknown): unknown {
     }
     out[key] = stripUnsupported(value);
   }
-  return withPropertyOrdering(collapseNullUnionObject(out));
+  return withPropertyOrdering(collapseNullUnionObject(rewriteExclusiveBounds(out)));
+}
+
+function rewriteExclusiveBounds(obj: JsonSchema): JsonSchema {
+  if (typeof obj.exclusiveMinimum !== "number" && typeof obj.exclusiveMaximum !== "number") {
+    return obj;
+  }
+  const next = { ...obj };
+  if (typeof next.exclusiveMinimum === "number") {
+    const inclusive = next.type === "integer" ? next.exclusiveMinimum + 1 : next.exclusiveMinimum;
+    const current = typeof next.minimum === "number" ? next.minimum : undefined;
+    next.minimum = current === undefined ? inclusive : Math.max(current, inclusive);
+    delete next.exclusiveMinimum;
+  }
+  if (typeof next.exclusiveMaximum === "number") {
+    const inclusive = next.type === "integer" ? next.exclusiveMaximum - 1 : next.exclusiveMaximum;
+    const current = typeof next.maximum === "number" ? next.maximum : undefined;
+    next.maximum = current === undefined ? inclusive : Math.min(current, inclusive);
+    delete next.exclusiveMaximum;
+  }
+  return next;
 }
 
 function collapseNullUnionObject(obj: JsonSchema): JsonSchema {
