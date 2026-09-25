@@ -11,6 +11,7 @@ import {
   imaginalWhenSpeech,
 } from "@/engine/pipeline/gates";
 import { isRequestedInsightSpine } from "@/engine/pipeline/report-grounding";
+import { evaluateDevelopmentalQualification } from "./developmental-qualification";
 
 export type SoftDimId =
   | "surprise"
@@ -19,7 +20,9 @@ export type SoftDimId =
   | "aim_sibling"
   | "projection_gold"
   | "affect_grounding"
-  | "bridge_to_11";
+  | "bridge_to_11"
+  | "symbolic_vitality"
+  | "subjective_depth";
 
 export type FrameworkScore = {
   id: string;
@@ -182,6 +185,10 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
   const imaginal = imaginalWhenSpeech(sections, caseState);
   scores.push(score("imaginal_when_speech", imaginal.passed, imaginal.detail, false));
 
+  for (const item of evaluateDevelopmentalQualification(caseState, sections).scores) {
+    scores.push(score(item.id, item.passed, item.detail, item.hard));
+  }
+
   const affectIndicated =
     (caseState.affect.chargeIntensity ?? 0) >= 1 || caseState.affect.emotions.length > 0;
   if (affectIndicated) {
@@ -228,6 +235,14 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
       {
         id: "bridge_to_11",
         question: "Would 1:1 feel like continuation of this inquiry?",
+      },
+      {
+        id: "symbolic_vitality",
+        question: "Did the symbol stay alive, with residue the formulation did not absorb? Mentor rating only; not a hard score.",
+      },
+      {
+        id: "subjective_depth",
+        question: "Did the report produce a felt recognition that was not already the client's theory? Mentor rating only; surprise is not auto-scored.",
       },
     ],
   };

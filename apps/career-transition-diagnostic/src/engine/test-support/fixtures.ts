@@ -600,8 +600,14 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis for you: freedom while an external container still carries authority and money. Your protection keeps lightness; the developmental aim may be structure in service of aliveness. The bargain protects ethereal identity while the pipe image marks a threshold mid-crossing.",
+        body: "One hypothesis for you: freedom while an external container still carries authority and money. Your protection keeps lightness; the developmental aim may be structure in service of aliveness. The bargain protects ethereal identity while the pipe image marks a threshold mid-crossing. One reading is a lost container; another reading is an ordinary practical route, and the darkness remains unresolved. The admired quality may be a value not yet owned directly.",
         evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q10.1")],
+      }),
+      reportSectionSchema.parse({
+        id: "developmental",
+        title: "The developmental tension",
+        body: "Freedom may protect aliveness and openness, while also making continuity hard to sustain. Structure may protect continuity and material safety, while also carrying the danger of deadening or externally imposed form. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known. ADHD and financial pressure remain true alongside this opposition.",
+        evidenceRefs: [q("Q2.1"), q("Q6.1")],
       }),
       reportSectionSchema.parse({
         id: "alternative",
@@ -798,7 +804,7 @@ function groundedReportSections(
       reportSectionSchema.parse({
         id: "hidden",
         title: "A possible hidden position",
-        body: "One hypothesis for you: your protection keeps cool distance while the developmental aim may be structure in service of aliveness — owning pace without collapsing into grind-only identity.",
+        body: "One hypothesis for you: your protection keeps cool distance while the developmental aim may be structure in service of aliveness — owning pace without collapsing into grind-only identity. One reading is a locked gate; another reading is an ordinary route, and the latch remains unresolved. The admired pace may be a value not yet owned directly.",
         evidenceRefs: [q("Q9.2"), q("Q9.3"), q("Q10.6")],
       }),
       reportSectionSchema.parse({
@@ -870,7 +876,7 @@ function groundedReportSections(
         title: "A possible hidden position",
         body: fixture === "symbol-split-lead"
           ? "Your protection may keep possibility intact while the developmental aim may be structure in service of aliveness. The gate image supports both an authorization reading and an ordinary route-clarity reading, so its meaning remains unresolved rather than settled."
-          : "One hypothesis is that your protection keeps possibility intact while the developmental aim may be structure in service of aliveness — without collapsing into grind-only identity. Ask what the image's voice wants at the scene you keep circling.",
+          : "One hypothesis is that your protection keeps possibility intact while the developmental aim may be structure in service of aliveness — without collapsing into grind-only identity. One reading stays with the image's voice; another reading stays unresolved. Ask what the image's voice wants at the scene you keep circling. A hooked quality may be a value not yet owned directly.",
         evidenceRefs: [q("Q1.3"), q("Q2.1"), q("Q10.1")],
       }),
     );
@@ -987,11 +993,11 @@ function finalFormulationFor(
     strongestAlternative:
       practical.observedPattern,
 
-    ...(fixture === "cross-domain-polarity" ? {
+    ...(fixture === "cross-domain-polarity" || fixture === "origin-gold" ? {
       developmentalFormulation: {
-        consciousPole: "freedom without imposed form",
-        compensatingPole: "dependable structure and commitment",
-        coreOpposition: "freedom versus dependable structure",
+        consciousPole: fixture === "origin-gold" ? "freedom" : "freedom without imposed form",
+        compensatingPole: fixture === "origin-gold" ? "structure" : "dependable structure and commitment",
+        coreOpposition: fixture === "origin-gold" ? "freedom and structure" : "freedom versus dependable structure",
         possibleDevelopmentalTask: "Integrate freedom with dependable structure.",
         uncertainty: "The practical explanation remains live.",
         evidenceRefs: [`${assessmentId}:Q2.1`, `${assessmentId}:Q6.1`],
