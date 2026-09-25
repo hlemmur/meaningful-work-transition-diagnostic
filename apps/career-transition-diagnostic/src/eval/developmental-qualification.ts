@@ -183,6 +183,29 @@ export function evaluateDevelopmentalWarrant(state: CaseState, sections: ReportS
   return { kinds, eligible, mode, bodyStatus, suppliedBody, text };
 }
 
+const GENERIC_READING_WORDS = new Set([
+  "a",
+  "an",
+  "its",
+  "one",
+  "only",
+  "possible",
+  "same",
+  "single",
+  "that",
+  "the",
+  "this",
+]);
+
+function symbolReadingsStayOpen(text: string) {
+  if (/another reading|second reading/i.test(text)) return true;
+  if (/\bboth\b[^.]{0,120}\breadings?\b/i.test(text)) return true;
+  const mentions = [...text.matchAll(/\b([a-z][\w-]*)\s+reading\b/gi)]
+    .map((match) => match[1]?.toLocaleLowerCase() ?? "")
+    .filter((word) => word && !GENERIC_READING_WORDS.has(word));
+  return new Set(mentions).size >= 2;
+}
+
 function score(
   id: QualificationScore["id"],
   passed: boolean,
@@ -231,7 +254,7 @@ export function evaluateDevelopmentalQualification(
     /only possible reading|the image simply means|nothing about the image remains unresolved/i.test(text) ||
     (readings.length >= 2 &&
       Boolean(state.imageAnalysis?.unresolvedSymbolicQuestion) &&
-      !/another reading|second reading/i.test(text));
+      !symbolReadingsStayOpen(text));
   const scores: QualificationScore[] = [
     score(
       "developmental_restraint",

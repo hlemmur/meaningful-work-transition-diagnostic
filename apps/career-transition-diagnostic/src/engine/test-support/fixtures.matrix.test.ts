@@ -109,9 +109,15 @@ describe("negative and positive mock fixtures", () => {
     expect(result.caseState.imageAnalysis?.plausibleReadings.length).toBeGreaterThanOrEqual(2);
     expect(result.caseState.imageAnalysis?.unresolvedSymbolicQuestion).toBeTruthy();
     expect(result.caseState.finalFormulation?.unresolvedForks.length).toBeGreaterThan(0);
-    expect(result.report?.sections.map((section) => section.body).join("\n")).toMatch(
-      /authorization.*route-clarity.*unresolved/i,
-    );
+    const prose = result.report?.sections.map((section) => section.body).join("\n") ?? "";
+    expect(prose).toMatch(/authorization.*route-clarity.*unresolved/i);
+    expect(prose).not.toMatch(/another reading|second reading/i);
+    const fidelity = evaluateFrameworkFidelity({
+      answers: { "Q1.1": "SYMBOL_SPLIT_LEAD" },
+      caseState: result.caseState,
+      report: result.report!,
+    });
+    expect(fidelity.scores.find((score) => score.id === "symbol_closure")?.passed).toBe(true);
   });
 
   it("completes the default mock pipeline when rich image material requires a substantive vote", async () => {

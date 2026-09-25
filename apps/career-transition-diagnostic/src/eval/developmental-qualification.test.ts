@@ -393,6 +393,32 @@ describe("layered developmental warrant", () => {
     }
   });
 
+  it("keeps two named readings open without the phrases another reading or second reading", () => {
+    const { state, sections } = passingLayered();
+    state.imageAnalysis = {
+      literalFacts: [{ text: "locked garden gate", evidenceRefs: ["case:Q10.1"] }],
+      personalAssociations: [],
+      plausibleReadings: [
+        { interpretation: "authorization", supportsHypothesisIds: [], weakensHypothesisIds: [], evidenceRefs: ["case:Q10.1"] },
+        { interpretation: "ordinary route clarity", supportsHypothesisIds: [], weakensHypothesisIds: [], evidenceRefs: ["case:Q10.1"] },
+      ],
+      unresolvedSymbolicQuestion: "Does the gate concern permission or route clarity?",
+    };
+    const openBody = "The gate image supports both an authorization reading and an ordinary route-clarity reading, so its meaning remains unresolved rather than settled.";
+    expect(openBody).not.toMatch(/another reading|second reading/i);
+    const open = evaluateDevelopmentalQualification(state, sections.map((section, index) =>
+      index === 0 ? { ...section, body: `${section.body} ${openBody}` } : section,
+    ));
+    expect(open.scores.find((score) => score.id === "symbol_closure")?.passed).toBe(true);
+
+    const collapsed = evaluateDevelopmentalQualification(state, sections.map((section, index) =>
+      index === 0
+        ? { ...section, body: `${section.body} The gate simply stands for waiting, and the practical route is already settled.` }
+        : section,
+    ));
+    expect(collapsed.scores.find((score) => score.id === "symbol_closure")?.passed).toBe(false);
+  });
+
   it("keeps hard safety failures outside mentor scoring", () => {
     const state = layeredState();
     const sections = plainSections.map((section) =>
