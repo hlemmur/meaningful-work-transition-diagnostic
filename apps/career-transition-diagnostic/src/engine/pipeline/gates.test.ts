@@ -2500,4 +2500,94 @@ describe("questions and close gate", () => {
     expect(result.passed).toBe(false);
     expect(result.detail).toMatch(/proof that another is primary/i);
   });
+
+  it("accepts a close that says the formulation should be updated and names the developmental task", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "The cycle repeats because making big outward leaps creates an image of decisive courage, while freezing at the point of commercial exposure protects an idealized sense of potential from being tested and judged by reality.",
+      maintenanceMechanism: {
+        trigger: "Commercial exposure.",
+        response: "Freezing.",
+        shortTermFunction: "Potential stays untested.",
+        longTermCost: "The offer stays private.",
+        reinforcingConsequence: "The image of courage remains.",
+      },
+      developmentalFormulation: {
+        consciousPole: "independence",
+        compensatingPole: "containment",
+        coreOpposition: "potential versus accountability",
+        possibleDevelopmentalTask: "Tolerating ordinary, imperfect visibility and routine containment without interpreting structure as a loss of soul or freedom.",
+        uncertainty: "The third is unknown.",
+        evidenceRefs: ["a1:Q2.1", "a1:Q6.1"],
+      },
+      whyItFits: ["Exposure freezes."],
+      whatItDoesNotExplain: ["Skill."],
+      strongestAlternative: "Loss of institutional scaffolding and ADHD executive collapse, where the absence of external deadlines and direct dependencies dissolves operational momentum regardless of psychological conflict.",
+      unresolvedForks: [],
+    };
+    const stored = "As a provisional working formulation, your transition appears suspended between two intertwined layers: practical ADHD executive disruption following the removal of corporate scaffolding, and a protective maintenance loop where freezing at the point of commercial exposure preserves an idealized sense of potential and shields you from public evaluation. The strongest alternative remains that your paralysis is fundamentally an operational container deficit compounded by the steep learning curve of client acquisition under acute financial pressure. Whether 1-to-1 coaching represents your true occupational vehicle or an unsustainable bridge remains an open question. This formulation should be updated based on how your nervous system responds to low-stakes external sharing and structured accountability.";
+    const withTask = `${stored} The developmental task is tolerating ordinary visibility and routine containment.`;
+    expect(closeSynthesisAdequate([
+      section("close", withTask, ["a1:Q1.1"]),
+    ], state).passed).toBe(true);
+    expect(closeSynthesisAdequate([
+      section("close", withTask.replace("updated", "updating"), ["a1:Q1.1"]),
+    ], state).passed).toBe(true);
+  });
+
+  it("still rejects the stored close when it omits the developmental task", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "The cycle repeats because making big outward leaps creates an image of decisive courage, while freezing at the point of commercial exposure protects an idealized sense of potential from being tested and judged by reality.",
+      maintenanceMechanism: {
+        trigger: "Commercial exposure.",
+        response: "Freezing.",
+        shortTermFunction: "Potential stays untested.",
+        longTermCost: "The offer stays private.",
+        reinforcingConsequence: "The image of courage remains.",
+      },
+      developmentalFormulation: {
+        consciousPole: "independence",
+        compensatingPole: "containment",
+        coreOpposition: "potential versus accountability",
+        possibleDevelopmentalTask: "Tolerating ordinary, imperfect visibility and routine containment without interpreting structure as a loss of soul or freedom.",
+        uncertainty: "The third is unknown.",
+        evidenceRefs: ["a1:Q2.1", "a1:Q6.1"],
+      },
+      whyItFits: ["Exposure freezes."],
+      whatItDoesNotExplain: ["Skill."],
+      strongestAlternative: "Loss of institutional scaffolding and ADHD executive collapse, where the absence of external deadlines and direct dependencies dissolves operational momentum regardless of psychological conflict.",
+      unresolvedForks: [],
+    };
+    const stored = "As a provisional working formulation, your transition appears suspended between two intertwined layers: practical ADHD executive disruption following the removal of corporate scaffolding, and a protective maintenance loop where freezing at the point of commercial exposure preserves an idealized sense of potential and shields you from public evaluation. The strongest alternative remains that your paralysis is fundamentally an operational container deficit compounded by the steep learning curve of client acquisition under acute financial pressure. Whether 1-to-1 coaching represents your true occupational vehicle or an unsustainable bridge remains an open question. This formulation should be updated based on how your nervous system responds to low-stakes external sharing and structured accountability.";
+    const finding = closeSynthesisAdequate([
+      section("close", stored, ["a1:Q1.1"]),
+    ], state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/warranted development/i);
+  });
+
+  it("rejects updated wording that does not synthesize the maintenance formulation", () => {
+    const state = extractCaseStateFull("a1", originAnswers);
+    state.finalFormulation = {
+      selectedHypothesisId: "h1",
+      maintenanceFormulation: "Waiting for certainty sustains delay.",
+      maintenanceMechanism: {
+        trigger: "A visible next step appears.",
+        response: "Action pauses.",
+        shortTermFunction: "Uncertainty falls.",
+        longTermCost: "Evidence stays scarce.",
+        reinforcingConsequence: "More certainty feels necessary.",
+      },
+      whyItFits: ["Delay recurs."],
+      whatItDoesNotExplain: ["Market fit."],
+      strongestAlternative: "The role may simply be a poor job-shape match.",
+      unresolvedForks: [],
+    };
+    expect(closeSynthesisAdequate([
+      section("close", "A different story remains open, and the formulation should be updated later.", ["a1:Q1.1"]),
+    ], state).passed).toBe(false);
+  });
 });

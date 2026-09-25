@@ -1104,7 +1104,7 @@ export function closeSynthesisAdequate(
     mentionsSource(body, formulation.strongestAlternative) &&
     (!formulation.developmentalFormulation || mentionsSource(body, formulation.developmentalFormulation.possibleDevelopmentalTask)) &&
     /\b(?:unknown|unresolved|uncertain|remains?)\b/i.test(body) &&
-    /\b(?:evidence|update|revise|weaken|change)\b/i.test(body);
+    /\b(?:evidence|updat(?:e|ed|ing)|revis(?:e|ed|ing)|weaken(?:s|ed|ing)?|chang(?:e|es|ed|ing))\b/i.test(body);
   return {
     id: "close-synthesis",
     passed: complete,
