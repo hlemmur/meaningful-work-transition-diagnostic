@@ -112,7 +112,7 @@ export async function runStructuredStage(input: {
     ) {
       previousIssues = [
         ...previousIssues,
-        "The questions section body must contain exactly three numbered questions, each ending with a question mark. questionIntents must list those three questions, and at least one couldWeakenSelectedFormulation must be true.",
+        "The questions section body must contain exactly three numbered questions, each ending with a question mark. questionIntents must list those three questions, at least one couldWeakenSelectedFormulation must be true, and at least one couldInvalidateWholeFormulation must be true.",
       ];
     }
   }

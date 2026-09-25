@@ -210,7 +210,8 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v15");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v16");
+    expect(promptRegistry.pass9.text).toMatch(/questions section must return questionIntents/i);
     expect(promptRegistry.pass9.text).toMatch(/couldInvalidateWholeFormulation/);
     expect(promptRegistry.pass9.text).toMatch(/invalidat\w* the whole formulation/i);
     expect(promptRegistry.pass9.text).toMatch(/What may also be true/);

@@ -71,6 +71,9 @@ export function jsonSchemaForStage(stage: string) {
     if (stage === "pass8") {
       return requirePass8LayerUpdates(requireNullablePass8ManipulatedVariable(schema));
     }
+    if (stage === "pass9") {
+      return requirePass9QuestionIntents(schema);
+    }
     return schema;
   }
   return z.toJSONSchema(z.object({ ok: z.boolean() })) as JsonSchema;
@@ -106,6 +109,23 @@ function requirePass6DevelopmentalFormulation(schema: JsonSchema) {
     developmental.required = [...new Set([...developmentalRequired, "possibleThird"])];
   }
   formulationProperties.developmentalFormulation = { ...developmental, nullable: true };
+  return schema;
+}
+
+function requirePass9QuestionIntents(schema: JsonSchema) {
+  const properties = schema.properties as JsonSchema | undefined;
+  const sections = properties?.sections as JsonSchema | undefined;
+  const item = sections?.items as JsonSchema | undefined;
+  const itemProperties = item?.properties as JsonSchema | undefined;
+  const intents = itemProperties?.questionIntents as JsonSchema | undefined;
+  const intentItem = intents?.items as JsonSchema | undefined;
+  if (!item || !intentItem) {
+    return schema;
+  }
+  const sectionRequired = Array.isArray(item.required) ? item.required as string[] : [];
+  item.required = [...new Set([...sectionRequired, "questionIntents"])];
+  const intentRequired = Array.isArray(intentItem.required) ? intentItem.required as string[] : [];
+  intentItem.required = [...new Set([...intentRequired, "couldInvalidateWholeFormulation"])];
   return schema;
 }
 
