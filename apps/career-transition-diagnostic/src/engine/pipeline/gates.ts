@@ -1079,9 +1079,10 @@ export function imaginalWhenSpeech(
     .join("\n");
 
   const generatedSecondTurn =
-    /\b(?:you|the image|the figure|the obstacle)\s+(?:reply|replies|respond|responds|answer|answers|whisper|whispers)\b/i.test(
+    /\b(?:the image|the figure|the obstacle)\s+(?:reply|replies|respond|responds|answer|answers|whisper|whispers)\b/i.test(
       text,
-    );
+    ) ||
+    /\byou\s+(?:reply|replies|whisper|whispers)\b/i.test(text);
 
   const scriptedExchange =
     /\byou ask\b[\s\S]{0,180}\b(?:it|the image|the figure|the obstacle)\s+(?:says|replies|responds|answers)\b/i.test(

@@ -1307,6 +1307,50 @@ describe("soft-depth conditional peel gates", () => {
     );
   });
 
+  it("does not treat watching how you respond as image dialogue", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+    state.symbolicMaterial.obstacleSpeech = "you are lost. you failed.";
+    const sections = [
+      section(
+        "experiment",
+        "Try two weeks of body-doubling. Moving forward, watching how you respond to structured body-doubling across both weeks.",
+        ["g1:Q1.1"],
+      ),
+    ];
+
+    expect(imaginalWhenSpeech(sections, state).passed).toBe(true);
+  });
+
+  it("does not treat you answer as image dialogue", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    const sections = [
+      section(
+        "questions",
+        "What would you answer if the next step stayed private?",
+        ["g1:Q1.1"],
+      ),
+    ];
+
+    expect(imaginalWhenSpeech(sections, state).passed).toBe(true);
+  });
+
+  it("rejects a reply spoken by the image", () => {
+    const state = extractCaseStateFull("g1", {
+      "Q1.1": "stall",
+    });
+    const sections = [
+      section(
+        "jungian",
+        "The image replies that you should turn back.",
+        ["g1:Q10.1"],
+      ),
+    ];
+
+    expect(imaginalWhenSpeech(sections, state).passed).toBe(false);
+  });
+
 
   it("antiInflationDiagnosis fails on romance of eternal becoming", () => {
     expect(
@@ -1626,6 +1670,22 @@ describe("somatic provenance gate", () => {
     expect(finding.detail).toMatch(
       /body|somatic|sensory/i,
     );
+  });
+
+  it("fails when an experiment tracks somatic tension without body evidence", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+    expect(state.affect.bodyResponses).toEqual([]);
+    const sections = [
+      section(
+        "experiment",
+        "Draft one note to relevant contacts. Track your somatic tension, the number of revisions made, and whether you send it.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    expect(somaticProvenance(sections, state).passed).toBe(false);
   });
 
   it("does not mistake practical pressure for a somatic claim", () => {
