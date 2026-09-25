@@ -18,6 +18,7 @@ import {
   experimentBoundToHypothesis,
   assertPeelHardGates,
   throwGate,
+  isGateError,
   warrantsJungianPolarity,
   epistemicallyUncalibratedSectionIds,
 } from "./gates";
@@ -128,24 +129,40 @@ export async function executeAnalysis(input: {
     const evidenceRef = firstEvidenceId(caseState, input.assessmentId);
     let stageOutput: unknown;
     try {
-      const result = await runStructuredStage({
+      const stageInput = buildStageLlmInput({
+        stage,
+        assessmentId: input.assessmentId,
+        evidenceRef,
+        caseState,
+        answers: input.answers,
+        failStage: input.failStage,
+        draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
+      });
+      let result = await runStructuredStage({
         stage,
         schema: passOutputSchemas[stage],
         model,
         llm: input.llm,
-        input: buildStageLlmInput({
-          stage,
-          assessmentId: input.assessmentId,
-          evidenceRef,
-          caseState,
-          answers: input.answers,
-          failStage: input.failStage,
-          draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
-        }),
+        input: stageInput,
       });
       stageOutput = result.output;
-
-      caseState = applyStage(stage, caseState, result.output);
+      try {
+        caseState = applyStage(stage, caseState, result.output);
+      } catch (error) {
+        if ((stage === "pass5" || stage === "pass8") && isGateError(error)) {
+          result = await runStructuredStage({
+            stage,
+            schema: passOutputSchemas[stage],
+            model,
+            llm: input.llm,
+            input: { ...stageInput, gateIssues: [error.message] },
+          });
+          stageOutput = result.output;
+          caseState = applyStage(stage, caseState, result.output);
+        } else {
+          throw error;
+        }
+      }
 
       if (stage === "pass9") {
         const sections = sanitizeReportSections(

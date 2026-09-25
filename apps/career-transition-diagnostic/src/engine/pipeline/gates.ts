@@ -1226,6 +1226,10 @@ export function throwGate(finding: GateFinding): never {
   throw error;
 }
 
+export function isGateError(error: unknown): error is GateError {
+  return error instanceof Error && typeof (error as GateError).gateId === "string";
+}
+
 const SOMATIC_CLAIM =
   /\b(?:in|through|across|around|inside|at)\s+(?:your\s+)?(?:chest|throat|stomach|belly|gut|heart|shoulders?|neck|jaw|head|back|arms?|legs?|hands?|feet)\b|\b(?:bodily|somatic|physical)\s+(?:tightness|pressure|heaviness|heat|cold|tingling|numbness|constriction|ache|pain|tension)\b/i;
 
