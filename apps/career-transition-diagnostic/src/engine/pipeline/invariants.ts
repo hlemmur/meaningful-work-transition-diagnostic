@@ -17,6 +17,7 @@ import {
   emergentPossibleThird,
   suppliedThirdCorpus,
 } from "./developmental-warrant";
+import { CUSTOMER_SAFETY_FAILURE, stripCanonicalEvidenceIds } from "./customer-prose";
 
 const PRACTICAL_CATEGORIES = new Set(["practical", "economic", "occupational"]);
 const QUESTION_SECTION_BY_ID = new Map(
@@ -804,10 +805,20 @@ export function sanitizeReportSections(
         });
       }
       const canonical = CANONICAL_PEEL_TITLES[section.id];
+      const body = stripCanonicalEvidenceIds(section.body, known);
+      if (CUSTOMER_SAFETY_FAILURE.test(body)) {
+        throwGate({
+          id: "customer-safety",
+          passed: false,
+          detail:
+            "Customer prose must not claim healing, direct medical causality, or that the psyche, unconscious, Self, or universe directs the person.",
+        });
+      }
       return {
         ...section,
         // Peel titles are structural labels — normalize so voice gates don't thrash live drafts.
         title: canonical ?? section.title,
+        body,
         evidenceRefs: refs,
       };
     });
