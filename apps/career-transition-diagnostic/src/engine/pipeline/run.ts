@@ -24,7 +24,7 @@ import {
 } from "./gates";
 import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from "./models";
 import { passOutputSchemas } from "./stage-schemas";
-import { buildStageLlmInput } from "./stage-input";
+import { buildStageLlmInput, STAGE_INPUT_TRIM, trimText } from "./stage-input";
 import { runStructuredStage, StructuredStageError } from "./structured";
 
 export type AnalysisRunRecord = {
@@ -150,12 +150,24 @@ export async function executeAnalysis(input: {
         caseState = applyStage(stage, caseState, result.output);
       } catch (error) {
         if ((stage === "pass5" || stage === "pass8") && isGateError(error)) {
+          const gateIssues = [error.message];
+          if (stage === "pass5") {
+            const speech = trimText(
+              caseState.symbolicMaterial.obstacleSpeech,
+              STAGE_INPUT_TRIM.maxQuoteChars,
+            );
+            if (typeof speech === "string" && speech.trim()) {
+              gateIssues.push(
+                `Copy this exact personalAssociations text and cite its Q10.6 evidence ref: ${speech}`,
+              );
+            }
+          }
           result = await runStructuredStage({
             stage,
             schema: passOutputSchemas[stage],
             model,
             llm: input.llm,
-            input: { ...stageInput, gateIssues: [error.message] },
+            input: { ...stageInput, gateIssues },
           });
           stageOutput = result.output;
           caseState = applyStage(stage, caseState, result.output);
