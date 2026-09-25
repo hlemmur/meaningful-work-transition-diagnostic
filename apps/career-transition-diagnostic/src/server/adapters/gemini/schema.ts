@@ -66,7 +66,7 @@ export function jsonSchemaForStage(stage: string) {
       return requireNullableProjectionInterpretationFields(schema);
     }
     if (stage === "pass6") {
-      return requirePass6LayerRelationship(schema);
+      return requirePass6DevelopmentalFormulation(requirePass6LayerRelationship(schema));
     }
     if (stage === "pass8") {
       return requirePass8LayerUpdates(requireNullablePass8ManipulatedVariable(schema));
@@ -85,6 +85,27 @@ function requirePass6LayerRelationship(schema: JsonSchema) {
   }
   const required = Array.isArray(formulation.required) ? formulation.required as string[] : [];
   formulation.required = [...new Set([...required, "layerRelationship"])];
+  return schema;
+}
+
+function requirePass6DevelopmentalFormulation(schema: JsonSchema) {
+  const properties = schema.properties as JsonSchema | undefined;
+  const formulation = properties?.finalFormulation as JsonSchema | undefined;
+  const formulationProperties = formulation?.properties as JsonSchema | undefined;
+  const developmental = formulationProperties?.developmentalFormulation as JsonSchema | undefined;
+  if (!formulation || !formulationProperties || !developmental) {
+    return schema;
+  }
+  const required = Array.isArray(formulation.required) ? formulation.required as string[] : [];
+  formulation.required = [...new Set([...required, "developmentalFormulation"])];
+  const developmentalProperties = developmental.properties as JsonSchema | undefined;
+  const third = developmentalProperties?.possibleThird;
+  if (developmentalProperties && third && typeof third === "object") {
+    developmentalProperties.possibleThird = { ...(third as JsonSchema), nullable: true };
+    const developmentalRequired = Array.isArray(developmental.required) ? developmental.required as string[] : [];
+    developmental.required = [...new Set([...developmentalRequired, "possibleThird"])];
+  }
+  formulationProperties.developmentalFormulation = { ...developmental, nullable: true };
   return schema;
 }
 

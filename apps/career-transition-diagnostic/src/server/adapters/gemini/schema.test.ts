@@ -51,6 +51,43 @@ describe("Gemini schema sanitizer", () => {
     expect(item.properties).not.toHaveProperty("developmentalTension");
   });
 
+  it("keeps a nullable developmentalFormulation on the Pass 6 Gemini formulation", () => {
+    const pass6 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass6")).properties);
+    const formulation = asObject(pass6.finalFormulation);
+    const properties = asObject(formulation.properties);
+    expect(formulation.required).toContain("developmentalFormulation");
+    expect(properties.developmentalFormulation).toEqual(
+      expect.objectContaining({ nullable: true }),
+    );
+    const developmental = asObject(properties.developmentalFormulation);
+    expect(developmental.required).toEqual(expect.arrayContaining([
+      "consciousPole",
+      "compensatingPole",
+      "coreOpposition",
+      "possibleDevelopmentalTask",
+      "possibleThird",
+      "uncertainty",
+      "evidenceRefs",
+    ]));
+    expect(asObject(developmental.properties).possibleThird).toEqual(
+      expect.objectContaining({ nullable: true }),
+    );
+    expect(formulation.required).not.toContain("maintainingLoop");
+  });
+
+  it("drops a null developmentalFormulation so a layered omission stays an omission", () => {
+    const coerced = coerceLiveStructuredOutput({
+      finalFormulation: {
+        selectedHypothesisId: "hyp-bargain-potentiality",
+        developmentalFormulation: null,
+        layerRelationship: { mode: "layered" },
+      },
+    });
+    const formulation = coerced.finalFormulation as Record<string, unknown>;
+    expect(formulation).not.toHaveProperty("developmentalFormulation");
+    expect(formulation.layerRelationship).toEqual({ mode: "layered" });
+  });
+
   it("requires layerRelationship on the Pass 6 Gemini formulation", () => {
     const pass6 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass6")).properties);
     const formulation = asObject(pass6.finalFormulation);
