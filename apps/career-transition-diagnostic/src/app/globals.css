@@ -97,6 +97,7 @@ body {
   }
 }
 
+/* Browser-owned print headers (URL, date, page title) are set in the browser print dialog, not by this stylesheet. Turn off “Headers and footers” there. CSS cannot hide them. */
 @media print {
   [aria-label="MOCK MODE"],
   [data-coaching-cta] {

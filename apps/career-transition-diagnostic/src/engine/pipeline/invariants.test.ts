@@ -786,6 +786,26 @@ describe("sanitizeReportSections", () => {
     ]);
   });
 
+  it("strips an exact canonical id from prose and keeps client brackets and metadata", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+    });
+    const [section] = sanitizeReportSections(
+      [
+        reportSectionSchema.parse({
+          id: "problem",
+          title: "The problem as you see it",
+          body: "You wrote [the gate] and cited [a1:Q1.1] in the draft.",
+          evidenceRefs: ["a1:Q1.1"],
+        }),
+      ],
+      state,
+    );
+    expect(section?.body).toContain("[the gate]");
+    expect(section?.body).not.toContain("a1:Q1.1");
+    expect(section?.evidenceRefs).toEqual(["a1:Q1.1"]);
+  });
+
   it("drops invented assessment-scoped evidence refs", () => {
     const state = extractCaseStateFull("a1", {
       "Q1.1": "I keep stalling.",
