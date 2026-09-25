@@ -251,7 +251,7 @@ export const promptRegistry = {
     text: `Jungian amplification only after resolution. Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v7",
+    version: "pass-8.v8",
     text: `Produce a reality check and at least one low-risk behavioral experiment. The behavioral experiment should discriminate between at least two live explanations when possible rather than merely encouraging action.
 
   Design one small, voluntary, reversible action that follows from the integration statement. Test one variable while holding the principal rival stable. Prefer a private or trusted-relational step over public exposure when it provides enough information.
@@ -267,8 +267,8 @@ export const promptRegistry = {
   For a behavioral experiment:
   - competingHypothesisIds must name at least one meaningful live rival hypothesis
   - manipulatedVariable must name the relevant variable deliberately changed and the action must actually vary it
-  - heldConstant must name meaningful alternative factors explicitly kept stable in the action
-  - outcomeInterpretations must contain at least two observable outcomes that favor different live explanations for stated reasons
+  - heldConstant must name meaningful alternative factors explicitly kept stable in the action. State that stability by holding, keeping, or leaving the factor unchanged, by using the existing factor, or by excluding a change to it, as in sharing the existing draft without a commercial ask. A factor that never appears in the action is not held stable.
+  - outcomeInterpretations must contain at least two observable outcomes that favor different live explanation ids for stated reasons. favors is that live id. One further outcome may set favors to "inconclusive" only when it names a concrete interruption, such as non-responsiveness, missing feedback, or the allocated window ending, that blocks discrimination.
   - success versus failure labels alone are not discriminating outcomes
   - an experiment that claims to test exposure must vary exposure itself while holding the main rival explanation stable
 

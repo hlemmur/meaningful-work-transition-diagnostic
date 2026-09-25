@@ -337,6 +337,266 @@ describe("experiment binding gate", () => {
     expect(experimentBoundToHypothesis(state).passed).toBe(true);
   });
 
+  it("accepts a private peer review that keeps the existing offer stable without a commercial ask and records an inconclusive logistical outcome", () => {
+    const state = experimentState();
+    state.hypotheses = [
+      {
+        id: "hyp-image-defense-bargain",
+        title: "Defense of Idealized Self-Image",
+        category: "psychological",
+        observedPattern: "Freezing before social exposure and public commercial testing.",
+        evidenceFor: ["exp:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: ["container_loss_vs_capacity"],
+        scoring: {
+          evidenceCoverage: 0.6,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.6,
+          personSpecificity: 0.5,
+          developmentalFit: 0.3,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0,
+        },
+        confidence: "moderate",
+      },
+      {
+        id: "hyp-adhd-container-collapse",
+        title: "Container loss",
+        category: "practical",
+        observedPattern: "Paralysis in unstructured solo work after leaving a structured job.",
+        evidenceFor: ["exp:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: ["container_loss_vs_capacity"],
+        scoring: {
+          evidenceCoverage: 0.6,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.6,
+          personSpecificity: 0.5,
+          developmentalFit: 0.3,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0,
+        },
+        confidence: "moderate",
+      },
+      {
+        id: "hyp-identity-contamination-fear",
+        title: "Identity contamination",
+        category: "psychological",
+        observedPattern: "Rejecting commercial promotion out of fear of losing authenticity.",
+        evidenceFor: ["exp:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: ["container_loss_vs_capacity"],
+        scoring: {
+          evidenceCoverage: 0.6,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.6,
+          personSpecificity: 0.5,
+          developmentalFit: 0.3,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0,
+        },
+        confidence: "moderate",
+      },
+    ];
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Private Single-Peer Offer Review",
+      hypothesisTested: "hyp-image-defense-bargain",
+      action: "Select one trusted colleague or friend from your past professional network. In a single 20-minute private session, share your existing one-page coaching offer draft directly with them via email or direct message, asking for their single impression regarding clarity, without any sales solicitation, public posting, or commercial ask.",
+      duration: "20 minutes",
+      whatToObserve: [
+        "Whether resistance or freeze emerges during the solitary preparation of the draft or selectively at the moment of transmitting it for evaluation",
+        "Somatic tension or dread when asking for feedback privately versus when contemplating public social media broadcast",
+        "Emotional response upon receiving honest peer commentary regarding the offering",
+      ],
+      resultSupportingHypothesis: "Freeze appears at the moment of sending.",
+      resultWeakeningHypothesis: "The draft cannot be prepared in the window.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-adhd-container-collapse", "hyp-identity-contamination-fear"],
+      manipulatedVariable: "Social exposure scope (confining review to a private, trusted 1-on-1 peer exchange instead of broadcast marketing)",
+      heldConstant: [
+        "Existing core coaching offer draft content (no new positioning created)",
+        "Solitary desk workspace and private drafting condition",
+        "Zero commercial conversion or sales pressure",
+      ],
+      sessionMinutes: 20,
+      audienceCount: 1,
+      exposure: "trusted",
+      reversible: true,
+      outcomeInterpretations: [
+        {
+          outcome: "Drafting and preparing the text happens smoothly, but acute freeze, rationalization, and impulse to withdraw arise specifically when attempting to send the draft to the trusted peer.",
+          favors: "hyp-image-defense-bargain",
+          because: "The bottleneck is triggered specifically by interpersonal evaluation and testing an imperfect reality against another person's view, rather than executive dysfunction or lack of structure.",
+          layerUpdates: [
+            { layer: "psychological", effect: "strengthens" },
+            { layer: "practical", effect: "unchanged" },
+            { layer: "developmental", effect: "strengthens" },
+          ],
+        },
+        {
+          outcome: "Inability to select a recipient or format the text within the 20-minute window due to wandering attention, disorganization, or task switching, without significant dread of peer judgment.",
+          favors: "hyp-adhd-container-collapse",
+          because: "The breakdown occurs at the level of self-initiated executive sequencing in an unstructured solo environment rather than emotional defense against exposure.",
+          layerUpdates: [
+            { layer: "practical", effect: "strengthens" },
+            { layer: "psychological", effect: "weakens" },
+            { layer: "developmental", effect: "unchanged" },
+          ],
+        },
+        {
+          outcome: "The draft is sent and reviewed easily, but acute distress and hesitation arise specifically if the offering text contains any commercial phrasing or value claims that feel like commercial marketing.",
+          favors: "hyp-identity-contamination-fear",
+          because: "The freeze is bound to identity conflict regarding commercial selling and fear of losing authenticity rather than fear of general competence evaluation.",
+          layerUpdates: [
+            { layer: "psychological", effect: "strengthens" },
+            { layer: "practical", effect: "unchanged" },
+            { layer: "developmental", effect: "strengthens" },
+          ],
+        },
+        {
+          outcome: "External technical difficulties or peer non-responsiveness prevent the feedback exchange from concluding during the allocated window.",
+          favors: "inconclusive",
+          because: "Extraneous logistical factors interrupted the session, preventing discrimination between executive dysregulation, image defense, and identity conflict.",
+          layerUpdates: [
+            { layer: "practical", effect: "inconclusive" },
+            { layer: "psychological", effect: "inconclusive" },
+            { layer: "developmental", effect: "inconclusive" },
+          ],
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed, finding.detail).toBe(true);
+  });
+
+  it("rejects a held factor the action never names, even when the action says existing and without", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Unnamed constant",
+      hypothesisTested: "hyp-structure",
+      action: "Share the existing note with one person without a public post.",
+      duration: "20 minutes",
+      whatToObserve: ["Whether one draft is sent."],
+      resultSupportingHypothesis: "The draft is sent.",
+      resultWeakeningHypothesis: "The draft is not sent.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "private sharing",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "One draft is sent within 20 minutes.",
+          favors: "hyp-structure",
+          because: "Sending changed when the step was private.",
+        },
+        {
+          outcome: "The draft stays unsent and errors cluster in the unfamiliar steps.",
+          favors: "hyp-skill",
+          because: "The block stays in the unfamiliar steps.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/heldConstant/i);
+  });
+
+  it("rejects an outcome that favors neither a live explanation nor inconclusive", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Unknown favor",
+      hypothesisTested: "hyp-structure",
+      action: "Share the existing draft while holding task difficulty unchanged.",
+      duration: "20 minutes",
+      whatToObserve: ["Whether one draft is sent."],
+      resultSupportingHypothesis: "The draft is sent.",
+      resultWeakeningHypothesis: "The draft is not sent.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "private sharing",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "One draft is sent within 20 minutes.",
+          favors: "hyp-structure",
+          because: "The private step produced a sent draft.",
+        },
+        {
+          outcome: "The draft stays unsent and errors cluster in unfamiliar steps.",
+          favors: "not-a-live-explanation",
+          because: "An unnamed explanation is not a rival.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/different live explanations/i);
+  });
+
+  it("rejects an inconclusive outcome that names no observable event", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Vague interruption",
+      hypothesisTested: "hyp-structure",
+      action: "Share the existing draft while holding task difficulty unchanged.",
+      duration: "20 minutes",
+      whatToObserve: ["Whether one draft is sent."],
+      resultSupportingHypothesis: "The draft is sent.",
+      resultWeakeningHypothesis: "The draft is not sent.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "private sharing",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "One draft is sent within 20 minutes.",
+          favors: "hyp-structure",
+          because: "The private step produced a sent draft.",
+        },
+        {
+          outcome: "Errors stay clustered in unfamiliar steps.",
+          favors: "hyp-skill",
+          because: "The block stays in the unfamiliar steps.",
+        },
+        {
+          outcome: "The feeling shifted.",
+          favors: "inconclusive",
+          because: "Nothing concrete interrupted the session.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/observable/i);
+  });
+
   it("rejects oversized, inverse-proof, and invented-body experiments", () => {
     const cases: Array<{ patch: Record<string, unknown>; pattern: RegExp }> = [
       {

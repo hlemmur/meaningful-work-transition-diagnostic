@@ -448,10 +448,14 @@ export function experimentBoundToHypothesis(
       const constantsAppearInAction = heldConstant.every((constant) =>
         [...overlapTokens(constant)].some((token) => actionTokens.has(token)),
       );
+      const actionKeepsFactorStable =
+        /\b(?:hold|held|keep|kept|same|unchanged|stable|constant|leav(?:e|ing)|existing|already|current|without|excluding)\b/i.test(
+          action,
+        );
       if (
         !heldConstant.length ||
         !constantsAppearInAction ||
-        !/\b(?:hold|held|keep|kept|same|unchanged|stable|constant|leav(?:e|ing))\b/i.test(action)
+        !actionKeepsFactorStable
       ) {
         failures.push(
           `${title}: heldConstant must name a meaningful factor explicitly kept stable in the action`,
@@ -475,10 +479,14 @@ export function experimentBoundToHypothesis(
           )
         : [];
       const allowedOutcomeIds = new Set([hypothesisTested, ...competingHypothesisIds]);
+      const nonDiscriminatingFavors = new Set(["inconclusive"]);
+      const discriminatingOutcomes = outcomes.filter(
+        (outcome) => !nonDiscriminatingFavors.has(outcome.favors),
+      );
       const invalidOutcomeIds = outcomes
         .map((outcome) => outcome.favors)
-        .filter((id) => !allowedOutcomeIds.has(id));
-      const favoredIds = new Set(outcomes.map((outcome) => outcome.favors));
+        .filter((id) => !nonDiscriminatingFavors.has(id) && !allowedOutcomeIds.has(id));
+      const favoredIds = new Set(discriminatingOutcomes.map((outcome) => outcome.favors));
       const vagueBinaryOutcome = outcomes.some((outcome) =>
         /^(?:(?:(?:the|this|an?)\s+)?(?:experiment|test|action|approach|plan|prototype|task)\s+)?(?:success|failure|succeeds?|fails?|works?|does not work|improves?|does not improve|no change)(?:\s+(?:well|poorly|better|worse))?[.!:]?$/i.test(
           outcome.outcome.trim(),
@@ -489,15 +497,15 @@ export function experimentBoundToHypothesis(
       );
       const unobservableOutcome = outcomes.some(
         (outcome) =>
-          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|minute|day|week|task|output|action|session|application|interview|message|draft|prototype|document|note|plan|artifact|revision|defect|mistake|charge|anxiety|distress|rating|score|freeze|stall|outreach|post)\w*\b/i.test(
+          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|responsiveness|feedback|window|minute|day|week|task|output|action|session|application|interview|message|draft|prototype|document|note|plan|artifact|revision|defect|mistake|charge|anxiety|distress|rating|score|freeze|stall|outreach|post)\w*\b/i.test(
             outcome.outcome,
           ),
       );
       const distinctReasons = new Set(
-        outcomes.map((outcome) => normalize(outcome.because)),
+        discriminatingOutcomes.map((outcome) => normalize(outcome.because)),
       );
       if (
-        outcomes.length < 2 ||
+        discriminatingOutcomes.length < 2 ||
         favoredIds.size < 2 ||
         !favoredIds.has(hypothesisTested) ||
         !competingHypothesisIds.some((id) => favoredIds.has(id)) ||
