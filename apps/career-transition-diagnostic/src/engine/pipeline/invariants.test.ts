@@ -339,6 +339,34 @@ describe("applyImageVotes", () => {
     ).toThrow(/not exact supplied client material/i);
   });
 
+  it("rejects an exact image answer cited under the neighboring question", () => {
+    const state = extractCaseStateFull("origin-case", {
+      "Q1.1": "I keep stalling.",
+      "Q10.3": "frustration that I am so far away from entrance",
+      "Q10.4": "darkness, unknown",
+    });
+    state.hypotheses = [hypothesis("hyp-live")];
+
+    expect(() =>
+      applyImageVotes(state, {
+        votes: [{
+          hypothesisId: "hyp-live",
+          verdict: "insufficient",
+          interpretation: "The image is too thin to decide.",
+          evidenceRefs: ["origin-case:Q10.4"],
+          exactClientMaterialUsed: ["origin-case:Q10.4"],
+        }],
+        imageAnalysis: {
+          literalFacts: [{ text: "darkness, unknown", evidenceRefs: ["origin-case:Q10.3"] }],
+          personalAssociations: [],
+          plausibleReadings: [],
+        },
+        projectionInterpretations: [],
+        overallNote: "Synthetic.",
+      }),
+    ).toThrow(/not exact supplied client material/i);
+  });
+
   it("rejects invented personal associations", () => {
     const state = extractCaseStateFull("a1", {
       "Q1.1": "I keep stalling.",

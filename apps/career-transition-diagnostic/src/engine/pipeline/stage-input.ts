@@ -89,12 +89,21 @@ function collectEvidenceItems(state: CaseState): EvidenceItem[] {
   return items;
 }
 
+const IMAGE_QUESTION_IDS = new Set(IMAGE_FIELD_TO_QUESTION.map((item) => item.questionId));
+
 function answersByQuestionId(answers: Record<string, unknown>) {
   const out: Record<string, unknown> = {};
-  const keys = Object.keys(answers)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .slice(0, STAGE_INPUT_TRIM.maxAnswerEntries);
+  const keys = Object.keys(answers).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true }),
+  );
+  const selected = new Set([
+    ...keys.filter((key) => !IMAGE_QUESTION_IDS.has(key)).slice(0, STAGE_INPUT_TRIM.maxAnswerEntries),
+    ...keys.filter((key) => IMAGE_QUESTION_IDS.has(key)),
+  ]);
   for (const key of keys) {
+    if (!selected.has(key)) {
+      continue;
+    }
     const trimmed = trimText(answers[key]);
     if (trimmed !== undefined && trimmed !== "") {
       out[key] = trimmed;
@@ -107,16 +116,26 @@ function refId(assessmentId: string, questionId: string) {
   return `${assessmentId}:${questionId}`;
 }
 
+function imageFieldPresent(value: CaseState["symbolicMaterial"][keyof CaseState["symbolicMaterial"]]) {
+  return Array.isArray(value) ? value.some((item) => item.trim()) : Boolean(value?.trim());
+}
+
 function imageCiteRefs(state: CaseState): string[] {
-  const refs: string[] = [];
-  for (const { field, questionId } of IMAGE_FIELD_TO_QUESTION) {
-    const value = state.symbolicMaterial[field];
-    const present = Array.isArray(value) ? value.length > 0 : Boolean(value);
-    if (present) {
-      refs.push(refId(state.assessmentId, questionId));
-    }
-  }
-  return refs;
+  return IMAGE_FIELD_TO_QUESTION.flatMap(({ field, questionId }) =>
+    imageFieldPresent(state.symbolicMaterial[field])
+      ? [refId(state.assessmentId, questionId)]
+      : [],
+  );
+}
+
+function imageFieldEvidenceRefs(state: CaseState): Record<string, string> {
+  return Object.fromEntries(
+    IMAGE_FIELD_TO_QUESTION.flatMap(({ field, questionId }) =>
+      imageFieldPresent(state.symbolicMaterial[field])
+        ? [[field, refId(state.assessmentId, questionId)]]
+        : [],
+    ),
+  );
 }
 
 function projectionCiteRefs(state: CaseState): string[] {
@@ -423,6 +442,7 @@ export function buildCaseSnapshot(input: {
         ),
 
         citeRefs: imageRefs,
+        fieldEvidenceRefs: imageFieldEvidenceRefs(caseState),
       },
     },
     tierA: {

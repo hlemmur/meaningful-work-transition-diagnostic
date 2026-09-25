@@ -654,6 +654,48 @@ describe("buildStageLlmInput", () => {
     );
   });
 
+  it("keeps Q10 answers and their field refs when earlier answers fill the snapshot cap", () => {
+    const answers: Record<string, string> = {};
+    for (let index = 1; index <= 45; index += 1) {
+      answers[`Q4.${index}`] = `earlier answer ${index}`;
+    }
+    answers["Q10.3"] = "frustration that I am so far away from entrance";
+    answers["Q10.4"] = "darkness, unknown";
+    const caseState = emptyCaseState("origin-case");
+    caseState.symbolicMaterial.obstacle = answers["Q10.3"];
+    caseState.symbolicMaterial.ahead = answers["Q10.4"];
+
+    const input = buildStageLlmInput({
+      stage: "pass5",
+      assessmentId: "origin-case",
+      evidenceRef: "origin-case:Q10.4",
+      caseState,
+      answers,
+    });
+    const snapshot = input.caseSnapshot as {
+      answersByQuestionId: Record<string, string>;
+      signals: {
+        symbolicMaterial: {
+          ahead?: string;
+          fieldEvidenceRefs?: Record<string, string>;
+        };
+      };
+    };
+
+    expect(snapshot.answersByQuestionId["Q10.4"]).toBe("darkness, unknown");
+    expect(snapshot.answersByQuestionId["Q10.3"]).toBe(
+      "frustration that I am so far away from entrance",
+    );
+    expect(snapshot.answersByQuestionId["Q4.45"]).toBeUndefined();
+    expect(snapshot.signals.symbolicMaterial.ahead).toBe("darkness, unknown");
+    expect(snapshot.signals.symbolicMaterial.fieldEvidenceRefs).toEqual(
+      expect.objectContaining({
+        obstacle: "origin-case:Q10.3",
+        ahead: "origin-case:Q10.4",
+      }),
+    );
+  });
+
   it("trims long answer strings so the snapshot stays bounded", () => {
     const long = "x".repeat(2000);
     const input = buildStageLlmInput({

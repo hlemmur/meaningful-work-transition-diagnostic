@@ -105,7 +105,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass5: {
-    version: "pass-5.v6",
+    version: "pass-5.v7",
     text: `Use symbolic material as an adversarial constraint on the leading hypotheses, not as decoration and not as a symbol dictionary. Personal associations outrank generic symbolic meanings. Vote independently on the relevant top hypotheses.
 
   Treat the image as a relatively autonomous presentation, not a coded answer. A symbolic reading may support, weaken, split, exceed, or remain unrelated to the current hypothesis set. Do not assume admired or rejected qualities are projections. Propose shadow gold only when history, affect, or behavior supports a disowned capacity, and never translate dependency into ordinary discipline. Include one final question whose answer could make the whole formulation wrong.
@@ -116,7 +116,7 @@ export const promptRegistry = {
   - splits: the image appears to support more than one psychological or practical center
   - insufficient: the supplied material is too thin to constrain the hypothesis
 
-  Preserve the fact/inference boundary. literalFacts and personalAssociations must copy the person's supplied words exactly and cite the matching Q10 evidence refs. plausibleReadings are interpretations: keep more than one when the material admits competing meanings, name the live hypothesis ids each reading supports or weakens, and cite supplied symbolic evidence. For thin material, return insufficient votes and no plausible readings. unresolvedSymbolicQuestion is optional and should remain open rather than preload an answer.
+  Preserve the fact/inference boundary. literalFacts and personalAssociations must copy the person's supplied words exactly and cite that field's fieldEvidenceRefs entry. Do not assign the next question id because a fact was emitted in a different order. plausibleReadings are interpretations: keep more than one when the material admits competing meanings, name the live hypothesis ids each reading supports or weakens, and cite supplied symbolic evidence. For thin material, return insufficient votes and no plausible readings. unresolvedSymbolicQuestion is optional and should remain open rather than preload an answer.
 
   Projection interpretation is separate from the raw projection evidence. It may tentatively propose a possibleDisownedValue, warn against literal enactment, and offer a matureExpression, but projectionEvidenceRefs must cite supplied Q5/Q6 projection evidence and the raw projection records must remain unchanged. Omit the projection interpretation record when no interpretive field is warranted; never return an evidence-only interpretation.
 
