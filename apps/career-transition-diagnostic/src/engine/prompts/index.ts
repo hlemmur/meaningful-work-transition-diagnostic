@@ -151,7 +151,7 @@ export const promptRegistry = {
   }. Return at least 1 vote. ${EMPTY_ARRAYS}`,
   },
   pass6: {
-    version: "pass-6.v8",
+    version: "pass-6.v9",
     text: `Resolve the case after contradiction generation, competing hypotheses, adversarial critique, and image voting. Do not restart the analysis from scratch.
 
   Resolve practical and psychological contributions independently. Do not make one layer defeat the other merely because one hypothesis is selected.
@@ -166,11 +166,11 @@ export const promptRegistry = {
   - layered
   - unresolved
 
-  Do not manufacture balance, integration, compromise, or a third. Record possibleThird only when supplied material contains an emergent image, action, or formulation not reducible to either pole. Practical and biological realities remain fully true in every mode.
+  Do not manufacture balance, integration, compromise, or a third. Return possibleThird as null unless supplied material contains an emergent image, action, or formulation not reducible to either pole. Practical and biological realities remain fully true in every mode.
 
   Choose selectedHypothesisId from the hypotheses present in caseSnapshot. Resolve each materially relevant open fork rather than silently ignoring it. A fork may lean one way, remain both, remain unresolved, or be not relevant. Preserve competing imageAnalysis.plausibleReadings and unresolvedSymbolicQuestion when symbolic material splits the leading explanations; do not force one symbolic meaning to manufacture resolution.
 
-  Produce one FinalFormulation that later report stages must treat as the working analytical spine. maintenanceFormulation and maintenanceMechanism explain why the pattern repeats now. maintainingLoop is optional: include it only when at least two supplied evidence refs support a recurring goal → trigger → response → payoff → cost → selfConfirmingResult cycle. Do not force a loop onto a sufficient practical explanation, repeat one statement as every step, or assume a predefined legitimacy pattern. developmentalFormulation is optional and describes a possible developmental meaning, never the maintenance cause. Include developmentalFormulation only when its opposition recurs across at least two independent questionnaire domains; otherwise omit it. Never force polarity onto a practical-only case. State what the selected hypothesis explains, what it does not explain, the strongest alternative, and unresolved forks. Do not present either formulation as certainty.
+  Produce one FinalFormulation that later report stages must treat as the working analytical spine. maintenanceFormulation and maintenanceMechanism explain why the pattern repeats now. maintainingLoop is optional: include it only when at least two supplied evidence refs support a recurring goal → trigger → response → payoff → cost → selfConfirmingResult cycle. Do not force a loop onto a sufficient practical explanation, repeat one statement as every step, or assume a predefined legitimacy pattern. developmentalFormulation describes a possible developmental meaning, never the maintenance cause. Return the object only when its opposition recurs across at least two independent questionnaire domains; otherwise return null. The live response schema requires the key, so null is how you omit it. Never force polarity onto a practical-only case. State what the selected hypothesis explains, what it does not explain, the strongest alternative, and unresolved forks. Do not present either formulation as certainty.
 
   hiddenPosition is optional and must be null when practical/environmental/economic explanation is sufficient or when evidence does not warrant a deeper hidden stance. If hiddenPosition is present:
   - use hypothesis language
@@ -208,12 +208,12 @@ export const promptRegistry = {
         selfConfirmingResult,
         evidenceRefs
       },
-      developmentalFormulation?: {
+      developmentalFormulation: null | {
         consciousPole,
         compensatingPole,
         coreOpposition,
         possibleDevelopmentalTask,
-        possibleThird?,
+        possibleThird: null | string,
         uncertainty,
         evidenceRefs
       },
