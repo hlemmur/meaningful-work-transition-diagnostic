@@ -46,6 +46,17 @@ function contentTokens(text: string) {
   return new Set([...tokens(text)].filter((token) => !STOPWORDS.has(token)));
 }
 
+function stemToken(token: string) {
+  if (token.length > 4 && token.endsWith("s") && !token.endsWith("ss")) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+function overlapTokens(text: string) {
+  return new Set([...contentTokens(text)].map(stemToken));
+}
+
 /** Jaccard-ish overlap on content words; used for Q11.3 paraphrase detection. */
 export function paraphraseOverlap(a: string, b: string) {
   const left = tokens(a);
@@ -409,10 +420,10 @@ export function experimentBoundToHypothesis(
         ? experiment.whatToObserve.filter((item): item is string => typeof item === "string")
         : [];
       const action = typeof experiment.action === "string" ? experiment.action : "";
-      const actionAndObservationTokens = contentTokens(
+      const actionAndObservationTokens = overlapTokens(
         `${action} ${observations.join(" ")}`,
       );
-      const manipulatedTokens = contentTokens(manipulatedVariable);
+      const manipulatedTokens = overlapTokens(manipulatedVariable);
       const genericVariableTokens = new Set([
         "external",
         "internal",
@@ -433,9 +444,9 @@ export function experimentBoundToHypothesis(
         );
       }
 
-      const actionTokens = contentTokens(action);
+      const actionTokens = overlapTokens(action);
       const constantsAppearInAction = heldConstant.every((constant) =>
-        [...contentTokens(constant)].some((token) => actionTokens.has(token)),
+        [...overlapTokens(constant)].some((token) => actionTokens.has(token)),
       );
       if (
         !heldConstant.length ||
@@ -478,7 +489,7 @@ export function experimentBoundToHypothesis(
       );
       const unobservableOutcome = outcomes.some(
         (outcome) =>
-          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|minute|day|week|task|output|action|session|application|interview|message|draft|prototype|document|note|plan|artifact|revision|defect|mistake|charge|anxiety|distress|rating|score)\w*\b/i.test(
+          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|minute|day|week|task|output|action|session|application|interview|message|draft|prototype|document|note|plan|artifact|revision|defect|mistake|charge|anxiety|distress|rating|score|freeze|stall|outreach|post)\w*\b/i.test(
             outcome.outcome,
           ),
       );
@@ -1231,8 +1242,19 @@ export function isGateError(error: unknown): error is GateError {
   return error instanceof Error && typeof (error as GateError).gateId === "string";
 }
 
-const SOMATIC_CLAIM =
-  /\b(?:in|through|across|around|inside|at)\s+(?:your\s+)?(?:chest|throat|stomach|belly|gut|heart|shoulders?|neck|jaw|head|back|arms?|legs?|hands?|feet)\b|\b(?:bodily|somatic|physical)\s+(?:tightness|pressure|heaviness|heat|cold|tingling|numbness|constriction|ache|pain|tension)\b/i;
+const LOCATION_CLAIM =
+  /\b(?:in|through|across|around|inside|at)\s+(?:your\s+)?(?:chest|throat|stomach|belly|gut|heart|shoulders?|neck|jaw|head|back|arms?|legs?|hands?|feet)\b/i;
+const NAMED_SENSATION =
+  /\b(?:bodily|somatic|physical)\s+(?:tightness|pressure|heaviness|heat|cold|tingling|numbness|constriction|ache|pain|tension)\b/i;
+const OBSERVATION_OF_SENSATION =
+  /\b(?:track|notice|watch|observe|note|record)\b[^.]{0,60}\b(?:bodily|somatic|physical)\s+(?:tightness|pressure|heaviness|heat|cold|tingling|numbness|constriction|ache|pain|tension)\b/i;
+
+function sectionStatesSomaticClaim(body: string) {
+  if (LOCATION_CLAIM.test(body)) {
+    return true;
+  }
+  return NAMED_SENSATION.test(body) && !OBSERVATION_OF_SENSATION.test(body);
+}
 
 function hasSuppliedSomaticMaterial(
   state: CaseState,
@@ -1247,7 +1269,7 @@ export function somaticProvenance(
   state: CaseState,
 ): GateFinding {
   const bodyClaims = sections.filter((section) =>
-    SOMATIC_CLAIM.test(section.body),
+    sectionStatesSomaticClaim(section.body),
   );
 
   if (!bodyClaims.length) {

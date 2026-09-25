@@ -315,6 +315,58 @@ describe("experiment binding gate", () => {
     expect(experimentBoundToHypothesis(state).passed).toBe(true);
   });
 
+  it("accepts a private-versus-public exposure test that holds a 45-minute block constant", () => {
+    const state = experimentState();
+    state.hypotheses = [
+      {
+        ...state.hypotheses[0],
+        id: "protective_bargain_eternal_potential",
+        title: "Protective bargain",
+        observedPattern: "Public exposure threatens an untested identity.",
+      },
+      {
+        ...state.hypotheses[1],
+        id: "container_loss_adhd_scaffolding",
+        title: "Container loss",
+        observedPattern: "Action needs an external accountability container.",
+      },
+    ];
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Scaffolded Outreach: Public Broadcast vs. Direct Private Offer",
+      hypothesisTested: "protective_bargain_eternal_potential",
+      action:
+        "Schedule two separate 45-minute co-working sessions with a body-doubling partner to hold the external structural container strictly constant. In session A, write and send two direct private messages offering a coaching session. In session B, under the exact same co-working container and time boundary, draft and publish one public post.",
+      duration: "one week",
+      whatToObserve: ["Whether initiation freezes only on the public post."],
+      resultSupportingHypothesis: "Private messages go out and the public post freezes.",
+      resultWeakeningHypothesis: "Both tasks stall.",
+      riskLevel: "low",
+      practicalRequirements: ["one peer"],
+      competingHypothesisIds: ["container_loss_adhd_scaffolding"],
+      manipulatedVariable: "Degree of public identity exposure (private direct message vs. public broadcast)",
+      heldConstant: [
+        "Coaching offer substance, price, and scope",
+        "External accountability container (real-time body doubling)",
+        "Task duration and environment (45 minutes per block)",
+      ],
+      outcomeInterpretations: [
+        {
+          outcome: "Execution succeeds in direct private outreach but freezes during the public post.",
+          favors: "protective_bargain_eternal_potential",
+          because: "The container was present, and the remaining block was public visibility.",
+        },
+        {
+          outcome: "Execution stalls equally on both private outreach and public posting.",
+          favors: "container_loss_adhd_scaffolding",
+          because: "Initiation failed even with the same accountability container.",
+        },
+      ],
+    }];
+
+    expect(experimentBoundToHypothesis(state).passed).toBe(true);
+  });
+
   it("rejects vague internal-state outcomes without a measure or observable action", () => {
     const state = experimentState();
     state.experiments = [{
@@ -1672,7 +1724,7 @@ describe("somatic provenance gate", () => {
     );
   });
 
-  it("fails when an experiment tracks somatic tension without body evidence", () => {
+  it("does not treat an instruction to track somatic tension as a body claim", () => {
     const state = extractCaseStateFull("som", {
       "Q1.1": "I keep stalling.",
     });
@@ -1681,6 +1733,51 @@ describe("somatic provenance gate", () => {
       section(
         "experiment",
         "Draft one note to relevant contacts. Track your somatic tension, the number of revisions made, and whether you send it.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    expect(somaticProvenance(sections, state).passed).toBe(true);
+  });
+
+  it("allows tracking somatic tension when no body location is claimed", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+    const sections = [
+      section(
+        "experiment",
+        "Draft one note. Track your somatic tension and the number of revisions, without naming a body location.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    expect(somaticProvenance(sections, state).passed).toBe(true);
+  });
+
+  it("still rejects an asserted somatic sensation that is not an observation instruction", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+    const sections = [
+      section(
+        "reality",
+        "You feel somatic tension whenever the work becomes public.",
+        ["som:Q1.1"],
+      ),
+    ];
+
+    expect(somaticProvenance(sections, state).passed).toBe(false);
+  });
+
+  it("still rejects a sensation asserted in a later sentence after an observation verb", () => {
+    const state = extractCaseStateFull("som", {
+      "Q1.1": "I keep stalling.",
+    });
+    const sections = [
+      section(
+        "reality",
+        "Notice the pattern. You feel somatic tension whenever the work becomes public.",
         ["som:Q1.1"],
       ),
     ];
