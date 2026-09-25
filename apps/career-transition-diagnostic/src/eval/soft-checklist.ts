@@ -17,6 +17,8 @@ const REQUIRED_SOFT_IDS: SoftDimId[] = [
   "projection_gold",
   "affect_grounding",
   "bridge_to_11",
+  "symbolic_vitality",
+  "subjective_depth",
 ];
 
 export function requiredSoftChecklistIds(): SoftDimId[] {
@@ -118,6 +120,14 @@ export function draftSoftChecklistFromArtifact(
     bridge_to_11: {
       rating: "adequate",
       note: "Offline draft: if peel stays second-person, case-specific, and open — 1:1 can continue here.",
+    },
+    symbolic_vitality: {
+      rating: "n/a",
+      note: "Mentor rating only. Subjective symbolic vitality is not a hard score.",
+    },
+    subjective_depth: {
+      rating: "n/a",
+      note: "Mentor rating only. Subjective depth and surprise are not auto-scored.",
     },
   };
 

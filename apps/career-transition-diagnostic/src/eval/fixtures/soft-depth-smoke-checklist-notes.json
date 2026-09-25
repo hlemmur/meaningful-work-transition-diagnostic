@@ -46,6 +46,18 @@
       "question": "Would 1:1 feel like continuation of this inquiry?",
       "rating": "strong",
       "note": "Second-person, case-specific, open hypothesis language — a 1:1 could continue without restarting the inquiry."
+    },
+    {
+      "id": "symbolic_vitality",
+      "question": "Did the symbol stay alive, with residue the formulation did not absorb? Mentor rating only; not a hard score.",
+      "rating": "adequate",
+      "note": "Mentor rating only. The image keeps unexplained residue; this is not a numerical depth score."
+    },
+    {
+      "id": "subjective_depth",
+      "question": "Did the report produce a felt recognition that was not already the client's theory? Mentor rating only; surprise is not auto-scored.",
+      "rating": "adequate",
+      "note": "Mentor rating only. Subjective recognition stays outside the hard benchmark."
     }
   ]
 }

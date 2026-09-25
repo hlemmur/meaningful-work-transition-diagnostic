@@ -19,6 +19,8 @@ describe("soft checklist (CAR-78)", () => {
       "projection_gold",
       "affect_grounding",
       "bridge_to_11",
+      "symbolic_vitality",
+      "subjective_depth",
     ]);
     expect(ids.join(" ")).not.toMatch(/\bpipe\b|\bprovider\b|\bhustler\b/i);
   });
