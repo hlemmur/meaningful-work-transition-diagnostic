@@ -275,6 +275,20 @@ export const maintainingLoopSchema = z
     }
   });
 
+export const layerRelationshipSchema = z.object({
+  mode: z.enum([
+    "practical_primary",
+    "psychological_primary",
+    "layered",
+    "unresolved",
+  ]),
+  practicalHypothesisIds: z.array(z.string()),
+  psychologicalHypothesisIds: z.array(z.string()),
+  relationship: z.string().trim().min(1),
+  uncertainty: z.string().trim().min(1),
+  evidenceRefs: z.array(z.string()),
+});
+
 export const currentFinalFormulationSchema = z.object({
   selectedHypothesisId: z.string(),
 
@@ -285,6 +299,8 @@ export const currentFinalFormulationSchema = z.object({
   maintainingLoop: maintainingLoopSchema.optional(),
 
   developmentalFormulation: developmentalFormulationSchema.optional(),
+
+  layerRelationship: layerRelationshipSchema.optional(),
 
   whyItFits: z.array(z.string()),
 

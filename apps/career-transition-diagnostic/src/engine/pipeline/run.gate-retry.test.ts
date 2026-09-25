@@ -170,4 +170,115 @@ describe("deterministic gate retry", () => {
     expect(calls).toHaveLength(2);
     expect((calls[1]?.input.gateIssues as string[])[0]).toMatch(/heldConstant/i);
   });
+
+  it("retries Pass 6 once when layered mode omits developmentalFormulation", async () => {
+    const previous = extractCaseStateFull("a1", originAnswers);
+    previous.hypotheses = [hypothesis("hyp-depth"), hypothesis("hyp-practical", "practical")];
+    previous.openForks = ["history_vs_stated_cause"];
+    const calls: StructuredLlmRequest[] = [];
+    const result = await executeAnalysis({
+      assessmentId: "a1",
+      answers: originAnswers,
+      previousCaseState: previous,
+      completedStages: ANALYSIS_STAGES.filter((stage) => stage !== "pass6"),
+      llm: llm((request) => {
+        calls.push(request);
+        return pass6LayeredOutput(calls.length > 1);
+      }),
+      persistRun() {},
+      persistCaseState() {},
+    });
+
+    expect(result.status, result.error).toBe("completed");
+    expect(calls).toHaveLength(2);
+    expect((calls[1]?.input.gateIssues as string[] | undefined)?.[0]).toMatch(/omitted developmentalFormulation/i);
+    expect(result.caseState.finalFormulation?.developmentalFormulation?.consciousPole).toBe("freedom");
+  });
+
+  it("fails Pass 6 when the retry still omits a declared developmental formulation", async () => {
+    const previous = extractCaseStateFull("a1", originAnswers);
+    previous.hypotheses = [hypothesis("hyp-depth"), hypothesis("hyp-practical", "practical")];
+    previous.openForks = ["history_vs_stated_cause"];
+    const calls: StructuredLlmRequest[] = [];
+    const result = await executeAnalysis({
+      assessmentId: "a1",
+      answers: originAnswers,
+      previousCaseState: previous,
+      completedStages: ANALYSIS_STAGES.filter((stage) => stage !== "pass6"),
+      llm: llm((request) => {
+        calls.push(request);
+        return pass6LayeredOutput(false);
+      }),
+      persistRun() {},
+      persistCaseState() {},
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.failedStage).toBe("pass6");
+    expect(result.error).toMatch(/omitted developmentalFormulation/i);
+    expect(calls).toHaveLength(2);
+  });
 });
+
+function pass6LayeredOutput(includeFormulation: boolean) {
+  return {
+    selectedHypothesisId: "hyp-depth",
+    forkResolutions: [{
+      forkId: "history_vs_stated_cause",
+      status: "leans_a",
+      interpretation: "The supplied history still outruns the stated cause.",
+      evidenceRefs: ["a1:Q2.1"],
+      importance: "high",
+      reportWorthiness: true,
+    }],
+    finalFormulation: {
+      selectedHypothesisId: "hyp-depth",
+      maintenanceFormulation: "Visibility still freezes a finished private draft.",
+      maintenanceMechanism: {
+        trigger: "A visible send is about to happen.",
+        response: "The action freezes.",
+        shortTermFunction: "Avoids exposure.",
+        longTermCost: "No new evidence accumulates.",
+        reinforcingConsequence: "The freeze confirms the danger.",
+      },
+      ...(includeFormulation
+        ? {
+            developmentalFormulation: {
+              consciousPole: "freedom",
+              compensatingPole: "structure",
+              coreOpposition: "freedom and structure",
+              possibleDevelopmentalTask: "Relate to both poles without ranking them.",
+              uncertainty: "Practical pressure remains true.",
+              evidenceRefs: ["a1:Q2.2", "a1:Q4.8"],
+            },
+          }
+        : {}),
+      layerRelationship: {
+        mode: "layered",
+        practicalHypothesisIds: ["hyp-practical"],
+        psychologicalHypothesisIds: ["hyp-depth"],
+        relationship: "External structure helps, and visibility stays charged.",
+        uncertainty: "The developmental wording was the missing piece.",
+        evidenceRefs: ["a1:Q2.2", "a1:Q3.3"],
+      },
+      whyItFits: ["Visibility changes the outcome."],
+      whatItDoesNotExplain: ["Money pressure remains real."],
+      strongestAlternative: "Constraints may still be sufficient.",
+      unresolvedForks: [],
+    },
+    hiddenPosition: {
+      consciousPosition: "I need a better system.",
+      observedPattern: "Visibility freezes finished work.",
+      possibleHiddenPosition: "Being seen may threaten a protected freedom.",
+      protectiveFunction: ["Keeps the work private"],
+      possibleCompensatoryAim: "Structure in service of aliveness",
+      threatenedByChange: ["Being seen"],
+      developmentalTension: { poleA: "freedom", poleB: "structure" },
+      imageVoteSummary: "unresolved",
+      evidenceRefs: ["a1:Q2.2"],
+      counterEvidenceRefs: [],
+      confidence: "tentative",
+    },
+    alternative: "Constraints may still be sufficient.",
+  };
+}

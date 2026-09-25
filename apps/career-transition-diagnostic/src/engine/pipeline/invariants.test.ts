@@ -935,3 +935,223 @@ describe("origin fixture symbolic provenance", () => {
     ).toThrow(/not exact supplied client material/i);
   });
 });
+
+function layerEvidence(
+  questionId: string,
+  meaning: string,
+  evidenceType: "practical_constraint" | "behavior" | "emotion" | "history",
+) {
+  return {
+    id: `a1:${questionId}`,
+    assessmentId: "a1",
+    questionId,
+    normalizedMeaning: meaning,
+    evidenceType,
+  };
+}
+
+function supportedResolutionState() {
+  const state = emptyCaseState("a1");
+  state.practicalContext.constraints = [
+    layerEvidence("Q0.5", "ADHD and money pressure remain.", "practical_constraint"),
+  ];
+  state.behavior.actionsTaken = [
+    layerEvidence("Q2.2", "A private draft was finished before visibility froze the send.", "behavior"),
+  ];
+  state.affect.emotions = [layerEvidence("Q3.3", "fear", "emotion")];
+  state.history.earlierOccurrences = [
+    layerEvidence("Q4.8", "External structure carried continuity.", "history"),
+  ];
+  state.projections.rejectedFigures = [{
+    id: "p1",
+    figure: "dependent colleague",
+    judgedQuality: "neediness",
+    evidenceRefs: ["a1:Q6.1"],
+  }];
+  state.symbolicMaterial = { scene: "a private draft beside a dark gate" };
+  state.hypotheses = [
+    hypothesisSchema.parse({ ...hypothesis("hyp-practical"), category: "practical" }),
+    hypothesisSchema.parse({ ...hypothesis("hyp-depth"), category: "psychological" }),
+  ];
+  state.openForks = ["history_vs_stated_cause"];
+  return state;
+}
+
+function chargedHidden() {
+  return {
+    consciousPosition: "I need a better system.",
+    observedPattern: "Visibility freezes finished work.",
+    possibleHiddenPosition: "Being seen may threaten a protected freedom.",
+    protectiveFunction: ["Keeps the work private"],
+    possibleCompensatoryAim: "Structure in service of aliveness",
+    threatenedByChange: ["Being seen"],
+    developmentalTension: { poleA: "freedom", poleB: "structure" },
+    imageVoteSummary: "unresolved",
+    evidenceRefs: ["a1:Q2.2"],
+    counterEvidenceRefs: [],
+    confidence: "tentative" as const,
+  };
+}
+
+function keptFormulation(possibleThird?: string) {
+  return {
+    consciousPole: "freedom",
+    compensatingPole: "structure",
+    coreOpposition: "freedom and structure",
+    possibleDevelopmentalTask: "Relate to both poles without ranking them.",
+    ...(possibleThird ? { possibleThird } : {}),
+    uncertainty: "Practical pressure remains true.",
+    evidenceRefs: ["a1:Q2.2", "a1:Q4.8"],
+  };
+}
+
+describe("layered Pass 6 resolution", () => {
+  it("keeps supported depth when the selected hypothesis is practical", () => {
+    const state = supportedResolutionState();
+    const output = resolutionOutput("hyp-practical");
+    output.finalFormulation.developmentalFormulation = keptFormulation();
+    output.finalFormulation.layerRelationship = {
+      mode: "layered",
+      practicalHypothesisIds: ["hyp-practical"],
+      psychologicalHypothesisIds: ["hyp-depth"],
+      relationship: "External structure helps, and visibility stays affectively charged.",
+      uncertainty: "Neither layer is settled.",
+      evidenceRefs: ["a1:Q0.5", "a1:Q3.3"],
+    };
+    output.hiddenPosition = chargedHidden();
+
+    const resolved = applyResolution(state, output);
+
+    expect(resolved.finalFormulation?.developmentalFormulation?.consciousPole).toBe("freedom");
+    expect(resolved.finalFormulation?.layerRelationship?.mode).toBe("layered");
+    expect(resolved.hiddenPosition?.possibleHiddenPosition).toMatch(/protected freedom/i);
+  });
+
+  it("does not let sufficientWithoutDepth delete independently supported depth", () => {
+    const state = supportedResolutionState();
+    state.realityCheck = {
+      sufficientWithoutDepth: true,
+      categories: ["constraints"],
+      narrative: "Practical conditions explain much of the stall.",
+      evidenceRefs: ["a1:Q0.5"],
+    };
+    const output = resolutionOutput("hyp-practical");
+    output.finalFormulation.developmentalFormulation = keptFormulation();
+    output.hiddenPosition = chargedHidden();
+
+    const resolved = applyResolution(state, output);
+
+    expect(resolved.finalFormulation?.developmentalFormulation).toBeDefined();
+    expect(resolved.hiddenPosition).toBeDefined();
+  });
+
+  it("omits a manufactured third and keeps an emergent one grounded in supplied action", () => {
+    const manufactured = supportedResolutionState();
+    const manufacturedOutput = resolutionOutput("hyp-depth");
+    manufacturedOutput.finalFormulation.developmentalFormulation = keptFormulation(
+      "Integrate both poles as a compromise.",
+    );
+    manufacturedOutput.hiddenPosition = chargedHidden();
+    expect(
+      applyResolution(manufactured, manufacturedOutput).finalFormulation?.developmentalFormulation?.possibleThird,
+    ).toBeUndefined();
+
+    const emergent = supportedResolutionState();
+    const emergentOutput = resolutionOutput("hyp-depth");
+    emergentOutput.finalFormulation.developmentalFormulation = keptFormulation(
+      "A private draft beside the dark gate is not either pole.",
+    );
+    emergentOutput.hiddenPosition = chargedHidden();
+    expect(
+      applyResolution(emergent, emergentOutput).finalFormulation?.developmentalFormulation?.possibleThird,
+    ).toMatch(/private draft/i);
+
+    const ungrounded = supportedResolutionState();
+    const ungroundedOutput = resolutionOutput("hyp-depth");
+    ungroundedOutput.finalFormulation.developmentalFormulation = keptFormulation(
+      "A cosmic mandate settles the opposition.",
+    );
+    ungroundedOutput.hiddenPosition = chargedHidden();
+    expect(
+      applyResolution(ungrounded, ungroundedOutput).finalFormulation?.developmentalFormulation?.possibleThird,
+    ).toBeUndefined();
+  });
+
+  it("retries by failing when layered mode omits the developmental formulation", () => {
+    const state = supportedResolutionState();
+    const output = resolutionOutput("hyp-depth");
+    output.finalFormulation.layerRelationship = {
+      mode: "layered",
+      practicalHypothesisIds: ["hyp-practical"],
+      psychologicalHypothesisIds: ["hyp-depth"],
+      relationship: "Both layers remain live.",
+      uncertainty: "The developmental task was not stated.",
+      evidenceRefs: ["a1:Q2.2", "a1:Q3.3"],
+    };
+    output.hiddenPosition = chargedHidden();
+
+    expect(() => applyResolution(state, output)).toThrow(/omitted developmentalFormulation/i);
+  });
+
+  it("rejects layered mode that is only two category labels", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [
+      hypothesisSchema.parse({ ...hypothesis("hyp-practical"), category: "practical" }),
+      hypothesisSchema.parse({ ...hypothesis("hyp-depth"), category: "psychological" }),
+    ];
+    state.openForks = ["history_vs_stated_cause"];
+    const output = resolutionOutput("hyp-practical");
+    output.finalFormulation.developmentalFormulation = keptFormulation();
+    output.finalFormulation.layerRelationship = {
+      mode: "layered",
+      practicalHypothesisIds: ["hyp-practical"],
+      psychologicalHypothesisIds: ["hyp-depth"],
+      relationship: "Two labels were available.",
+      uncertainty: "No independent pattern was supplied.",
+      evidenceRefs: ["a1:Q1.1"],
+    };
+
+    expect(() => applyResolution(state, output)).toThrow(/category labels/i);
+  });
+
+  it("rejects psychological-primary when the practical rival is merely present", () => {
+    const state = supportedResolutionState();
+    state.hypothesisCritiques = [
+      hypothesisCritiqueSchema.parse({
+        hypothesisId: "hyp-practical",
+        strongestMundaneAlternative: "The market.",
+        counterEvidenceRefs: [],
+        missingEvidence: [],
+        confirmationBiasRisk: "Low.",
+        overPsychologizingRisk: "Low.",
+        evidenceActuallyUniqueToHypothesis: ["a1:Q0.5"],
+        rankAdjustment: "keep",
+        reason: "The practical rival is still live.",
+      }),
+    ];
+    const output = resolutionOutput("hyp-depth");
+    output.finalFormulation.developmentalFormulation = keptFormulation();
+    output.finalFormulation.layerRelationship = {
+      mode: "psychological_primary",
+      practicalHypothesisIds: ["hyp-practical"],
+      psychologicalHypothesisIds: ["hyp-depth"],
+      relationship: "Depth leads while money constraints remain.",
+      uncertainty: "The practical rival was not weakened.",
+      evidenceRefs: ["a1:Q2.2", "a1:Q3.3"],
+    };
+    output.hiddenPosition = chargedHidden();
+
+    expect(() => applyResolution(state, output)).toThrow(/weakened practical rival/i);
+  });
+
+  it("rejects a hidden stance that has no conscious ego position", () => {
+    const state = supportedResolutionState();
+    const output = resolutionOutput("hyp-depth");
+    output.hiddenPosition = {
+      ...chargedHidden(),
+      consciousPosition: "   ",
+    };
+
+    expect(() => applyResolution(state, output)).toThrow(/conscious ego position/i);
+  });
+});

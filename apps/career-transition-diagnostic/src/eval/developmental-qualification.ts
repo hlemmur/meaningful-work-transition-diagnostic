@@ -1,6 +1,16 @@
 import { questions } from "@/questionnaire/questionnaire.v2";
 import type { ReportSection } from "@/engine/schemas/analysis";
 import type { CaseState } from "@/engine/schemas/case-state";
+import {
+  classifyEvidenceKinds,
+  evaluateDevelopmentalWarrant,
+  type BodyStatus,
+  type EvidenceKind,
+  type WarrantMode,
+} from "@/engine/pipeline/developmental-warrant";
+
+export { classifyEvidenceKinds, evaluateDevelopmentalWarrant };
+export type { BodyStatus, EvidenceKind, WarrantMode };
 
 export type QualificationScore = {
   id:
@@ -22,49 +32,12 @@ export type QualificationScore = {
   hard: true;
 };
 
-export type EvidenceKind =
-  | "self_theory"
-  | "behavior_history"
-  | "affect"
-  | "projection"
-  | "symbol"
-  | "enactment"
-  | "practical_biological";
-
 export type StageMark =
   | "grounded"
   | "partial"
   | "explicitly_unavailable"
   | "not_warranted"
   | "missing";
-
-export type BodyStatus = "grounded" | "explicitly_unavailable" | "not_warranted" | "missing";
-
-export type WarrantMode = "warranted" | "unresolved" | "not_warranted";
-
-const KIND_ORDER: EvidenceKind[] = [
-  "self_theory",
-  "behavior_history",
-  "affect",
-  "projection",
-  "symbol",
-  "enactment",
-  "practical_biological",
-];
-
-const DEPTH_CATEGORIES = new Set([
-  "psychological",
-  "identity",
-  "developmental",
-  "structural",
-]);
-
-const PRACTICAL_CATEGORIES = new Set([
-  "practical",
-  "economic",
-  "occupational",
-  "environmental",
-]);
 
 const BODY_LOCATIONS = ["chest", "shoulder", "throat", "stomach", "jaw", "gut", "belly"];
 
@@ -80,107 +53,6 @@ function evidenceDomains(refs: string[]) {
       return section === undefined ? [] : [section];
     }),
   );
-}
-
-function joined(sections: ReportSection[]) {
-  return sections.map((section) => `${section.title}\n${section.body}`).join("\n");
-}
-
-function hasText(value: string | undefined) {
-  return Boolean(value?.trim());
-}
-
-export function classifyEvidenceKinds(state: CaseState): EvidenceKind[] {
-  const kinds = new Set<EvidenceKind>();
-  if (
-    state.consciousNarrative.statedCausesFreeText.length > 0 ||
-    state.consciousNarrative.consciousExplanationTags.length > 0 ||
-    hasText(state.userFinalReflection.explanationShift)
-  ) {
-    kinds.add("self_theory");
-  }
-  if (
-    state.behavior.actionsTaken.length > 0 ||
-    state.behavior.avoidedActions.length > 0 ||
-    state.history.earlierOccurrences.length > 0 ||
-    state.history.supportiveStructures.length > 0
-  ) {
-    kinds.add("behavior_history");
-  }
-  if (state.affect.emotions.length > 0) {
-    kinds.add("affect");
-  }
-  if (
-    state.projections.admiredFigures.length > 0 ||
-    state.projections.rejectedFigures.length > 0 ||
-    state.projectionInterpretations.length > 0
-  ) {
-    kinds.add("projection");
-  }
-  const symbolicValues = Object.values(state.symbolicMaterial).some((value) =>
-    Array.isArray(value) ? value.some((item) => item.trim()) : hasText(value),
-  );
-  if (symbolicValues || (state.imageAnalysis?.literalFacts.length ?? 0) > 0) {
-    kinds.add("symbol");
-  }
-  if (
-    state.history.functionWithAccountability.length > 0 ||
-    state.history.legitimacyLoop.length > 0
-  ) {
-    kinds.add("enactment");
-  }
-  if (
-    state.practicalContext.constraints.length > 0 ||
-    state.practicalContext.pressureSources.length > 0 ||
-    state.hypotheses.some((item) => PRACTICAL_CATEGORIES.has(item.category))
-  ) {
-    kinds.add("practical_biological");
-  }
-  return KIND_ORDER.filter((kind) => kinds.has(kind));
-}
-
-function selectedHypothesis(state: CaseState) {
-  const id = state.finalFormulation?.selectedHypothesisId;
-  return state.hypotheses.find((item) => item.id === id);
-}
-
-export function evaluateDevelopmentalWarrant(state: CaseState, sections: ReportSection[] = []) {
-  const kinds = classifyEvidenceKinds(state);
-  const independent = kinds.filter((kind) => kind !== "self_theory");
-  const eligible = kinds.length >= 2 && independent.length >= 1;
-  const selected = selectedHypothesis(state);
-  const practicalPrimary = Boolean(
-    state.realityCheck?.sufficientWithoutDepth &&
-      selected &&
-      PRACTICAL_CATEGORIES.has(selected.category),
-  );
-  const trigger = state.finalFormulation?.maintenanceMechanism.trigger.trim() ?? "";
-  const hasTrigger = trigger.length > 0 && trigger !== "Not recorded in the legacy formulation.";
-  const hasEmotion = state.affect.emotions.length > 0;
-  const hasTension = Boolean(
-    state.hiddenPosition?.developmentalTension.poleA.trim() &&
-      state.hiddenPosition.developmentalTension.poleB.trim(),
-  );
-  const acceptedDepth = Boolean(selected && DEPTH_CATEGORIES.has(selected.category));
-  const warranted = eligible && !practicalPrimary && hasTrigger && hasEmotion && hasTension && acceptedDepth;
-  const mode: WarrantMode = practicalPrimary || !eligible
-    ? "not_warranted"
-    : warranted
-      ? "warranted"
-      : "unresolved";
-  const text = joined(sections);
-  const suppliedBody = state.affect.bodyResponses
-    .map((item) => `${item.rawQuote ?? ""} ${item.normalizedMeaning}`)
-    .join(" ");
-  let bodyStatus: BodyStatus = "missing";
-  if (state.affect.bodyResponses.length > 0) {
-    bodyStatus = "grounded";
-  } else if (/no body sensation was supplied|body (?:data|sensation|response).{0,48}(?:not supplied|unavailable)/i.test(text)) {
-    bodyStatus = "explicitly_unavailable";
-  } else if (!hasEmotion && mode !== "warranted") {
-    bodyStatus = "not_warranted";
-  }
-  return { kinds, eligible, mode, bodyStatus, suppliedBody, text };
 }
 
 const GENERIC_READING_WORDS = new Set([

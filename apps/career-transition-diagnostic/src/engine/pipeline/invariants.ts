@@ -12,6 +12,11 @@ import {
   throwGate,
 } from "./gates";
 import type { z } from "zod";
+import {
+  depthIndependentlySupported,
+  emergentPossibleThird,
+  suppliedThirdCorpus,
+} from "./developmental-warrant";
 
 const PRACTICAL_CATEGORIES = new Set(["practical", "economic", "occupational"]);
 const QUESTION_SECTION_BY_ID = new Map(
@@ -575,8 +580,83 @@ const selectedIsPractical =
     selectedHypothesis.category,
   );
 
+  const paraphrasesInsight =
+    Boolean(requested) &&
+    Boolean(output.hiddenPosition) &&
+    isParaphraseOf(output.hiddenPosition!.possibleHiddenPosition, requested!);
+
+  const candidate = structuredClone(state);
+  if (output.hiddenPosition && !selectedRejected && !paraphrasesInsight) {
+    candidate.hiddenPosition = output.hiddenPosition;
+  }
+  const supported = depthIndependentlySupported(candidate);
+  const layer = state.finalFormulation.layerRelationship;
+  if (layer) {
+    const liveIds = new Set(state.hypotheses.map((item) => item.id));
+    const unknownIds = [
+      ...layer.practicalHypothesisIds,
+      ...layer.psychologicalHypothesisIds,
+    ].filter((id) => !liveIds.has(id));
+    if (unknownIds.length > 0) {
+      throwGate({
+        id: "resolution-referential-integrity",
+        passed: false,
+        detail: `Pass 6 layerRelationship cites hypotheses that are not live: ${unknownIds.join(", ")}.`,
+      });
+    }
+    if (
+      (layer.mode === "layered" || layer.mode === "psychological_primary") &&
+      !state.finalFormulation.developmentalFormulation
+    ) {
+      throwGate({
+        id: "developmental-omission",
+        passed: false,
+        detail:
+          "Pass 6 declared layered or psychological-primary mode but omitted developmentalFormulation. Retry once; do not invent the interpretation.",
+      });
+    }
+    if (
+      (layer.mode === "layered" || layer.mode === "psychological_primary") &&
+      !supported
+    ) {
+      throwGate({
+        id: "layered-without-support",
+        passed: false,
+        detail:
+          "Layered or psychological-primary mode requires independently supported depth, not two category labels.",
+      });
+    }
+    if (layer.mode === "psychological_primary" && layer.practicalHypothesisIds.length > 0) {
+      const weakened = (state.hypothesisCritiques ?? []).some(
+        (item) =>
+          layer.practicalHypothesisIds.includes(item.hypothesisId) &&
+          (item.rankAdjustment === "lower" || item.rankAdjustment === "reject"),
+      );
+      if (!weakened) {
+        throwGate({
+          id: "psychological-primary-rival",
+          passed: false,
+          detail:
+            "psychological_primary requires a specifically weakened practical rival, not a rival that is merely present.",
+        });
+      }
+    }
+  }
+
+  if (
+    output.hiddenPosition &&
+    !output.hiddenPosition.consciousPosition.trim() &&
+    output.hiddenPosition.possibleHiddenPosition.trim()
+  ) {
+    throwGate({
+      id: "conscious-position",
+      passed: false,
+      detail: "A persona or hidden stance requires a distinct conscious ego position.",
+    });
+  }
+
   const developmental = state.finalFormulation.developmentalFormulation;
-  if (developmental && !selectedIsPractical) {
+  if (developmental && (!selectedIsPractical || supported)) {
     const knownEvidence = new Set(collectCanonicalEvidenceIds(state));
     const invalidRefs = developmental.evidenceRefs.filter(
       (ref) => !knownEvidence.has(ref),
@@ -600,6 +680,23 @@ const selectedIsPractical =
             : "Developmental formulation requires evidence from at least two questionnaire sections.",
       });
     }
+    const third = developmental.possibleThird;
+    if (
+      third &&
+      !emergentPossibleThird(
+        third,
+        [developmental.consciousPole, developmental.compensatingPole],
+        suppliedThirdCorpus(state),
+      )
+    ) {
+      state.finalFormulation = {
+        ...state.finalFormulation,
+        developmentalFormulation: {
+          ...developmental,
+          possibleThird: undefined,
+        },
+      };
+    }
   }
 
   const maintainingLoop = state.finalFormulation.maintainingLoop;
@@ -619,6 +716,7 @@ const selectedIsPractical =
 
   if (
     selectedIsPractical &&
+    !supported &&
     (state.finalFormulation.developmentalFormulation || state.finalFormulation.maintainingLoop)
   ) {
     state.finalFormulation = {
@@ -628,14 +726,9 @@ const selectedIsPractical =
     };
     state.gateRemediations = [
       ...(state.gateRemediations ?? []),
-      "Dropped developmentalFormulation and maintainingLoop because the selected hypothesis is practical, economic, or occupational.",
+      "Dropped developmentalFormulation and maintainingLoop because depth is not independently supported.",
     ];
   }
-
-  const paraphrasesInsight =
-    Boolean(requested) &&
-    Boolean(output.hiddenPosition) &&
-    isParaphraseOf(output.hiddenPosition!.possibleHiddenPosition, requested!);
 
   if (paraphrasesInsight) {
     state.gateRemediations = [
@@ -647,7 +740,7 @@ const selectedIsPractical =
   if (
     !output.hiddenPosition ||
     selectedRejected ||
-    selectedIsPractical ||
+    (selectedIsPractical && !supported) ||
     paraphrasesInsight
   ) {
     state.hiddenPosition = undefined;

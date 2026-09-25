@@ -12,6 +12,7 @@ import {
   ensurePracticalRival,
   sanitizeReportSections,
 } from "./invariants";
+import { realityCheckAgreement } from "./developmental-warrant";
 import {
   assertCaseStateCompleteness,
   critiquesNonEmpty,
@@ -149,7 +150,7 @@ export async function executeAnalysis(input: {
       try {
         caseState = applyStage(stage, caseState, result.output);
       } catch (error) {
-        if ((stage === "pass5" || stage === "pass8") && isGateError(error)) {
+        if ((stage === "pass5" || stage === "pass6" || stage === "pass8") && isGateError(error)) {
           const gateIssues = [error.message];
           if (stage === "pass5") {
             const speech = trimText(
@@ -464,6 +465,17 @@ function applyStage(
       const parsed = passOutputSchemas.pass8.parse(output);
       next.realityCheck = parsed.realityCheck;
       next.experiments = parsed.experiments;
+      const agreement = realityCheckAgreement(next);
+      if (agreement.action === "fail") {
+        throwGate({
+          id: "layer-reality-agreement",
+          passed: false,
+          detail: agreement.detail,
+        });
+      }
+      if (agreement.action === "note") {
+        next.gateRemediations = [...(next.gateRemediations ?? []), agreement.detail];
+      }
       const bind = experimentBoundToHypothesis(next, parsed.experiments);
       if (!bind.passed) {
         throwGate(bind);

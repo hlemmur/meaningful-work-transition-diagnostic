@@ -625,6 +625,10 @@ export function buildCaseSnapshot(input: {
           caseState.finalFormulation
             .developmentalFormulation,
 
+        layerRelationship:
+          caseState.finalFormulation
+            .layerRelationship,
+
         whyItFits:
           caseState.finalFormulation
             .whyItFits
