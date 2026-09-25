@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { pass9OutputSchema } from "./stage-schemas";
+import { REQUIRED_PEEL_SECTION_IDS } from "@/engine/schemas/analysis";
 import { runStructuredStage, withQuestionIntents } from "./structured";
 
 const schema = z.object({ ok: z.literal(true), n: z.number() });
@@ -105,6 +107,35 @@ describe("runStructuredStage", () => {
       ]),
     );
   });
+
+  it("tells a Pass 9 retry that one intent must be able to invalidate the whole formulation", async () => {
+    const questionSchema = z.object({
+      questions: z.string().min(1, "Questions must include exactly three structured intents"),
+    });
+    const seen: Array<Record<string, unknown>> = [];
+    await runStructuredStage({
+      stage: "pass9",
+      schema: questionSchema,
+      input: {},
+      model: "mock-cheap",
+      llm: {
+        async completeStructured({ stage, input }) {
+          seen.push(input);
+          return {
+            stage,
+            fixture: "questions",
+            output: seen.length === 1 ? { questions: "" } : { questions: "1. What would you test?" },
+          };
+        },
+      },
+    });
+
+    expect(seen[1]?.schemaIssues).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/couldInvalidateWholeFormulation/i),
+      ]),
+    );
+  });
 });
 
 describe("withQuestionIntents", () => {
@@ -128,5 +159,37 @@ describe("withQuestionIntents", () => {
       sections: [{ id: "questions", body: "1. Only one question?" }],
     }) as { sections: Array<{ questionIntents?: unknown }> };
     expect(output.sections[0]?.questionIntents).toBeUndefined();
+  });
+
+  it("does not invent whole-formulation invalidation for the live numbered questions", () => {
+    const body = [
+      "1. If a structured operational framework or partner provided mandatory daily deadlines and managed client acquisition for you, would your execution freeze dissolve entirely, or would the dread of being seen publicly still stop you?",
+      "2. What if your difficulty initiating outbound marketing is neither an identity defense nor a container deficit, but the unaddressed physical and nervous system exhaustion resulting from fifteen years of corporate burnout?",
+      "3. When you imagine shifting your work from one-to-one coaching to research, writing, or educational digital products, does your hesitation around visibility decrease, or does any form of public delivery trigger the same resistance?",
+    ].join("\n");
+    const reconstructed = withQuestionIntents({
+      sections: [{ id: "questions", body }],
+    }) as {
+      sections: Array<{
+        questionIntents: Array<{ couldWeakenSelectedFormulation: boolean; couldInvalidateWholeFormulation?: boolean }>;
+      }>;
+    };
+    const intents = reconstructed.sections[0]?.questionIntents ?? [];
+    expect(intents.map((intent) => intent.couldWeakenSelectedFormulation)).toEqual([true, true, false]);
+    expect(intents.every((intent) => intent.couldInvalidateWholeFormulation === undefined)).toBe(true);
+
+    const parsed = pass9OutputSchema.safeParse({
+      sections: REQUIRED_PEEL_SECTION_IDS.map((id, index) => ({
+        id,
+        title: id,
+        body: id === "questions" ? body : "A concrete evidence-backed paragraph about the stall.",
+        evidenceRefs: [`origin-case:Q${index + 1}.1`],
+        ...(id === "questions" ? { questionIntents: intents } : {}),
+      })),
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map((issue) => issue.message).join(" ")).toMatch(/whole formulation/i);
+    }
   });
 });
