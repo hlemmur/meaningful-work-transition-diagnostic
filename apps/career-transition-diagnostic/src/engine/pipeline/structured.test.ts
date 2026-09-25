@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { runStructuredStage } from "./structured";
+import { runStructuredStage, withQuestionIntents } from "./structured";
 
 const schema = z.object({ ok: z.literal(true), n: z.number() });
 
@@ -75,5 +75,29 @@ describe("runStructuredStage", () => {
         },
       }),
     ).rejects.toThrow(/schema validation failed for pass3:[\s\S]*ok:/i);
+  });
+});
+
+describe("withQuestionIntents", () => {
+  it("derives three intents from numbered questions and marks disconfirming openings", () => {
+    const output = withQuestionIntents({
+      sections: [{
+        id: "questions",
+        body: "1. What remains concrete in the history?\n2. If the container were restored, what would still stall?\n3. Which detail is still missing?",
+      }],
+    }) as { sections: Array<{ questionIntents: Array<{ couldWeakenSelectedFormulation: boolean }> }> };
+
+    expect(output.sections[0]?.questionIntents.map((item) => item.couldWeakenSelectedFormulation)).toEqual([
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  it("leaves a partial question list untouched", () => {
+    const output = withQuestionIntents({
+      sections: [{ id: "questions", body: "1. Only one question?" }],
+    }) as { sections: Array<{ questionIntents?: unknown }> };
+    expect(output.sections[0]?.questionIntents).toBeUndefined();
   });
 });
