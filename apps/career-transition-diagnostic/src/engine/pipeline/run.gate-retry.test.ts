@@ -191,7 +191,7 @@ describe("deterministic gate retry", () => {
 
     expect(result.status, result.error).toBe("completed");
     expect(calls).toHaveLength(2);
-    expect(calls[1]?.input.gateIssues?.[0]).toMatch(/omitted developmentalFormulation/i);
+    expect((calls[1]?.input.gateIssues as string[] | undefined)?.[0]).toMatch(/omitted developmentalFormulation/i);
     expect(result.caseState.finalFormulation?.developmentalFormulation?.consciousPole).toBe("freedom");
   });
 

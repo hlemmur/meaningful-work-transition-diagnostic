@@ -183,9 +183,9 @@ export function emergentPossibleThird(
 
 export function suppliedThirdCorpus(state: CaseState) {
   const actions = [
-    ...state.behavior.actionsTaken,
-    ...state.behavior.avoidedActions,
-  ].map((item) => `${item.rawQuote ?? ""} ${item.normalizedMeaning}`);
+    ...state.behavior.actionsTaken.map((item) => `${item.rawQuote ?? ""} ${item.normalizedMeaning}`),
+    ...state.behavior.avoidedActions.map((item) => item.action),
+  ];
   const symbolic = Object.values(state.symbolicMaterial).flatMap((value) =>
     Array.isArray(value) ? value : value ? [value] : [],
   );

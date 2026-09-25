@@ -5,6 +5,7 @@ import {
   depthIndependentlySupported,
   evaluateDevelopmentalWarrant,
   realityCheckAgreement,
+  suppliedThirdCorpus,
 } from "./developmental-warrant";
 
 function evidence(
@@ -189,6 +190,20 @@ describe("developmental warrant helper", () => {
       evidenceRefs: ["case:Q0.5"],
     };
     expect(realityCheckAgreement(state).action).toBe("fail");
+  });
+
+  it("builds the third corpus from taken quotes and avoided actions", () => {
+    const state = emptyCaseState("case");
+    state.behavior.actionsTaken = [
+      evidence("Q2.2", "finished a private draft", "behavior"),
+    ];
+    state.behavior.actionsTaken[0]!.rawQuote = "I finished the draft.";
+    state.behavior.avoidedActions = [{ action: "skipped the public send" }];
+    const corpus = suppliedThirdCorpus(state);
+    expect(corpus).toContain("I finished the draft.");
+    expect(corpus).toContain("finished a private draft");
+    expect(corpus).toContain("skipped the public send");
+    expect(corpus).not.toContain("undefined");
   });
 
   it("loads a legacy formulation that has no layer relationship", () => {
