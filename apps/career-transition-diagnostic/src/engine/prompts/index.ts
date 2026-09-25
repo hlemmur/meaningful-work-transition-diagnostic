@@ -304,7 +304,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v16",
+    version: "pass-9.v17",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
@@ -380,6 +380,7 @@ export const promptRegistry = {
   - End with a short working formulation.
   - Explicitly frame it as provisional and testable, not settled truth.
   - Synthesize the maintenance hypothesis, strongest alternative, warranted developmental opposition when present, remaining unknowns, and evidence that would update the formulation.
+  - When developmentalFormulation is present, name its possibleDevelopmentalTask in the close. A different open question does not replace that task.
 
   Return JSON {
     sections: array of {
