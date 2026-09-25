@@ -34,6 +34,45 @@ function schemaIssueLines(error: { issues: Array<{ path: PropertyKey[]; message:
   });
 }
 
+const DISCONFIRMING_QUESTION = /^(?:if|what if|what would|what evidence)\b/i;
+
+export function withQuestionIntents(output: unknown): unknown {
+  if (!output || typeof output !== "object" || !("sections" in output)) {
+    return output;
+  }
+  const record = output as { sections?: unknown };
+  if (!Array.isArray(record.sections)) {
+    return output;
+  }
+  return {
+    ...record,
+    sections: record.sections.map((section) => {
+      if (!section || typeof section !== "object") {
+        return section;
+      }
+      const item = section as { id?: unknown; body?: unknown; questionIntents?: unknown };
+      if (item.id !== "questions" || (Array.isArray(item.questionIntents) && item.questionIntents.length > 0)) {
+        return section;
+      }
+      const body = typeof item.body === "string" ? item.body : "";
+      const questions = [...body.matchAll(/\d+\.\s*([\s\S]*?)(?=(?:\n\s*\d+\.)|$)/g)]
+        .map((match) => match[1]?.trim())
+        .filter((question): question is string => Boolean(question));
+      if (questions.length !== 3) {
+        return section;
+      }
+      return {
+        ...item,
+        questionIntents: questions.map((question) => ({
+          question,
+          targetUncertainty: question.slice(0, 120),
+          couldWeakenSelectedFormulation: DISCONFIRMING_QUESTION.test(question),
+        })),
+      };
+    }),
+  };
+}
+
 export async function runStructuredStage(input: {
   stage: string;
   schema: z.ZodTypeAny;
@@ -54,8 +93,8 @@ export async function runStructuredStage(input: {
         ...(previousIssues?.length ? { schemaIssues: previousIssues } : {}),
       },
     });
-    lastOutput = raw.output;
-    const parsed = input.schema.safeParse(raw.output);
+    lastOutput = input.stage === "pass9" ? withQuestionIntents(raw.output) : raw.output;
+    const parsed = input.schema.safeParse(lastOutput);
     if (parsed.success) {
       return {
         output: parsed.data as unknown,

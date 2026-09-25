@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { emptyCaseState } from "@/engine/checkpoints/empty-case-state";
 import { extractCaseStateFull } from "@/engine/checkpoints/extract";
@@ -854,5 +856,82 @@ describe("sanitizeReportSections", () => {
         state,
       ),
     ).toThrow(/no supported evidence refs/i);
+  });
+});
+
+const originFixtureAnswers = JSON.parse(
+  readFileSync(
+    join(__dirname, "../test-support/fixtures/origin-case-answers.json"),
+    "utf8",
+  ),
+) as Record<string, unknown>;
+
+function originImageVote(text: string, evidenceRef: string) {
+  return {
+    votes: [{
+      hypothesisId: "hyp-live",
+      verdict: "supports" as const,
+      interpretation: "The supplied image is compatible with the stall.",
+      evidenceRefs: [evidenceRef],
+      exactClientMaterialUsed: [evidenceRef],
+    }],
+    imageAnalysis: {
+      literalFacts: [],
+      personalAssociations: [{ text, evidenceRefs: [evidenceRef] }],
+      plausibleReadings: [],
+    },
+    projectionInterpretations: [],
+    overallNote: "Origin fixture provenance.",
+  };
+}
+
+describe("origin fixture symbolic provenance", () => {
+  function prepared() {
+    const state = extractCaseStateFull("a1", originFixtureAnswers);
+    state.hypotheses = [hypothesis("hyp-live")];
+    const snapshot = buildCaseSnapshot({ caseState: state, answers: originFixtureAnswers });
+    const speech = String(snapshot.signals.symbolicMaterial.obstacleSpeech);
+    return { state, speech };
+  }
+
+  it("accepts the trimmed Q10.6 snapshot the model actually sees", () => {
+    const { state, speech } = prepared();
+    expect(String(originFixtureAnswers["Q10.6"]).length).toBeGreaterThan(
+      STAGE_INPUT_TRIM.maxQuoteChars,
+    );
+    expect(speech.endsWith("…")).toBe(true);
+
+    applyImageVotes(state, originImageVote(speech, "a1:Q10.6"));
+
+    expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(speech);
+  });
+
+  it("rejects a paraphrase of the obstacle speech", () => {
+    const { state } = prepared();
+    expect(() =>
+      applyImageVotes(
+        state,
+        originImageVote(
+          "Frustration that the passage is too far from the entrance to turn back.",
+          "a1:Q10.6",
+        ),
+      ),
+    ).toThrow(/not exact supplied client material/i);
+  });
+
+  it("rejects the obstacle text when it is filed as a personal association", () => {
+    const { state } = prepared();
+    const obstacle = String(originFixtureAnswers["Q10.3"]);
+    expect(() =>
+      applyImageVotes(state, originImageVote(obstacle, "a1:Q10.3")),
+    ).toThrow(/not exact supplied client material/i);
+  });
+
+  it("rejects a lightly cleaned paraphrase of the snapshot", () => {
+    const { state, speech } = prepared();
+    const cleaned = `${speech.slice(0, -1).trim()} and that means the attempt failed.`;
+    expect(() =>
+      applyImageVotes(state, originImageVote(cleaned, "a1:Q10.6")),
+    ).toThrow(/not exact supplied client material/i);
   });
 });

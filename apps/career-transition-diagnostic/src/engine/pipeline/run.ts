@@ -18,12 +18,13 @@ import {
   experimentBoundToHypothesis,
   assertPeelHardGates,
   throwGate,
+  isGateError,
   warrantsJungianPolarity,
   epistemicallyUncalibratedSectionIds,
 } from "./gates";
 import { ANALYSIS_STAGES, costForModel, modelForStage, type AnalysisStage } from "./models";
 import { passOutputSchemas } from "./stage-schemas";
-import { buildStageLlmInput } from "./stage-input";
+import { buildStageLlmInput, STAGE_INPUT_TRIM, trimText } from "./stage-input";
 import { runStructuredStage, StructuredStageError } from "./structured";
 
 export type AnalysisRunRecord = {
@@ -128,31 +129,89 @@ export async function executeAnalysis(input: {
     const evidenceRef = firstEvidenceId(caseState, input.assessmentId);
     let stageOutput: unknown;
     try {
-      const result = await runStructuredStage({
+      const stageInput = buildStageLlmInput({
+        stage,
+        assessmentId: input.assessmentId,
+        evidenceRef,
+        caseState,
+        answers: input.answers,
+        failStage: input.failStage,
+        draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
+      });
+      let result = await runStructuredStage({
         stage,
         schema: passOutputSchemas[stage],
         model,
         llm: input.llm,
-        input: buildStageLlmInput({
-          stage,
-          assessmentId: input.assessmentId,
-          evidenceRef,
-          caseState,
-          answers: input.answers,
-          failStage: input.failStage,
-          draftReport: stage === "pass10" && report ? { sections: report.sections } : undefined,
-        }),
+        input: stageInput,
       });
       stageOutput = result.output;
-
-      caseState = applyStage(stage, caseState, result.output);
+      try {
+        caseState = applyStage(stage, caseState, result.output);
+      } catch (error) {
+        if ((stage === "pass5" || stage === "pass8") && isGateError(error)) {
+          const gateIssues = [error.message];
+          if (stage === "pass5") {
+            const speech = trimText(
+              caseState.symbolicMaterial.obstacleSpeech,
+              STAGE_INPUT_TRIM.maxQuoteChars,
+            );
+            if (typeof speech === "string" && speech.trim()) {
+              gateIssues.push(
+                "personalAssociations may contain only exact copies of obstacleSpeech, obstacleWant, and ifNotRemoved. Remove obstacle, scene, and surroundings text from that list.",
+              );
+              gateIssues.push(
+                `Copy this exact personalAssociations text and cite its Q10.6 evidence ref: ${speech}`,
+              );
+            }
+          }
+          result = await runStructuredStage({
+            stage,
+            schema: passOutputSchemas[stage],
+            model,
+            llm: input.llm,
+            input: { ...stageInput, gateIssues },
+          });
+          stageOutput = result.output;
+          caseState = applyStage(stage, caseState, result.output);
+        } else {
+          throw error;
+        }
+      }
 
       if (stage === "pass9") {
-        const sections = sanitizeReportSections(
-          passOutputSchemas.pass9.parse(result.output).sections,
-          caseState,
-        );
-        assertPeelHardGates(sections, caseState);
+        const acceptPass9 = (output: unknown) => {
+          const sections = sanitizeReportSections(
+            passOutputSchemas.pass9.parse(output).sections,
+            caseState,
+          );
+          assertPeelHardGates(sections, caseState);
+          return sections;
+        };
+        let sections;
+        try {
+          sections = acceptPass9(result.output);
+        } catch (error) {
+          if (!isGateError(error)) {
+            throw error;
+          }
+          result = await runStructuredStage({
+            stage,
+            schema: passOutputSchemas[stage],
+            model,
+            llm: input.llm,
+            input: {
+              ...stageInput,
+              gateIssues: [
+                error.message,
+                "Do not invent image speech, a reply, or a second turn of dialogue.",
+              ],
+            },
+          });
+          stageOutput = result.output;
+          caseState = applyStage(stage, caseState, result.output);
+          sections = acceptPass9(result.output);
+        }
         report = {
           assessmentId: input.assessmentId,
           engineVersion: ENGINE_VERSION,
