@@ -1307,7 +1307,7 @@ describe("soft-depth conditional peel gates", () => {
     );
   });
 
-  it("rejects watching how you respond as a generated reply", () => {
+  it("does not treat watching how you respond as image dialogue", () => {
     const state = extractCaseStateFull("g1", {
       "Q1.1": "stall",
     });
@@ -1320,7 +1320,20 @@ describe("soft-depth conditional peel gates", () => {
       ),
     ];
 
-    expect(imaginalWhenSpeech(sections, state).passed).toBe(false);
+    expect(imaginalWhenSpeech(sections, state).passed).toBe(true);
+  });
+
+  it("does not treat you answer as image dialogue", () => {
+    const state = extractCaseStateFull("g1", { "Q1.1": "stall" });
+    const sections = [
+      section(
+        "questions",
+        "What would you answer if the next step stayed private?",
+        ["g1:Q1.1"],
+      ),
+    ];
+
+    expect(imaginalWhenSpeech(sections, state).passed).toBe(true);
   });
 
   it("rejects a reply spoken by the image", () => {
