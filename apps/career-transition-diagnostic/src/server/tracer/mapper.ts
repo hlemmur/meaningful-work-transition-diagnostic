@@ -15,6 +15,29 @@ import {
   type TracerStore,
 } from "./records";
 
+export function lastRunsByIdempotencyKey<T extends { idempotencyKey: string }>(
+  runs: T[],
+): T[] {
+  const byKey = new Map<string, T>();
+  for (const run of runs) {
+    byKey.set(run.idempotencyKey, run);
+  }
+  return [...byKey.values()];
+}
+
+export function uniqueIdempotencyKey(
+  existing: Iterable<{ idempotencyKey: string }>,
+  key: string,
+): string {
+  const taken = new Set(
+    [...existing].map((item) => item.idempotencyKey),
+  );
+  if (!taken.has(key)) {
+    return key;
+  }
+  return `${key}:${randomUUID()}`;
+}
+
 export const TRACER_TABLES = [
   "purchases",
   "marketing_consents",
@@ -141,7 +164,7 @@ export function storeToTables(store: TracerStore): TracerTables {
     });
   }
 
-  for (const run of store.analysisRuns) {
+  for (const run of lastRunsByIdempotencyKey(store.analysisRuns)) {
     tables.analysis_runs.push({
       id: randomUUID(),
       assessment_id: run.assessmentId,

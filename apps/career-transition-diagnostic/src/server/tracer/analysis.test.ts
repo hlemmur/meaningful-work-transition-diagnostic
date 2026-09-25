@@ -171,6 +171,35 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     ).toBe(false);
   });
 
+  it("keeps unique analysis-run keys when a failed stage is resumed and fails again", async () => {
+    const { assessmentId } = await submittedAssessment({
+      "Q1.1": "I stall",
+    });
+
+    const first = await runAnalysisPipeline(assessmentId, {
+      llm: llmForFixture("schema-fail"),
+    });
+    const second = await runAnalysisPipeline(assessmentId, {
+      llm: llmForFixture("schema-fail"),
+    });
+
+    expect(first.status).toBe("failed");
+    expect(second.status).toBe("failed");
+    expect(first.failedStage).toBe("pass3");
+    expect(second.failedStage).toBe("pass3");
+
+    const runs = await listAnalysisRuns(assessmentId);
+    const keys = runs.map((item) => item.idempotencyKey);
+    expect(keys.length).toBeGreaterThan(1);
+    expect(new Set(keys).size).toBe(keys.length);
+
+    const pass3Failures = runs.filter(
+      (item) => item.stage === "pass3" && item.status === "failure",
+    );
+    expect(pass3Failures).toHaveLength(2);
+    expect(pass3Failures.every((item) => item.error?.match(/hypotheses/i))).toBe(true);
+  });
+
   it("includes a practical rival when constraints warrant it", async () => {
     const { assessmentId } = await submittedAssessment({
       "Q1.1": "I want out.",

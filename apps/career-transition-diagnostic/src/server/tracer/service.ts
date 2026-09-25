@@ -18,6 +18,7 @@ import {
 import { assertMockMode, isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
 import { retentionMs } from "@/config/launch-gate";
 import { getActiveStore, getRepository, withStore } from "./repository";
+import { uniqueIdempotencyKey } from "./mapper";
 import type { AssessmentRecord, MarketingConsentRecord, TracerStore } from "./records";
 import { createEmptyTracerStore } from "./records";
 import type { ReportSection } from "@/engine/schemas/analysis";
@@ -793,8 +794,10 @@ export async function runAnalysisPipeline(
       llm: options?.llm ?? adapters.llm,
       failStage: options.failStage,
       persistRun(run) {
-        getStore().analysisRuns.push({
+        const store = getStore();
+        store.analysisRuns.push({
           ...run,
+          idempotencyKey: uniqueIdempotencyKey(store.analysisRuns, run.idempotencyKey),
           createdAt: new Date().toISOString(),
         });
       },
