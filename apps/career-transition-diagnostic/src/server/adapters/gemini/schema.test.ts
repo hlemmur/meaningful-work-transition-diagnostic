@@ -103,6 +103,23 @@ describe("Gemini schema sanitizer", () => {
     }));
   });
 
+  it("keeps Pass 9 question intents and the invalidation flag in the Gemini schema", () => {
+    const pass9 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass9")).properties);
+    const section = asObject(asObject(pass9.sections).items);
+    expect(section.required).toContain("questionIntents");
+    const intent = asObject(asObject(asObject(section.properties).questionIntents).items);
+    expect(intent.required).toEqual(expect.arrayContaining([
+      "question",
+      "targetUncertainty",
+      "couldWeakenSelectedFormulation",
+      "couldInvalidateWholeFormulation",
+    ]));
+    expect(intent.required).not.toEqual(expect.arrayContaining([
+      "relatedHypothesisId",
+      "relatedForkId",
+    ]));
+  });
+
   it("strips min/max item counts that inflate Gemini schema complexity", () => {
     const pass2 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass2")).properties);
     expect(asObject(pass2.contradictions).minItems).toBeUndefined();
