@@ -58,7 +58,7 @@ function peelSections(assessmentId = "a1") {
       questionIntents: [
         { question: "What would make you question this explanation?", targetUncertainty: "Whether the explanation fits", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: true },
         { question: "What changes when you test structure directly?", targetUncertainty: "Whether structure changes action", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: false },
-        { question: "What still feels unexplained to you?", targetUncertainty: "The unexplained remainder", couldWeakenSelectedFormulation: false },
+        { question: "What still feels unexplained to you?", targetUncertainty: "The unexplained remainder", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: true },
       ],
     },
     {

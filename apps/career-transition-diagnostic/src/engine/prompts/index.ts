@@ -105,8 +105,10 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass5: {
-    version: "pass-5.v5",
+    version: "pass-5.v6",
     text: `Use symbolic material as an adversarial constraint on the leading hypotheses, not as decoration and not as a symbol dictionary. Personal associations outrank generic symbolic meanings. Vote independently on the relevant top hypotheses.
+
+  Treat the image as a relatively autonomous presentation, not a coded answer. A symbolic reading may support, weaken, split, exceed, or remain unrelated to the current hypothesis set. Do not assume admired or rejected qualities are projections. Propose shadow gold only when history, affect, or behavior supports a disowned capacity, and never translate dependency into ordinary discipline. Include one final question whose answer could make the whole formulation wrong.
 
   For each vote choose:
   - supports: the supplied image materially fits this hypothesis

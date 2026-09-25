@@ -8,7 +8,7 @@ import {
 } from "./stage-schemas";
 
 describe("pass5OutputSchema / symbolic readings", () => {
-  it("rejects a reading that neither supports nor weakens a hypothesis", () => {
+  it("accepts a symbolic reading that stays unrelated to the hypothesis set", () => {
     const parsed = pass5OutputSchema.safeParse({
       votes: [{
         hypothesisId: "hyp-depth",
@@ -24,6 +24,28 @@ describe("pass5OutputSchema / symbolic readings", () => {
           supportsHypothesisIds: [],
           weakensHypothesisIds: [],
           evidenceRefs: ["a1:Q10.1"],
+        }],
+      },
+      projectionInterpretations: [],
+      overallNote: "Synthetic.",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still rejects a reading that cites no supplied evidence", () => {
+    const parsed = pass5OutputSchema.safeParse({
+      votes: [{
+        hypothesisId: "hyp-depth",
+        verdict: "splits",
+        evidenceRefs: ["a1:Q10.1"],
+        exactClientMaterialUsed: ["a1:Q10.1"],
+      }],
+      imageAnalysis: {
+        literalFacts: [{ text: "A gate.", evidenceRefs: ["a1:Q10.1"] }],
+        personalAssociations: [],
+        plausibleReadings: [{
+          interpretation: "An unbound interpretation.",
+          evidenceRefs: [],
         }],
       },
       projectionInterpretations: [],

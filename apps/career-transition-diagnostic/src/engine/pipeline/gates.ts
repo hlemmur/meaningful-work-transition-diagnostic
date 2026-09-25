@@ -980,12 +980,13 @@ export function questionsAndCloseAdequate(
       new Set(renderedQuestions).size !== 3 ||
       intentQuestions.some((question) => !renderedQuestions.includes(question)) ||
       invalidIntent ||
-      !intents.some((intent) => intent.couldWeakenSelectedFormulation))
+      !intents.some((intent) => intent.couldWeakenSelectedFormulation) ||
+      !intents.some((intent) => intent.couldInvalidateWholeFormulation))
   ) {
     return {
       id: "questions-close",
       passed: false,
-      detail: "Questions require three personalized, non-leading structured intents, including one that could weaken the selected formulation.",
+      detail: "Questions require three personalized, non-leading structured intents, including one that could weaken the selected formulation and one that could make the whole formulation wrong.",
     };
   }
 
@@ -1385,6 +1386,13 @@ if (!questionsClose.passed) {
   const inflation = antiInflationDiagnosis(body);
   if (!inflation.passed) {
     throwGate(inflation);
+  }
+  if (/they are your shadow|discipline is the gold|ordinary discipline is the gold|latent destiny/i.test(body)) {
+    throwGate({
+      id: "projection-gold",
+      passed: false,
+      detail: "Projection gold must stay tentative and must not turn a figure into the client's shadow, discipline, or destiny.",
+    });
   }
 }
 
