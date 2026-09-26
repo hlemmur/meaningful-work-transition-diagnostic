@@ -211,7 +211,11 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v18");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v19");
+    expect(promptRegistry.pass9.text).toMatch(/residual-layer question/i);
+    expect(promptRegistry.pass9.text).toMatch(/cumulative per-layer updates/i);
+    expect(promptRegistry.pass9.text).toMatch(/Forbidden shapes/i);
+    expect(promptRegistry.pass9.text).toMatch(/primary difficulty/i);
     expect(promptRegistry.pass9.text).toMatch(/possibleDevelopmentalTask/);
     expect(promptRegistry.pass9.text).toMatch(/questions section must return questionIntents/i);
     expect(promptRegistry.pass9.text).toMatch(/couldInvalidateWholeFormulation/);
@@ -277,7 +281,9 @@ expectMentions(promptRegistry.pass8.text, [
       /you are a puer\/senex|archetypal identity/i,
     );
 
-    expect(promptRegistry.pass10.version).toBe("pass-10.v15");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v16");
+    expect(promptRegistry.pass10.text).toMatch(/residual-layer question/i);
+    expect(promptRegistry.pass10.text).toMatch(/inverse-proof/i);
     expect(promptRegistry.pass10.text).toMatch(/couldInvalidateWholeFormulation/);
     expect(promptRegistry.pass10.text).toMatch(/invalidat\w* the whole formulation/i);
     expect(promptRegistry.pass8.version).toBe("pass-8.v9");

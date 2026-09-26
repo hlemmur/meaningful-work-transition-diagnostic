@@ -36,7 +36,7 @@ function baseSections(overrides: Partial<Record<ReportSection["id"], string>> = 
     experiment:
       "Change: use one template for twenty minutes.\nObserve: what becomes easier, what remains, and what arises unexpectedly.\nWhen the structure changed, drafting became easier, while the charge around being seen remained.",
     questions:
-      "1. If the changed practical condition made execution substantially easier, what tension around visibility would still remain?\n2. What vitality feels threatened if the practical change works?\n3. What other open candidate already named in the report would still need checking?",
+      "1. If the changed practical condition made execution substantially easier for you, what tension around visibility would still remain?\n2. What vitality feels threatened if the practical change works?\n3. What other open candidate already named in the report would still need checking?",
     close:
       "If the practical change helps a lot, that contribution is clearly important; psychological material is not retired. Unknowns remain, and new evidence can update the formulation.",
     jungian:
@@ -254,6 +254,23 @@ describe("epistemology qualification (CAR-127)", () => {
         "1. What remains if structure helps?\n2. What vitality is threatened?\n3. Is your primary difficulty social vulnerability or missing structure?",
     }));
     expect(result.scores.find((score) => score.id === "binary_layer_question")?.passed).toBe(false);
+  });
+
+  it("requires a residual-layer question as a hard epistemology score", () => {
+    const missing = evaluateEpistemologyQualification(teacherLayered(), baseSections({
+      questions:
+        "1. What happens when you test this?\n2. What evidence would weaken the hypothesis?\n3. What remains unexplained?",
+    }));
+    const residual = missing.scores.find((score) => score.id === "residual_question_present");
+    expect(residual?.passed).toBe(false);
+    expect(residual?.hard).toBe(true);
+    expect(missing.hardPassed).toBe(false);
+
+    const present = evaluateEpistemologyQualification(teacherLayered(), baseSections({
+      questions:
+        "1. If clearer structure made execution substantially easier for you, what tension around visibility would still remain?\n2. What evidence would weaken the hypothesis?\n3. What remains unexplained?",
+    }));
+    expect(present.scores.find((score) => score.id === "residual_question_present")?.passed).toBe(true);
   });
 
   it("fails clinical finding language in product voice but allows quoted client wording", () => {

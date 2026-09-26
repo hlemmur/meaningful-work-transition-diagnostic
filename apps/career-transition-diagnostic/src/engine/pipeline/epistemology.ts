@@ -142,6 +142,12 @@ export function hasInventedAnalogue(state: CaseState) {
   });
 }
 
+export function hasResidualLayerQuestion(text: string) {
+  return /if[\s\S]{0,100}(?:made|makes|make)[\s\S]{0,100}easier[\s\S]{0,160}(?:remain|still|would still)/i.test(
+    text,
+  );
+}
+
 export function evaluateEpistemologyQualification(
   state: CaseState,
   sections: ReportSection[],
@@ -171,8 +177,7 @@ export function evaluateEpistemologyQualification(
       ? !hasRivalLexicon(alternative)
       : true;
   const residualPass =
-    questions.trim().length === 0 ||
-    /if[\s\S]{0,80}(?:made|makes)[\s\S]{0,80}easier[\s\S]{0,120}(?:remain|still)/i.test(questions);
+    questions.trim().length === 0 || hasResidualLayerQuestion(questions);
 
   const scores: EpistemologyScore[] = [
     score(
@@ -237,7 +242,6 @@ export function evaluateEpistemologyQualification(
       residualPass
         ? "Questions include a residual-layer inquiry, or no questions section is present."
         : "Questions omit a residual-layer inquiry when questions are present.",
-      false,
     ),
   ];
 

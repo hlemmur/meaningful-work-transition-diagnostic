@@ -28,6 +28,7 @@ import {
   developmentalSectionQuality,
   epistemicallyUncalibratedSectionIds,
   closeSynthesisAdequate,
+  closeInverseProof,
 } from "./gates";
 
 const originAnswers = JSON.parse(
@@ -2668,10 +2669,10 @@ describe("questions and close gate", () => {
       reportSectionSchema.parse({
         id: "questions",
         title: "questions",
-        body: "1. What happens when you test this? 2. What evidence would weaken the hypothesis for you? 3. What remains unexplained for you?",
+        body: "1. If clearer structure made execution substantially easier for you, what tension around visibility would still remain? 2. What evidence would weaken the hypothesis for you? 3. What remains unexplained for you?",
         evidenceRefs: ["a1:Q1.1"],
         questionIntents: [
-          { question: "What happens when you test this?", targetUncertainty: "Whether behavior changes", couldWeakenSelectedFormulation: false },
+          { question: "If clearer structure made execution substantially easier for you, what tension around visibility would still remain?", targetUncertainty: "Residual tension", couldWeakenSelectedFormulation: false },
           { question: "What evidence would weaken the hypothesis for you?", targetUncertainty: "Whether the formulation fits", couldWeakenSelectedFormulation: true },
           { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
         ],
@@ -2690,15 +2691,76 @@ describe("questions and close gate", () => {
     ).toBe(true);
   });
 
+  it("rejects a practical-vs-psychological binary question", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. If clearer structure made execution substantially easier for you, what tension around visibility would still remain? 2. Is your primary difficulty missing structure or social vulnerability? 3. What remains unexplained for you?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          { question: "If clearer structure made execution substantially easier for you, what tension around visibility would still remain?", targetUncertainty: "Residual", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: true },
+          { question: "Is your primary difficulty missing structure or social vulnerability?", targetUncertainty: "Binary", couldWeakenSelectedFormulation: false },
+          { question: "What remains unexplained for you?", targetUncertainty: "Unknown", couldWeakenSelectedFormulation: false },
+        ],
+      }),
+      section("close", "A working formulation.", ["a1:Q1.1"]),
+    ];
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    const result = questionsAndCloseAdequate(sections, state);
+    expect(result.passed).toBe(false);
+    expect(result.detail).toMatch(/binary/i);
+  });
+
+  it("requires a residual-layer question", () => {
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. What happens when you test this? 2. What evidence would weaken the hypothesis for you? 3. What remains unexplained for you?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          { question: "What happens when you test this?", targetUncertainty: "Behavior", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: true },
+          { question: "What evidence would weaken the hypothesis for you?", targetUncertainty: "Fit", couldWeakenSelectedFormulation: false },
+          { question: "What remains unexplained for you?", targetUncertainty: "Unknown", couldWeakenSelectedFormulation: false },
+        ],
+      }),
+      section("close", "A working formulation.", ["a1:Q1.1"]),
+    ];
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    const result = questionsAndCloseAdequate(sections, state);
+    expect(result.passed).toBe(false);
+    expect(result.detail).toMatch(/residual-layer/i);
+  });
+
+  it("fails inverse-proof close language via closeInverseProof", () => {
+    const finding = closeInverseProof([
+      section(
+        "close",
+        "If structure works, then the practical hypothesis is primary and wins.",
+        ["a1:Q1.1"],
+      ),
+    ]);
+    expect(finding.passed).toBe(false);
+    expect(finding.id).toBe("close-inverse-proof");
+    expect(closeInverseProof([
+      section(
+        "close",
+        "If the practical change helps a lot, that contribution is clearly important and psychological material is not retired.",
+        ["a1:Q1.1"],
+      ),
+    ]).passed).toBe(true);
+  });
+
   it("ignores a preamble before three numbered questions", () => {
     const sections = [
       reportSectionSchema.parse({
         id: "questions",
         title: "questions",
-        body: "Stay with these questions as inquiry tools rather than seeking immediate answers: 1. If you were guaranteed respect, would your execution freeze? 2. When you notice the pattern, what boundary feels adult to you? 3. What remains unexplained for you?",
+        body: "Stay with these questions as inquiry tools rather than seeking immediate answers: 1. If clearer structure made execution substantially easier for you, what tension around visibility would still remain? 2. When you notice the pattern, what boundary feels adult to you? 3. What remains unexplained for you?",
         evidenceRefs: ["a1:Q1.1"],
         questionIntents: [
-          { question: "If you were guaranteed respect, would your execution freeze?", targetUncertainty: "Whether respect removes the freeze", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: true },
+          { question: "If clearer structure made execution substantially easier for you, what tension around visibility would still remain?", targetUncertainty: "Residual tension", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: true },
           { question: "When you notice the pattern, what boundary feels adult to you?", targetUncertainty: "Which boundary is at stake", couldWeakenSelectedFormulation: false },
           { question: "What remains unexplained for you?", targetUncertainty: "The unresolved remainder", couldWeakenSelectedFormulation: false },
         ],
