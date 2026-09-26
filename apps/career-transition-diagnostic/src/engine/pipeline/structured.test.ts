@@ -154,6 +154,70 @@ describe("withQuestionIntents", () => {
     ]);
   });
 
+  it("coerces missing you/your onto numbered question bodies and existing intents", () => {
+    const output = withQuestionIntents({
+      sections: [{
+        id: "questions",
+        body: [
+          "1. If an external partner provided total daily structural accountability and made administrative execution substantially easier, what tension around visibility would still remain?",
+          "2. What evidence would weaken the selected formulation?",
+          "3. What would make the whole formulation wrong?",
+        ].join("\n"),
+        questionIntents: [
+          {
+            question: "If an external partner provided total daily structural accountability and made administrative execution substantially easier, what tension around visibility would still remain?",
+            targetUncertainty: "Residual visibility",
+            couldWeakenSelectedFormulation: false,
+          },
+          {
+            question: "What evidence would weaken the selected formulation?",
+            targetUncertainty: "Weaken",
+            couldWeakenSelectedFormulation: true,
+          },
+          {
+            question: "What would make the whole formulation wrong?",
+            targetUncertainty: "Invalidate",
+            couldWeakenSelectedFormulation: false,
+            couldInvalidateWholeFormulation: true,
+          },
+        ],
+      }],
+    }) as {
+      sections: Array<{
+        body: string;
+        questionIntents: Array<{ question: string }>;
+      }>;
+    };
+
+    const section = output.sections[0]!;
+    expect(section.body).toMatch(/for you\?/g);
+    expect([...section.body.matchAll(/\b(?:you|your)\b/gi)].length).toBeGreaterThanOrEqual(3);
+    for (const intent of section.questionIntents) {
+      expect(intent.question).toMatch(/\b(?:you|your)\b/i);
+    }
+  });
+
+  it("leaves questions that already address you/your unchanged", () => {
+    const body = [
+      "1. If clearer structure made execution substantially easier for you, what tension around visibility would still remain?",
+      "2. What evidence would weaken the selected formulation for you?",
+      "3. What would make the whole formulation wrong for you?",
+    ].join("\n");
+    const output = withQuestionIntents({
+      sections: [{
+        id: "questions",
+        body,
+        questionIntents: [
+          { question: "If clearer structure made execution substantially easier for you, what tension around visibility would still remain?", targetUncertainty: "a", couldWeakenSelectedFormulation: false },
+          { question: "What evidence would weaken the selected formulation for you?", targetUncertainty: "b", couldWeakenSelectedFormulation: true },
+          { question: "What would make the whole formulation wrong for you?", targetUncertainty: "c", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: true },
+        ],
+      }],
+    }) as { sections: Array<{ body: string }> };
+
+    expect(output.sections[0]?.body).toBe(body);
+  });
+
   it("leaves a partial question list untouched", () => {
     const output = withQuestionIntents({
       sections: [{ id: "questions", body: "1. Only one question?" }],

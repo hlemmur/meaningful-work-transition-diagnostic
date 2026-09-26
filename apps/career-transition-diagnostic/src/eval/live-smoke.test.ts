@@ -75,6 +75,22 @@ describe("M6 live Gemini smoke", () => {
                   bodyStart: (section.body ?? "").slice(0, 160),
                 }));
               })(),
+              pass9Questions: (() => {
+                const pass9 = [...runs].reverse().find((run) => run.stage === "pass9");
+                const sections = (pass9?.output as {
+                  sections?: Array<{
+                    id?: string;
+                    body?: string;
+                    questionIntents?: Array<{ question?: string }>;
+                  }>;
+                } | undefined)?.sections;
+                const questions = sections?.find((section) => section.id === "questions");
+                if (!questions) return null;
+                return {
+                  body: questions.body ?? null,
+                  intentQuestions: (questions.questionIntents ?? []).map((intent) => intent.question ?? null),
+                };
+              })(),
               tokenTotals: usage.totals,
               tokenTable: formatPassTokenUsageTable(usage),
             },

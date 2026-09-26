@@ -30,6 +30,7 @@ import {
   closeSynthesisAdequate,
   closeInverseProof,
 } from "./gates";
+import { withQuestionIntents } from "./structured";
 
 const originAnswers = JSON.parse(
   readFileSync(join(__dirname, "../test-support/fixtures/origin-case-answers.json"), "utf8"),
@@ -2791,6 +2792,66 @@ describe("questions and close gate", () => {
       section("close", "A provisional working formulation for you.", ["a1:Q1.1"]),
     ];
     expect(questionsAndCloseAdequate(sections, state).passed).toBe(true);
+  });
+
+  it("passes after coercing live-shaped questions that omit you/your", () => {
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Visibility",
+        category: "psychological",
+        observedPattern: "Freeze under exposure.",
+        evidenceFor: ["a1:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        confidence: "moderate",
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.5,
+          personSpecificity: 0.5,
+          developmentalFit: 0.5,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.1,
+        },
+      },
+    ];
+    const raw = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. If an external partner provided total daily structural accountability and made administrative execution substantially easier, what tension around visibility would still remain?\n2. What evidence would weaken the selected formulation?\n3. What would make the whole formulation wrong?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          {
+            question: "If an external partner provided total daily structural accountability and made administrative execution substantially easier, what tension around visibility would still remain?",
+            targetUncertainty: "Residual",
+            couldWeakenSelectedFormulation: false,
+          },
+          {
+            question: "What evidence would weaken the selected formulation?",
+            targetUncertainty: "Weaken",
+            couldWeakenSelectedFormulation: true,
+          },
+          {
+            question: "What would make the whole formulation wrong?",
+            targetUncertainty: "Invalidate",
+            couldWeakenSelectedFormulation: false,
+            couldInvalidateWholeFormulation: true,
+          },
+        ],
+      }),
+      section("close", "A provisional working formulation for you.", ["a1:Q1.1"]),
+    ];
+    expect(questionsAndCloseAdequate(raw, state).passed).toBe(false);
+    const coerced = withQuestionIntents({ sections: raw }) as { sections: typeof raw };
+    expect(questionsAndCloseAdequate(coerced.sections, state).passed).toBe(true);
   });
 
   it("rejects a practical-vs-psychological binary question", () => {
