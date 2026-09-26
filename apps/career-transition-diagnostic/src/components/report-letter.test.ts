@@ -26,24 +26,72 @@ describe("report letter", () => {
     expect(html).not.toMatch(/Use your browser print dialog/i);
   });
 
-  it("preserves line breaks only on experiment and question sections", () => {
+  it("splits blank-line blocks into paragraphs with whitespace-pre-wrap", () => {
     const marked = renderToStaticMarkup(
       createElement(ReportLetter, {
         sections: [
-          { id: "problem", title: "The problem as you see it", body: "One line.\n\nAnother line." },
-          { id: "experiment", title: "Your experiment", body: "Step one.\n\nStep two." },
-          { id: "questions", title: "Questions", body: "1. First?\n\n2. Second?" },
+          {
+            id: "problem",
+            title: "The problem as you see it",
+            body: "One line.\n\nAnother line with\nan intentional break.",
+          },
         ],
       }),
     );
-    expect(marked).toContain('class="leading-7"');
-    expect(marked).toContain('class="leading-7 whitespace-pre-line"');
-    expect(marked.match(/whitespace-pre-line/g)).toHaveLength(2);
-    expect(marked).toContain("Step one.\n\nStep two.");
-    expect(marked).toContain("1. First?\n\n2. Second?");
+    expect(marked).toContain('class="leading-7 whitespace-pre-wrap"');
+    expect(marked.match(/<p class="leading-7 whitespace-pre-wrap">/g)).toHaveLength(2);
+    expect(marked).toContain("Another line with\nan intentional break.");
   });
 
-  it("hides app chrome in print and documents browser-owned headers", () => {
+  it("renders multiline experiment movements and numbered questions as structured lists", () => {
+    const marked = renderToStaticMarkup(
+      createElement(ReportLetter, {
+        sections: [
+          {
+            id: "experiment",
+            title: "Your experiment",
+            body:
+              "Change: Use a 25-minute private draft window.\n\nObserve: Notice what becomes easier and what charge remains.\n\nDeepen: If freeze softens, ask what vitality is protected.\n\nBridge: Bring what you noticed back to the formulation.",
+          },
+          {
+            id: "questions",
+            title: "Questions",
+            body: "1. If structure helped, what tension around visibility would still remain?\n2. What evidence would weaken this hypothesis?\n3. What remains unexplained?",
+          },
+        ],
+      }),
+    );
+
+    expect(marked).toContain("<p class=\"leading-7 whitespace-pre-wrap\">Change: Use a 25-minute private draft window.</p>");
+    expect(marked).toContain("<p class=\"leading-7 whitespace-pre-wrap\">Observe: Notice what becomes easier and what charge remains.</p>");
+    expect(marked).toContain("<p class=\"leading-7 whitespace-pre-wrap\">Deepen: If freeze softens, ask what vitality is protected.</p>");
+    expect(marked).toContain("<p class=\"leading-7 whitespace-pre-wrap\">Bridge: Bring what you noticed back to the formulation.</p>");
+    expect(marked).toContain("<ol");
+    expect(marked).toContain("<li>If structure helped, what tension around visibility would still remain?</li>");
+    expect(marked).toContain("<li>What evidence would weaken this hypothesis?</li>");
+    expect(marked).toContain("<li>What remains unexplained?</li>");
+    expect(marked).not.toMatch(/evidenceRefs/i);
+  });
+
+  it("renders bullet lines as unordered lists", () => {
+    const marked = renderToStaticMarkup(
+      createElement(ReportLetter, {
+        sections: [
+          {
+            id: "reality",
+            title: "What is happening in practice",
+            body: "- Money pressure is real.\n- Deadlines keep slipping.\n- Sleep is thin.",
+          },
+        ],
+      }),
+    );
+    expect(marked).toContain("<ul");
+    expect(marked).toContain("<li>Money pressure is real.</li>");
+    expect(marked).toContain("<li>Deadlines keep slipping.</li>");
+    expect(marked).toContain("<li>Sleep is thin.</li>");
+  });
+
+  it("hides app chrome in print and styles letter lists for print", () => {
     expect(html).toContain('class="print:hidden leading-7 text-muted"');
     expect(html).toContain('class="print:hidden text-sm text-muted"');
     const badge = renderToStaticMarkup(createElement(MockModeBadge));
@@ -51,6 +99,7 @@ describe("report letter", () => {
     const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
     expect(css).toMatch(/Browser-owned print headers/);
     expect(css).toMatch(/CSS cannot hide them/);
+    expect(css).toMatch(/\.report-page (ul|ol)/);
   });
 
   it("drops leftover evidence markers from the letter the client reads", () => {
@@ -77,7 +126,8 @@ describe("report letter", () => {
     expect(letter).not.toContain("[,,, ]");
     expect(letter).toContain("You left a career after burnout.");
     expect(letter).toContain("Freezing shows up whenever marketing starts.");
-    expect(letter).toContain("Send the existing draft.\n\nWatch the 25-minute window.");
+    expect(letter).toContain("Send the existing draft.");
+    expect(letter).toContain("Watch the 25-minute window.");
   });
 
   it("keeps a client's own bracketed words in the letter", () => {
@@ -94,5 +144,23 @@ describe("report letter", () => {
     );
 
     expect(letter).toContain("[a tender romance]");
+  });
+
+  it("never renders evidenceRefs arrays into the letter markup", () => {
+    const letter = renderToStaticMarkup(
+      createElement(ReportLetter, {
+        sections: [
+          {
+            id: "close",
+            title: "A working formulation",
+            body: "This stays provisional.",
+            // @ts-expect-error intentional leak attempt for the customer letter contract
+            evidenceRefs: ["case:Q1.1", "case:Q2.2"],
+          } as { id: string; title: string; body: string },
+        ],
+      }),
+    );
+    expect(letter).not.toContain("case:Q1.1");
+    expect(letter).not.toContain("evidenceRefs");
   });
 });

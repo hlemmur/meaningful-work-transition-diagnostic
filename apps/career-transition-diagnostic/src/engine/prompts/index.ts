@@ -394,7 +394,7 @@ Return JSON {
 }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v20",
+    version: "pass-9.v21",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
@@ -460,6 +460,10 @@ Return JSON {
   10. close
 
   Titles MUST equal caseSnapshot.requiredTitles[id].
+
+  Experiment body formatting:
+  - Write the experiment as short labeled movements the reader can follow: Change. Observe. Deepen (if present). Bridge (if present).
+  - Use line breaks between movements. Do not emit internal ids.
 
   Questions:
   - Include exactly 3 personalized unresolved questions.
