@@ -219,6 +219,17 @@ describe("epistemology qualification (CAR-127)", () => {
   it("fails rival lexicon in customer prose", () => {
     expect(hasRivalLexicon("a strong mundane rival deserves equal weight")).toBe(true);
     expect(hasRivalLexicon("Alongside the psychological pattern, there is a strong practical layer.")).toBe(false);
+    expect(
+      hasRivalLexicon(
+        "Freedom and structure can coexist without either having to defeat the other.",
+      ),
+    ).toBe(false);
+    expect(hasRivalLexicon("This is not an automatic rival to the psychological pattern.")).toBe(
+      false,
+    );
+    expect(hasRivalLexicon("The practical change proves difficult under fatigue.")).toBe(false);
+    expect(hasRivalLexicon("One layer must win over the other.")).toBe(true);
+    expect(hasRivalLexicon("This proves that structure is the real cause.")).toBe(true);
 
     const result = evaluateEpistemologyQualification(teacherLayered(), baseSections({
       alternative: "A strong mundane rival deserves equal weight and may be where the friction lives.",

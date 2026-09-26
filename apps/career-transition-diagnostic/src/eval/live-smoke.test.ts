@@ -56,7 +56,7 @@ describe("M6 live Gemini smoke", () => {
                 outputPreview:
                   run.output === undefined
                     ? null
-                    : JSON.stringify(run.output).slice(0, 2000),
+                    : JSON.stringify(run.output).slice(0, run.stage === "pass9" ? 120_000 : 2000),
               })),
               pass8LearningAim: (() => {
                 const pass8 = [...runs].reverse().find((run) => run.stage === "pass8");

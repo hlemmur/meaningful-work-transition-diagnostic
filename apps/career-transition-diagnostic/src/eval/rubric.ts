@@ -9,6 +9,7 @@ import {
 import { clientVoiceGates } from "@/engine/pipeline/gates";
 import {
   hasClinicalFindingLanguage,
+  hasRivalLexicon,
   hasUnhedgedSymbolPredicate,
 } from "@/engine/pipeline/epistemology";
 
@@ -53,11 +54,6 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
     id: "authorizing-certainty",
     re: /this report (finally )?proves you (are|were) legitimate/i,
     detail: "Report must not replace inquiry with authorizing certainty.",
-  },
-  {
-    id: "rival-lexicon",
-    re: /\brival\b|primary weight|the real cause|therefore primary|mundane challenger/i,
-    detail: "Report must not frame practical conditions as rivals or winners.",
   },
   {
     id: "clinical-finding",
@@ -178,6 +174,14 @@ export function evaluateReport(input: {
       finding(pattern.id, !pattern.re.test(text), pattern.detail),
     );
   }
+
+  findings.push(
+    finding(
+      "rival-lexicon",
+      !hasRivalLexicon(text),
+      "Report must not frame practical conditions as rivals or winners.",
+    ),
+  );
 
   const jungianOverreach = /you are (an? )?(puer|senex|anima|animus|hero|shadow)/i.test(text);
   findings.push(
