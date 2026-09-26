@@ -128,7 +128,7 @@ export function evaluateDevelopmentalQualification(
       Boolean(state.imageAnalysis?.unresolvedSymbolicQuestion) &&
       !symbolReadingsStayOpen(text));
   const goldOwnershipLanguage =
-    /not yet owned|could own|tentative|seeking (?:conscious )?integration|qualities seeking|may point toward (?:qualities|a quality)|not yet (?:fully )?(?:claimed|integrated|owned)|could (?:claim|integrate|own)|hypothesis about (?:disowned|unowned) (?:value|quality)/i;
+    /not yet owned|could own|tentative|seeking (?:conscious )?integration|qualities seeking|may point toward (?:qualities|a quality)|not yet (?:fully )?(?:claimed|integrated|owned)|could (?:claim|integrate|own)|could be approached as|encounter with disowned|disowned aspects|hypothesis about (?:disowned|unowned) (?:value|quality)/i;
   const scores: QualificationScore[] = [
     score(
       "developmental_restraint",
