@@ -2735,6 +2735,63 @@ describe("questions and close gate", () => {
     ).toBe(true);
   });
 
+  it("requires you/your on numbered question bodies, not on every intent string", () => {
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Visibility",
+        category: "psychological",
+        observedPattern: "Freeze under exposure.",
+        evidenceFor: ["a1:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.5,
+          personSpecificity: 0.5,
+          developmentalFit: 0.5,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.1,
+        },
+      },
+    ];
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. If clearer structure made execution substantially easier for you, what tension around visibility would still remain?\n2. What evidence would weaken the selected formulation for you?\n3. What would make the whole formulation wrong for you?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          {
+            question: "If clearer structure made execution substantially easier, what tension around visibility would still remain?",
+            targetUncertainty: "Residual",
+            couldWeakenSelectedFormulation: false,
+          },
+          {
+            question: "What evidence would weaken the selected formulation?",
+            targetUncertainty: "Weaken",
+            couldWeakenSelectedFormulation: true,
+          },
+          {
+            question: "What would make the whole formulation wrong?",
+            targetUncertainty: "Invalidate",
+            couldWeakenSelectedFormulation: false,
+            couldInvalidateWholeFormulation: true,
+          },
+        ],
+      }),
+      section("close", "A provisional working formulation for you.", ["a1:Q1.1"]),
+    ];
+    expect(questionsAndCloseAdequate(sections, state).passed).toBe(true);
+  });
+
   it("rejects a practical-vs-psychological binary question", () => {
     const sections = [
       reportSectionSchema.parse({

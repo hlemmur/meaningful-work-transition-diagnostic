@@ -1054,7 +1054,9 @@ export function questionsAndCloseAdequate(
         rendered.includes(intentQuestion) ||
         intentQuestion.includes(rendered),
     );
-  const missingYouYour = intents.filter((intent) => !/\b(?:you|your)\b/i.test(intent.question));
+  const missingYouYour = renderedQuestions.filter(
+    (question) => !/\b(?:you|your)\b/i.test(question),
+  );
   const leadingIntents = intents.filter((intent) => leading.test(intent.question));
   const badHypothesis = intents.filter(
     (intent) =>
@@ -1078,7 +1080,9 @@ export function questionsAndCloseAdequate(
     if (intentQuestions.some((question) => !intentAligns(question))) {
       reasons.push("intent questions must align with the numbered questions body");
     }
-    if (missingYouYour.length) reasons.push("each intent must address you/your");
+    if (missingYouYour.length) {
+      reasons.push("each numbered question must address you/your");
+    }
     if (leadingIntents.length) reasons.push("intents must not be leading");
     if (badHypothesis.length) reasons.push("relatedHypothesisId must be a live hypothesis");
     if (badFork.length) reasons.push("relatedForkId must be a live fork");
