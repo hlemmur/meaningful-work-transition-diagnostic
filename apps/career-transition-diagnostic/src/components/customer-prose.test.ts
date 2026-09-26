@@ -17,6 +17,27 @@ describe("customer report prose", () => {
     expect(body).toContain("Also.");
   });
 
+  it("removes parenthetical quote citations that live Pass 9 emits", () => {
+    const body = visibleReportBody(
+      [
+        'You left engineering ("live-origin-smoke:Q0.1b", "").',
+        'You registered a company ("", "live-origin-smoke:Q2.4", "").',
+        'The freeze protects an unbound attitude ("").',
+        'Sibling aims remain open ("", "").',
+        'Both poles stay provisional ("", "", "").',
+      ].join(" "),
+    );
+
+    expect(body).not.toContain('""');
+    expect(body).not.toContain("live-origin-smoke:");
+    expect(body).not.toMatch(/\(\s*\)/);
+    expect(body).toContain("You left engineering.");
+    expect(body).toContain("You registered a company.");
+    expect(body).toContain("The freeze protects an unbound attitude.");
+    expect(body).toContain("Sibling aims remain open.");
+    expect(body).toContain("Both poles stay provisional.");
+  });
+
   it("keeps evidenceRefs when the visible body is cleaned", () => {
     const section = {
       id: "problem",
@@ -41,5 +62,11 @@ describe("customer report prose", () => {
       "Keep the note [aside, for later] in place.",
     );
     expect(visibleReportBody("No marker in this sentence.")).toBe("No marker in this sentence.");
+  });
+
+  it("does not delete ordinary parenthetical asides", () => {
+    expect(visibleReportBody("You named it (a tender romance) in the image.")).toBe(
+      "You named it (a tender romance) in the image.",
+    );
   });
 });

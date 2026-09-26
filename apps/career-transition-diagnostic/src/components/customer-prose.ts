@@ -11,16 +11,36 @@ function isEvidenceMarker(inner: string) {
   });
 }
 
-/** Customer-visible prose. Stored evidenceRefs are left to the caller. */
-export function visibleReportBody(body: string) {
-  const withoutMarkers = body
-    .replace(/\[[^\]\n]*\]/g, (match) => (isEvidenceMarker(match.slice(1, -1)) ? "" : match))
-    .replace(/\b[A-Za-z0-9_-]+:Q[A-Za-z0-9.]+\b/g, "");
-  return withoutMarkers
+/** Parenthetical cite groups like ("a1:Q1.1", "") or ("", ""). */
+function isEvidenceParenGroup(inner: string) {
+  const parts = inner.split(",").map((part) => part.trim());
+  if (parts.length === 0 || parts.every((part) => part.length === 0)) {
+    return false;
+  }
+  return parts.every((part) => {
+    if (part.length === 0) return true;
+    const unquoted = part.replace(/^["']|["']$/g, "").trim();
+    return unquoted.length === 0 || EVIDENCE_TOKEN.test(unquoted);
+  });
+}
+
+function tidyProse(body: string) {
+  return body
     .replace(/[ \t]{2,}/g, " ")
     .replace(/[ \t]+([.,;:!?])/g, "$1")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n");
+}
+
+/** Customer-visible prose. Stored evidenceRefs are left to the caller. */
+export function visibleReportBody(body: string) {
+  const withoutMarkers = body
+    .replace(/\[[^\]\n]*\]/g, (match) => (isEvidenceMarker(match.slice(1, -1)) ? "" : match))
+    .replace(/\([^()\n]*\)/g, (match) =>
+      isEvidenceParenGroup(match.slice(1, -1)) ? "" : match,
+    )
+    .replace(/\b[A-Za-z0-9_-]+:Q[A-Za-z0-9.]+\b/g, "");
+  return tidyProse(withoutMarkers);
 }
 
 export function visibleReportSection<T extends { body: string }>(section: T): T {
