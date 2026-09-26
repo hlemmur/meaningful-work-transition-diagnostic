@@ -40,6 +40,20 @@ describe("questionnaire.v2", () => {
     expect(ids).toEqual([...new Set(ids)]);
   });
 
+  it("places optional analogue and contrast fields after Q4.8 and before Q4.9", () => {
+    const ids = questions.map((question) => question.id);
+    expect(ids.indexOf("Q4.8")).toBeLessThan(ids.indexOf("Q4.10"));
+    expect(ids.indexOf("Q4.10")).toBeLessThan(ids.indexOf("Q4.11"));
+    expect(ids.indexOf("Q4.11")).toBeLessThan(ids.indexOf("Q4.12"));
+    expect(ids.indexOf("Q4.12")).toBeLessThan(ids.indexOf("Q4.9"));
+    for (const id of ["Q4.10", "Q4.11", "Q4.12"] as const) {
+      const question = questions.find((item) => item.id === id);
+      expect(question?.optionality).toBe("optional");
+      expect(question?.inputType).toBe("long_text");
+      expect(question?.section).toBe(4);
+    }
+  });
+
   it("covers every v2 section from 0 through 11", () => {
     const sections = new Set(questions.map((question) => question.section));
     expect([...sections].sort((a, b) => a - b)).toEqual([

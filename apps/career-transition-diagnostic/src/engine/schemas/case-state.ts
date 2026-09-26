@@ -91,6 +91,14 @@ export const caseStateSchema = z.object({
     functionWithAccountability: z.array(evidenceItemSchema),
     legitimacyLoop: z.array(evidenceItemSchema),
   }),
+  parallelPatterns: z
+    .object({
+      similarStrugglesElsewhere: z.string().optional(),
+      lowerStakesExample: z.string().optional(),
+      oppositeOrEasyExample: z.string().optional(),
+      evidenceRefs: z.array(z.string()),
+    })
+    .default({ evidenceRefs: [] }),
   projections: z.object({
     admiredFigures: z.array(projectionItemSchema),
     rejectedFigures: z.array(projectionItemSchema),

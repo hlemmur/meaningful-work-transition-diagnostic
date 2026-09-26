@@ -267,6 +267,48 @@ describe("buildStageLlmInput", () => {
     expect(snapshot.finalFormulation?.layerRelationship?.mode).toBe("layered");
   });
 
+  it("carries optional parallelPatterns into later-stage snapshots without inventing fields", () => {
+    const blank = seededCase();
+    const blankInput = buildStageLlmInput({
+      stage: "pass6",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: blank,
+      answers: { "Q1.1": "stall" },
+    });
+    const blankSnapshot = blankInput.caseSnapshot as {
+      parallelPatterns?: {
+        similarStrugglesElsewhere?: string;
+        lowerStakesExample?: string;
+        oppositeOrEasyExample?: string;
+        evidenceRefs: string[];
+      };
+    };
+    expect(blankSnapshot.parallelPatterns).toEqual({ evidenceRefs: [] });
+
+    const filled = seededCase();
+    filled.parallelPatterns = {
+      similarStrugglesElsewhere: "Same freeze when booking the dentist.",
+      lowerStakesExample: "Booking a haircut feels easier.",
+      oppositeOrEasyExample: "I run a community dinner easily.",
+      evidenceRefs: ["a1:Q4.10", "a1:Q4.11", "a1:Q4.12"],
+    };
+    const filledInput = buildStageLlmInput({
+      stage: "pass6",
+      assessmentId: "a1",
+      evidenceRef: "a1:Q1.1",
+      caseState: filled,
+      answers: {
+        "Q1.1": "stall",
+        "Q4.10": "Same freeze when booking the dentist.",
+      },
+    });
+    const filledSnapshot = filledInput.caseSnapshot as {
+      parallelPatterns?: typeof filled.parallelPatterns;
+    };
+    expect(filledSnapshot.parallelPatterns).toEqual(filled.parallelPatterns);
+  });
+
   it("adds Tier-A case snapshot for pass2+ including early analysis passes", () => {
     const state = seededCase();
     state.projections.admiredFigures = [

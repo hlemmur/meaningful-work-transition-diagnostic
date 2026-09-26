@@ -706,6 +706,28 @@ export function buildCaseSnapshot(input: {
       evidenceRefs: item.evidenceRefs,
       confidence: item.confidence,
     })),
+    parallelPatterns: {
+      ...(caseState.parallelPatterns.similarStrugglesElsewhere
+        ? {
+            similarStrugglesElsewhere: trimText(
+              caseState.parallelPatterns.similarStrugglesElsewhere,
+            ),
+          }
+        : {}),
+      ...(caseState.parallelPatterns.lowerStakesExample
+        ? {
+            lowerStakesExample: trimText(caseState.parallelPatterns.lowerStakesExample),
+          }
+        : {}),
+      ...(caseState.parallelPatterns.oppositeOrEasyExample
+        ? {
+            oppositeOrEasyExample: trimText(
+              caseState.parallelPatterns.oppositeOrEasyExample,
+            ),
+          }
+        : {}),
+      evidenceRefs: caseState.parallelPatterns.evidenceRefs,
+    },
     realityCheck: caseState.realityCheck
       ? {
           sufficientWithoutDepth: caseState.realityCheck.sufficientWithoutDepth,
