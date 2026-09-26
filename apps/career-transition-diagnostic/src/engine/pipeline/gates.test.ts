@@ -2838,7 +2838,7 @@ describe("questions and close gate", () => {
     const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
     const result = questionsAndCloseAdequate(sections, state);
     expect(result.passed).toBe(false);
-    expect(result.detail).toMatch(/whole formulation/i);
+    expect(result.detail).toMatch(/couldInvalidateWholeFormulation|whole formulation/i);
   });
 
   it("fails when the questions section has fewer than three questions", () => {

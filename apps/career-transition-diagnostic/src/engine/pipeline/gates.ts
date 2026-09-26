@@ -1038,35 +1038,63 @@ export function questionsAndCloseAdequate(
   const liveHypotheses = new Set(state?.hypotheses.map((hypothesis) => hypothesis.id) ?? []);
   const liveForks = new Set(state?.forkResolutions.map((fork) => fork.forkId) ?? []);
   const leading = /\b(?:why do you|what makes you|don't you|isn't it|wouldn't you|surely)\b/i;
-  const numberedQuestions = questions.body.match(/\d+[.)]\s*[^?]+\?/g) ?? [];
-  const renderedQuestions = (numberedQuestions.length === 3
-    ? numberedQuestions
-    : questions.body.match(/[^?]+\?/g) ?? []
-  ).map((question) =>
-    normalize(question.replace(/^\s*\d+[.)]\s*/, "")),
-  );
+  const numberedFromBody = [...questions.body.matchAll(/\d+[.)]\s*([\s\S]*?)(?=(?:\n\s*\d+[.)])|$)/g)]
+    .map((match) => (match[1] ?? "").trim())
+    .filter(Boolean);
+  const renderedQuestions = (
+    numberedFromBody.length === 3
+      ? numberedFromBody
+      : questions.body.match(/[^?]+\?/g) ?? []
+  ).map((question) => normalize(question.replace(/^\s*\d+[.)]\s*/, "")));
   const intentQuestions = intents.map((intent) => normalize(intent.question));
-  const invalidIntent = intents.some((intent) =>
-    !/\b(?:you|your)\b/i.test(intent.question) ||
-    leading.test(intent.question) ||
-    (intent.relatedHypothesisId !== undefined && state !== undefined && !liveHypotheses.has(intent.relatedHypothesisId)) ||
-    (intent.relatedForkId !== undefined && state !== undefined && !liveForks.has(intent.relatedForkId)),
+  const intentAligns = (intentQuestion: string) =>
+    renderedQuestions.some(
+      (rendered) =>
+        rendered === intentQuestion ||
+        rendered.includes(intentQuestion) ||
+        intentQuestion.includes(rendered),
+    );
+  const missingYouYour = intents.filter((intent) => !/\b(?:you|your)\b/i.test(intent.question));
+  const leadingIntents = intents.filter((intent) => leading.test(intent.question));
+  const badHypothesis = intents.filter(
+    (intent) =>
+      intent.relatedHypothesisId !== undefined &&
+      state !== undefined &&
+      !liveHypotheses.has(intent.relatedHypothesisId),
   );
-  if (
-    state !== undefined &&
-    (intents.length !== 3 ||
-      new Set(intentQuestions).size !== 3 ||
-      new Set(renderedQuestions).size !== 3 ||
-      intentQuestions.some((question) => !renderedQuestions.includes(question)) ||
-      invalidIntent ||
-      !intents.some((intent) => intent.couldWeakenSelectedFormulation) ||
-      !intents.some((intent) => intent.couldInvalidateWholeFormulation))
-  ) {
-    return {
-      id: "questions-close",
-      passed: false,
-      detail: "Questions require three personalized, non-leading structured intents, including one that could weaken the selected formulation and one that could make the whole formulation wrong.",
-    };
+  const badFork = intents.filter(
+    (intent) =>
+      intent.relatedForkId !== undefined &&
+      state !== undefined &&
+      !liveForks.has(intent.relatedForkId),
+  );
+  if (state !== undefined) {
+    const reasons: string[] = [];
+    if (intents.length !== 3) reasons.push(`expected 3 intents, found ${intents.length}`);
+    if (new Set(intentQuestions).size !== 3) reasons.push("intent questions are not unique");
+    if (new Set(renderedQuestions).size !== 3) {
+      reasons.push(`expected 3 rendered questions, found ${new Set(renderedQuestions).size}`);
+    }
+    if (intentQuestions.some((question) => !intentAligns(question))) {
+      reasons.push("intent questions must align with the numbered questions body");
+    }
+    if (missingYouYour.length) reasons.push("each intent must address you/your");
+    if (leadingIntents.length) reasons.push("intents must not be leading");
+    if (badHypothesis.length) reasons.push("relatedHypothesisId must be a live hypothesis");
+    if (badFork.length) reasons.push("relatedForkId must be a live fork");
+    if (!intents.some((intent) => intent.couldWeakenSelectedFormulation)) {
+      reasons.push("need couldWeakenSelectedFormulation");
+    }
+    if (!intents.some((intent) => intent.couldInvalidateWholeFormulation)) {
+      reasons.push("need couldInvalidateWholeFormulation");
+    }
+    if (reasons.length > 0) {
+      return {
+        id: "questions-close",
+        passed: false,
+        detail: `Questions intents failed: ${reasons.join("; ")}.`,
+      };
+    }
   }
 
   if (!close.body.trim()) {
