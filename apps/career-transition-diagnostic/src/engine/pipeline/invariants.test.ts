@@ -1028,6 +1028,18 @@ describe("origin fixture symbolic provenance", () => {
     expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(speech);
   });
 
+  it("accepts the maxAnswerChars prefix without ellipsis (live truncation flake)", () => {
+    const { state } = prepared();
+    const full = String(originFixtureAnswers["Q10.6"]);
+    expect(full.length).toBeGreaterThan(STAGE_INPUT_TRIM.maxAnswerChars);
+    const prefix = full.slice(0, STAGE_INPUT_TRIM.maxAnswerChars);
+    expect(prefix.endsWith("…")).toBe(false);
+
+    applyImageVotes(state, originImageVote(prefix, "a1:Q10.6"));
+
+    expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(prefix);
+  });
+
   it("rejects a paraphrase of the obstacle speech", () => {
     const { state } = prepared();
     expect(() =>
