@@ -80,7 +80,7 @@ export function selectExperimentStrategy(
 }
 
 const LEARNING_AIM =
-  /\bwhen\b[\s\S]{0,160}\b(?:changed|change[sd]?)\b[\s\S]{0,160}\b(?:became|becomes)\s+easier\b[\s\S]{0,160}\bremain(?:ed|s)?\b/i;
+  /\bwhen\b[\s\S]{0,240}(?:\b(?:changed|change[sd]?|altered|reduced|removed|held|shifted|softened)\b|was\s+(?:held|removed|reduced|altered|changed|set\s+aside)|were\s+(?:held|removed|reduced|altered|changed))[\s\S]{0,200}\b(?:became|becomes)\s+easier\b[\s\S]{0,200}\b(?:while\s+)?[\s\S]{0,120}\bremain(?:ed|s)?\b/i;
 
 export function matchesLearningAimShape(text: string) {
   return LEARNING_AIM.test(text.trim());

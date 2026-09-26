@@ -100,7 +100,22 @@ describe("learning aim and implication guards", () => {
         "When external structure changed, initiation became easier, while visibility charge remained.",
       ),
     ).toBe(true);
+    expect(
+      matchesLearningAimShape(
+        "When public evaluation was held private, drafting became easier, while authenticity doubt remained.",
+      ),
+    ).toBe(true);
+    expect(
+      matchesLearningAimShape(
+        "When outreach pressure was reduced, wording became easier while bodily freeze remained.",
+      ),
+    ).toBe(true);
     expect(matchesLearningAimShape("Prove which hypothesis wins.")).toBe(false);
+    expect(
+      matchesLearningAimShape(
+        "When structure helped a lot, the practical layer is primary.",
+      ),
+    ).toBe(false);
   });
 
   it("flags winner implications", () => {

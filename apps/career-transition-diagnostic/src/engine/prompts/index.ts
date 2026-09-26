@@ -272,7 +272,7 @@ If no client-supplied image, omit symbolic deepening and do not invent one.
 Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v9",
+    version: "pass-8.v10",
     text: `Produce a reality check and one psychologically informative experiment.
 Title stays "Your experiment".
 
@@ -287,6 +287,7 @@ Governing rules:
 - A useful inquiry changes one condition, observes what emerges, and returns
   the result to the formulation without declaring a winner.
 - Result sentence: When X changed, Y became easier, while Z remained.
+- learningAim must follow that shape (X may be phrased as changed, reduced, removed, held, or held private).
 - One change only. One vessel. One experiment.
 - Do not change structure and exposure in the same action.
 - Do not invent analogues, contrasts, images, body data, or dialogue.
