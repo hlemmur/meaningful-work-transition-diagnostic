@@ -233,8 +233,10 @@ describe("applyImageVotes", () => {
     const snapshotAnswer = String(trimText(scene, STAGE_INPUT_TRIM.maxAnswerChars));
     expect(snapshotAnswer.endsWith("…")).toBe(true);
     // Allowed: snapshot with ellipsis, or exact maxAnswerChars prefix without ellipsis.
-    // One character shorter than that prefix is outside the boundary.
-    const outsideBoundary = snapshotAnswer.slice(0, -2);
+    // Cutting into a content word (not only trailing whitespace) stays outside the boundary
+    // after normalize(), which collapses trailing spaces.
+    const allowedPrefix = snapshotAnswer.slice(0, -1);
+    const outsideBoundary = `${allowedPrefix.trimEnd().slice(0, -12)}…`;
 
     expect(() =>
       applyImageVotes(state, {
