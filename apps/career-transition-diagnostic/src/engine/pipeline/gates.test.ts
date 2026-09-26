@@ -1994,6 +1994,37 @@ describe("client voice gates", () => {
     expect(secondPersonVoice(sections).passed).toBe(true);
   });
 
+  it("second_person allows labeled experiment movements without repeating you/your", () => {
+    const sections = [
+      section("problem", "You stall after leaving IT.", ["o1:Q1.1"]),
+      section(
+        "experiment",
+        "Change: Draft a private 150-word offer note.\n\nObserve: Notice what becomes easier and what charge remains.\n\nBridge: Bring what appeared back to the formulation.",
+        ["o1:Q2.2"],
+      ),
+      section(
+        "questions",
+        "1. If clearer structure made execution easier for you, what tension around visibility would still remain?\n2. What evidence would weaken this hypothesis?\n3. What remains unexplained?",
+        ["o1:Q1.1"],
+      ),
+    ];
+    expect(secondPersonVoice(sections).passed).toBe(true);
+  });
+
+  it("second_person still fails when a non-experiment section lacks you/your", () => {
+    const sections = [
+      section("problem", "A stall appears after leaving IT.", ["o1:Q1.1"]),
+      section(
+        "experiment",
+        "Change: Draft a private note.\n\nObserve: Notice what remains.",
+        ["o1:Q2.2"],
+      ),
+    ];
+    const finding = secondPersonVoice(sections);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/problem/i);
+  });
+
   it("plain_titles fails on thesis subtitles", () => {
     const sections = [
       reportSectionSchema.parse({

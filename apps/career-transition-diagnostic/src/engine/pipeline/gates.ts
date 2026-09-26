@@ -912,18 +912,30 @@ export function tierACitationGates(
 
 /** Client peel must address the person in second person, not as “the client”. */
 export function secondPersonVoice(sections: ReportSection[]): GateFinding {
-  const bodies = sections.map((section) => section.body);
-  const third = bodies.some((body) => CLIENT_THIRD_PERSON.test(body));
-  const missingYou = bodies.some((body) => !SECOND_PERSON.test(body));
-  const passed = !third && !missingYou;
+  const third = sections.filter((section) => CLIENT_THIRD_PERSON.test(section.body));
+  const missingYou = sections.filter((section) => {
+    if (SECOND_PERSON.test(section.body)) return false;
+    // Labeled experiment movements are imperative and may omit you/your while still
+    // being customer-facing instructions (Change / Observe / Deepen / Bridge).
+    if (
+      section.id === "experiment" &&
+      /\bChange\b[\s\S]{0,400}\bObserve\b/i.test(section.body)
+    ) {
+      return false;
+    }
+    return true;
+  });
+  const passed = third.length === 0 && missingYou.length === 0;
   return {
     id: "second_person",
     passed,
     detail: passed
       ? "Report bodies address the person in second person."
-      : third
+      : third.length > 0
         ? "Report must not refer to the person as “the client”; use second person."
-        : "Every section body must include You/Your address.",
+        : `Every section body must include You/Your address. Missing in: ${missingYou
+            .map((section) => section.id)
+            .join(", ")}.`,
   };
 }
 
