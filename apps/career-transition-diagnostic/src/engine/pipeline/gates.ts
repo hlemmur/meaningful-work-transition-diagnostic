@@ -1047,13 +1047,22 @@ export function questionsAndCloseAdequate(
       : questions.body.match(/[^?]+\?/g) ?? []
   ).map((question) => normalize(question.replace(/^\s*\d+[.)]\s*/, "")));
   const intentQuestions = intents.map((intent) => normalize(intent.question));
-  const intentAligns = (intentQuestion: string) =>
-    renderedQuestions.some(
-      (rendered) =>
+  const intentAligns = (intentQuestion: string) => {
+    const compact = (text: string) =>
+      normalize(text).replace(/\b(?:for you|you|your|yourself|yours)\b/g, " ").replace(/\s+/g, " ").trim();
+    const intentCompact = compact(intentQuestion);
+    return renderedQuestions.some((rendered) => {
+      const renderedCompact = compact(rendered);
+      return (
         rendered === intentQuestion ||
         rendered.includes(intentQuestion) ||
-        intentQuestion.includes(rendered),
-    );
+        intentQuestion.includes(rendered) ||
+        renderedCompact === intentCompact ||
+        renderedCompact.includes(intentCompact) ||
+        intentCompact.includes(renderedCompact)
+      );
+    });
+  };
   const missingYouYour = renderedQuestions.filter(
     (question) => !/\b(?:you|your)\b/i.test(question),
   );
