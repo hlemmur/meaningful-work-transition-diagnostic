@@ -497,7 +497,7 @@ export function experimentBoundToHypothesis(
       );
       const unobservableOutcome = outcomes.some(
         (outcome) =>
-          !/\b(?:\d+|one|two|three|four|five|attempt|complete|completion|error|send|publish|reply|response|responsiveness|feedback|window|minute|day|week|task|output|action|session|application|interview|message|draft|prototype|document|note|plan|artifact|revision|defect|mistake|charge|anxiety|distress|rating|score|freeze|stall|outreach|post)\w*\b/i.test(
+          !/\b(?:\d+|one|two|three|four|five|attempt|complet(?:e|ing)|completion|error|send|publish|reply|response|responsiveness|feedback|window|minute|day|week|task|output|action|session|application|interview|messag(?:e|ing)|draft|prototyp(?:e|ing)|document|not(?:e|ing)|plan|artifact|revision|defect|mistak(?:e|ing)|charg(?:e|ing)|anxiety|distress|rating|scor(?:e|ing)|freez(?:e|ing)|froz(?:e|en)|stall|outreach|post)\w*\b/i.test(
             outcome.outcome,
           ),
       );
