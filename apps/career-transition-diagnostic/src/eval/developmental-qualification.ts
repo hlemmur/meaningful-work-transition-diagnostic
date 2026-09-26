@@ -127,6 +127,8 @@ export function evaluateDevelopmentalQualification(
     (readings.length >= 2 &&
       Boolean(state.imageAnalysis?.unresolvedSymbolicQuestion) &&
       !symbolReadingsStayOpen(text));
+  const goldOwnershipLanguage =
+    /not yet owned|could own|tentative|seeking (?:conscious )?integration|qualities seeking|may point toward (?:qualities|a quality)|not yet (?:fully )?(?:claimed|integrated|owned)|could (?:claim|integrate|own)|hypothesis about (?:disowned|unowned) (?:value|quality)/i;
   const scores: QualificationScore[] = [
     score(
       "developmental_restraint",
@@ -193,7 +195,7 @@ export function evaluateDevelopmentalQualification(
     score(
       "projection_gold",
       !/ordinary discipline|discipline is the gold/i.test(text) &&
-        (!goldRequired || /not yet owned|could own|tentative/i.test(text)),
+        (!goldRequired || goldOwnershipLanguage.test(text)),
       "Projection gold stays tentative and is not reduced to ordinary discipline.",
     ),
     score(
