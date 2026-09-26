@@ -272,7 +272,7 @@ If no client-supplied image, omit symbolic deepening and do not invent one.
 Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v9",
+    version: "pass-8.v11",
     text: `Produce a reality check and one psychologically informative experiment.
 Title stays "Your experiment".
 
@@ -287,6 +287,7 @@ Governing rules:
 - A useful inquiry changes one condition, observes what emerges, and returns
   the result to the formulation without declaring a winner.
 - Result sentence: When X changed, Y became easier, while Z remained.
+- learningAim must follow that shape (X may be phrased as changed, reduced, removed, held, or held private).
 - One change only. One vessel. One experiment.
 - Do not change structure and exposure in the same action.
 - Do not invent analogues, contrasts, images, body data, or dialogue.
@@ -315,6 +316,9 @@ Decision flow:
    - symbolic_only: behavioral step inappropriate AND a supplied image exists
    If analogue/contrast fields are empty, do not invent them. Use direct
    with a smaller same-domain step, or symbolic_only.
+   For analogue or contrast, practicalCondition.sourceRef is REQUIRED and
+   must be exactly one of caseSnapshot.parallelPatterns.evidenceRefs
+   (assessmentId:Q4.10, Q4.11, or Q4.12). Never omit sourceRef.
 3. Action: small, reversible, at most one session of 30 minutes unless
    a case-specific justification exists. Prefer private or one trusted
    other over public exposure when that still changes the condition.
@@ -394,12 +398,12 @@ Return JSON {
 }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v21",
+    version: "pass-9.v22",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
 
-  Describe the intelligence, protection, vitality, and danger in both poles. Do not make either pole defective, immature, superior, more adult, or more integrated because it is more productive or socially approved.
+  Describe the intelligence, protection, vitality, and danger in both poles. Explicitly name a protective/vitality gift and a danger/cost/risk for each pole (use those word families). Do not make either pole defective, immature, superior, more adult, or more integrated because it is more productive or socially approved.
 
   Include plain non-identification: “This is a pattern you may be able to observe and relate to; it is not the whole of who you are.”
 

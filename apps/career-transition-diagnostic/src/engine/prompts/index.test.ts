@@ -215,7 +215,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v21");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v22");
     expect(promptRegistry.pass9.text).toMatch(/residual-layer question/i);
     expect(promptRegistry.pass9.text).toMatch(/cumulative per-layer updates/i);
     expect(promptRegistry.pass9.text).toMatch(/Forbidden shapes/i);
@@ -298,9 +298,10 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass10.text).toMatch(/inverse-proof/i);
     expect(promptRegistry.pass10.text).toMatch(/couldInvalidateWholeFormulation/);
     expect(promptRegistry.pass10.text).toMatch(/invalidat\w* the whole formulation/i);
-    expect(promptRegistry.pass8.version).toBe("pass-8.v9");
+    expect(promptRegistry.pass8.version).toBe("pass-8.v11");
     expect(promptRegistry.pass8.text).toMatch(/When X changed, Y became easier, while Z remained/i);
     expect(promptRegistry.pass8.text).toMatch(/not intended to prove which explanation/i);
+    expect(promptRegistry.pass8.text).toMatch(/practicalCondition\.sourceRef is REQUIRED/i);
     expect(promptRegistry.pass8.text).not.toMatch(/the result proves the unconscious motive/i);
     expect(promptRegistry.pass6.version).toBe("pass-6.v10");
     expect(promptRegistry.pass6.text).toMatch(/coexist without either having to defeat the other/);

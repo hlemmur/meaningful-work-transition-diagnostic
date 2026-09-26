@@ -912,18 +912,31 @@ export function tierACitationGates(
 
 /** Client peel must address the person in second person, not as “the client”. */
 export function secondPersonVoice(sections: ReportSection[]): GateFinding {
-  const bodies = sections.map((section) => section.body);
-  const third = bodies.some((body) => CLIENT_THIRD_PERSON.test(body));
-  const missingYou = bodies.some((body) => !SECOND_PERSON.test(body));
-  const passed = !third && !missingYou;
+  const third = sections.filter((section) => CLIENT_THIRD_PERSON.test(section.body));
+  const missingYou = sections.filter((section) => {
+    if (SECOND_PERSON.test(section.body)) return false;
+    // Labeled experiment movements are imperative and may omit you/your while still
+    // being customer-facing instructions (Change / Observe / Deepen / Bridge).
+    if (
+      section.id === "experiment" &&
+      /\bChange\b/i.test(section.body) &&
+      /\bObserve\b/i.test(section.body)
+    ) {
+      return false;
+    }
+    return true;
+  });
+  const passed = third.length === 0 && missingYou.length === 0;
   return {
     id: "second_person",
     passed,
     detail: passed
       ? "Report bodies address the person in second person."
-      : third
+      : third.length > 0
         ? "Report must not refer to the person as “the client”; use second person."
-        : "Every section body must include You/Your address.",
+        : `Every section body must include You/Your address. Missing in: ${missingYou
+            .map((section) => section.id)
+            .join(", ")}.`,
   };
 }
 
@@ -1025,35 +1038,76 @@ export function questionsAndCloseAdequate(
   const liveHypotheses = new Set(state?.hypotheses.map((hypothesis) => hypothesis.id) ?? []);
   const liveForks = new Set(state?.forkResolutions.map((fork) => fork.forkId) ?? []);
   const leading = /\b(?:why do you|what makes you|don't you|isn't it|wouldn't you|surely)\b/i;
-  const numberedQuestions = questions.body.match(/\d+[.)]\s*[^?]+\?/g) ?? [];
-  const renderedQuestions = (numberedQuestions.length === 3
-    ? numberedQuestions
-    : questions.body.match(/[^?]+\?/g) ?? []
-  ).map((question) =>
-    normalize(question.replace(/^\s*\d+[.)]\s*/, "")),
-  );
+  const numberedFromBody = [...questions.body.matchAll(/\d+[.)]\s*([\s\S]*?)(?=(?:\n\s*\d+[.)])|$)/g)]
+    .map((match) => (match[1] ?? "").trim())
+    .filter(Boolean);
+  const renderedQuestions = (
+    numberedFromBody.length === 3
+      ? numberedFromBody
+      : questions.body.match(/[^?]+\?/g) ?? []
+  ).map((question) => normalize(question.replace(/^\s*\d+[.)]\s*/, "")));
   const intentQuestions = intents.map((intent) => normalize(intent.question));
-  const invalidIntent = intents.some((intent) =>
-    !/\b(?:you|your)\b/i.test(intent.question) ||
-    leading.test(intent.question) ||
-    (intent.relatedHypothesisId !== undefined && state !== undefined && !liveHypotheses.has(intent.relatedHypothesisId)) ||
-    (intent.relatedForkId !== undefined && state !== undefined && !liveForks.has(intent.relatedForkId)),
+  const intentAligns = (intentQuestion: string) => {
+    const compact = (text: string) =>
+      normalize(text).replace(/\b(?:for you|you|your|yourself|yours)\b/g, " ").replace(/\s+/g, " ").trim();
+    const intentCompact = compact(intentQuestion);
+    return renderedQuestions.some((rendered) => {
+      const renderedCompact = compact(rendered);
+      return (
+        rendered === intentQuestion ||
+        rendered.includes(intentQuestion) ||
+        intentQuestion.includes(rendered) ||
+        renderedCompact === intentCompact ||
+        renderedCompact.includes(intentCompact) ||
+        intentCompact.includes(renderedCompact)
+      );
+    });
+  };
+  const missingYouYour = renderedQuestions.filter(
+    (question) => !/\b(?:you|your)\b/i.test(question),
   );
-  if (
-    state !== undefined &&
-    (intents.length !== 3 ||
-      new Set(intentQuestions).size !== 3 ||
-      new Set(renderedQuestions).size !== 3 ||
-      intentQuestions.some((question) => !renderedQuestions.includes(question)) ||
-      invalidIntent ||
-      !intents.some((intent) => intent.couldWeakenSelectedFormulation) ||
-      !intents.some((intent) => intent.couldInvalidateWholeFormulation))
-  ) {
-    return {
-      id: "questions-close",
-      passed: false,
-      detail: "Questions require three personalized, non-leading structured intents, including one that could weaken the selected formulation and one that could make the whole formulation wrong.",
-    };
+  const leadingIntents = intents.filter((intent) => leading.test(intent.question));
+  const badHypothesis = intents.filter(
+    (intent) =>
+      intent.relatedHypothesisId !== undefined &&
+      state !== undefined &&
+      !liveHypotheses.has(intent.relatedHypothesisId),
+  );
+  const badFork = intents.filter(
+    (intent) =>
+      intent.relatedForkId !== undefined &&
+      state !== undefined &&
+      !liveForks.has(intent.relatedForkId),
+  );
+  if (state !== undefined) {
+    const reasons: string[] = [];
+    if (intents.length !== 3) reasons.push(`expected 3 intents, found ${intents.length}`);
+    if (new Set(intentQuestions).size !== 3) reasons.push("intent questions are not unique");
+    if (new Set(renderedQuestions).size !== 3) {
+      reasons.push(`expected 3 rendered questions, found ${new Set(renderedQuestions).size}`);
+    }
+    if (intentQuestions.some((question) => !intentAligns(question))) {
+      reasons.push("intent questions must align with the numbered questions body");
+    }
+    if (missingYouYour.length) {
+      reasons.push("each numbered question must address you/your");
+    }
+    if (leadingIntents.length) reasons.push("intents must not be leading");
+    if (badHypothesis.length) reasons.push("relatedHypothesisId must be a live hypothesis");
+    if (badFork.length) reasons.push("relatedForkId must be a live fork");
+    if (!intents.some((intent) => intent.couldWeakenSelectedFormulation)) {
+      reasons.push("need couldWeakenSelectedFormulation");
+    }
+    if (!intents.some((intent) => intent.couldInvalidateWholeFormulation)) {
+      reasons.push("need couldInvalidateWholeFormulation");
+    }
+    if (reasons.length > 0) {
+      return {
+        id: "questions-close",
+        passed: false,
+        detail: `Questions intents failed: ${reasons.join("; ")}.`,
+      };
+    }
   }
 
   if (!close.body.trim()) {
@@ -1253,7 +1307,14 @@ export function developmentalSectionQuality(
   if (/integrate both/i.test(body) && !formulation.possibleThird) {
     problems.push("integrate both without emergence");
   }
-  if (!/protect/i.test(body) || !/danger|hard to sustain|deadening|risk/i.test(body)) {
+  if (
+    !/\b(?:protect|protection|protective|vitality|intelligence|gift|strength|aliveness)\b/i.test(
+      body,
+    ) ||
+    !/\b(?:danger|dangerous|hard to sustain|deadening|risk|cost|collapse|trap|exhaust(?:ion|ing)?|burn(?:out|ing)?)\b/i.test(
+      body,
+    )
+  ) {
     problems.push("both poles need value and danger");
   }
   const maintenance = state.finalFormulation?.maintenanceFormulation ?? "";

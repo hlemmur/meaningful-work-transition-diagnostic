@@ -391,6 +391,33 @@ describe("layered developmental warrant", () => {
       const result = evaluateDevelopmentalQualification(state, sections);
       expect(result.scores.find((score) => score.id === scoreId)?.passed, body).toBe(false);
     }
+
+    const missingGold = evaluateDevelopmentalQualification(state, passingLayered().sections);
+    expect(missingGold.scores.find((score) => score.id === "projection_gold")?.passed).toBe(false);
+
+    const hedgedGold = evaluateDevelopmentalQualification(state, [
+      ...passingLayered().sections,
+      {
+        id: "jungian" as const,
+        title: "A symbolic reading",
+        body:
+          "These figures may point toward qualities seeking conscious integration rather than fixed identity.",
+        evidenceRefs: ["case:Q5.1"],
+      },
+    ]);
+    expect(hedgedGold.scores.find((score) => score.id === "projection_gold")?.passed).toBe(true);
+
+    const liveHedgedGold = evaluateDevelopmentalQualification(state, [
+      ...passingLayered().sections,
+      {
+        id: "jungian" as const,
+        title: "A symbolic reading",
+        body:
+          "The sharp moral judgment directed toward dependent figures, paired with the admiration of unhesitating authority, could be approached as an encounter with disowned aspects of mundane dependency and personal authority.",
+        evidenceRefs: ["case:Q5.1"],
+      },
+    ]);
+    expect(liveHedgedGold.scores.find((score) => score.id === "projection_gold")?.passed).toBe(true);
   });
 
   it("keeps two named readings open without the phrases another reading or second reading", () => {

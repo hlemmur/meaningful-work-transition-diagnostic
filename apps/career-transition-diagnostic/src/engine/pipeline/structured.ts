@@ -35,6 +35,66 @@ function schemaIssueLines(error: { issues: Array<{ path: PropertyKey[]; message:
 }
 
 const DISCONFIRMING_QUESTION = /^(?:if|what if|what would|what evidence)\b/i;
+const NUMBERED_QUESTION_RE = /^(\d+[.)]\s*)([\s\S]*?)$/;
+
+function ensureYouYourInQuestion(question: string): string {
+  const trimmed = question.trim();
+  if (!trimmed || /\b(?:you|your)\b/i.test(trimmed)) {
+    return trimmed;
+  }
+  return trimmed.replace(/\?\s*$/, " for you?");
+}
+
+function coerceQuestionsSecondPerson(section: {
+  id?: unknown;
+  body?: unknown;
+  questionIntents?: unknown;
+  [key: string]: unknown;
+}) {
+  const body = typeof section.body === "string" ? section.body : "";
+  const lines = body.split("\n");
+  let changed = false;
+  const nextLines = lines.map((line) => {
+    const match = line.match(NUMBERED_QUESTION_RE);
+    if (!match) {
+      return line;
+    }
+    const prefix = match[1] ?? "";
+    const question = match[2] ?? "";
+    const coerced = ensureYouYourInQuestion(question);
+    if (coerced !== question.trim()) {
+      changed = true;
+    }
+    return `${prefix}${coerced}`;
+  });
+
+  const intents = Array.isArray(section.questionIntents) ? section.questionIntents : undefined;
+  const nextIntents = intents?.map((intent) => {
+    if (!intent || typeof intent !== "object") {
+      return intent;
+    }
+    const record = intent as { question?: unknown; [key: string]: unknown };
+    if (typeof record.question !== "string") {
+      return intent;
+    }
+    const coerced = ensureYouYourInQuestion(record.question);
+    if (coerced !== record.question.trim()) {
+      changed = true;
+      return { ...record, question: coerced };
+    }
+    return intent;
+  });
+
+  if (!changed && intents && intents.length > 0) {
+    return section;
+  }
+
+  return {
+    ...section,
+    body: changed ? nextLines.join("\n") : body,
+    ...(nextIntents ? { questionIntents: nextIntents } : {}),
+  };
+}
 
 export function withQuestionIntents(output: unknown): unknown {
   if (!output || typeof output !== "object" || !("sections" in output)) {
@@ -51,18 +111,22 @@ export function withQuestionIntents(output: unknown): unknown {
         return section;
       }
       const item = section as { id?: unknown; body?: unknown; questionIntents?: unknown };
-      if (item.id !== "questions" || (Array.isArray(item.questionIntents) && item.questionIntents.length > 0)) {
+      if (item.id !== "questions") {
         return section;
       }
-      const body = typeof item.body === "string" ? item.body : "";
+      const withSecondPerson = coerceQuestionsSecondPerson(item);
+      if (Array.isArray(withSecondPerson.questionIntents) && withSecondPerson.questionIntents.length > 0) {
+        return withSecondPerson;
+      }
+      const body = typeof withSecondPerson.body === "string" ? withSecondPerson.body : "";
       const questions = [...body.matchAll(/\d+\.\s*([\s\S]*?)(?=(?:\n\s*\d+\.)|$)/g)]
         .map((match) => match[1]?.trim())
         .filter((question): question is string => Boolean(question));
       if (questions.length !== 3) {
-        return section;
+        return withSecondPerson;
       }
       return {
-        ...item,
+        ...withSecondPerson,
         questionIntents: questions.map((question) => ({
           question,
           targetUncertainty: question.slice(0, 120),

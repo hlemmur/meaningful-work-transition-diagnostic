@@ -20,7 +20,17 @@ export type EpistemologyScore = {
 };
 
 const RIVAL_LEXICON =
-  /\brival\b|primary weight|fundamentally a|the real cause|where the friction lives|\bwins\b|\bproves\b|rules out|therefore primary|mundane challenger|one layer must win|defeat the other|primary vs secondary/i;
+  /\b(?:strong )?mundane rival\b|\brival (?:hypothesis|explanation|claim|account)\b|\bautomatic rival\b|primary weight|fundamentally a functional breakdown|the real cause|where the friction lives|\b(?:layer|hypothesis|explanation|account) wins\b|\bproves (?:that|the|which|it)\b|rules out|therefore primary|mundane challenger|one layer must win|defeat the other|primary vs secondary/i;
+
+const ALLOWED_RIVAL_SCRUBS = [
+  /\bcoexist without either having to defeat the other\b/gi,
+  /\bwithout either having to defeat the other\b/gi,
+  /\bwithout (?:one|either) (?:pole|layer)(?:s)? having to defeat the other\b/gi,
+  /\bdo not (?:make|let) one (?:layer|pole) defeat the other\b/gi,
+  /\bnot (?:an? )?(?:automatic )?rival\b/gi,
+  /\brather than (?:an? )?(?:automatic )?rival\b/gi,
+  /\bnot framed as (?:an? )?rival\b/gi,
+];
 
 const INVERSE_PROOF_CLOSE =
   /\bif\b[\s\S]{0,120}\b(?:works|succeeds|fails|freezes|persists)\b[\s\S]{0,120}\b(?:primary|central leverage|real cause|\bwins\b)\b/i;
@@ -60,7 +70,11 @@ function stripQuotedSpans(text: string) {
 }
 
 export function hasRivalLexicon(text: string) {
-  return RIVAL_LEXICON.test(text);
+  let scrubbed = text;
+  for (const pattern of ALLOWED_RIVAL_SCRUBS) {
+    scrubbed = scrubbed.replace(pattern, " ");
+  }
+  return RIVAL_LEXICON.test(scrubbed);
 }
 
 export function hasInverseProofClose(text: string) {

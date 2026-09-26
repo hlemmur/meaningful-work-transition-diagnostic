@@ -3,10 +3,15 @@
  * M6 live Gemini smoke — at most 1–2 assessments. Persists scoreable artifacts.
  * Requires GEMINI_API_KEY. Does NOT iterate prompts; score offline with eval:framework.
  *
- * Usage: npm run smoke:live -- [--practical]
+ * Usage: bun scripts/smoke-live.ts [--practical]
  */
-import { readFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { AnalysisRunRecord } from "../src/engine/pipeline/run";
+import {
+  formatPassTokenUsageTable,
+  summarizePassTokenUsage,
+} from "../src/eval/token-usage";
 
 async function main() {
   if (!process.env.GEMINI_API_KEY) {
@@ -25,6 +30,7 @@ async function main() {
     "../src/eval/persist-artifact"
   );
   const { evaluateFrameworkFidelity } = await import("../src/eval/framework-fidelity");
+  const { evaluateReport } = await import("../src/eval/rubric");
 
   const originPath = join(
     process.cwd(),
@@ -56,16 +62,21 @@ async function main() {
   }
 
   for (const item of cases.slice(0, 2)) {
+    const runs: AnalysisRunRecord[] = [];
     const result = await executeAnalysis({
       assessmentId: `live-${item.label}`,
       answers: item.answers,
       completedStages: [],
       llm: liveLlmAdapter,
-      persistRun() {},
+      persistRun(run) {
+        runs.push(run);
+      },
       persistCaseState() {},
     });
     if (result.status !== "completed" || !result.report) {
-      console.error(`Live run failed for ${item.label}`, result.failedStage);
+      console.error(`Live run failed for ${item.label}`, result.failedStage, result.error);
+      const usage = summarizePassTokenUsage(runs);
+      console.error(formatPassTokenUsageTable(usage));
       process.exit(2);
     }
     const artifact = buildScoreableArtifact({
@@ -74,12 +85,53 @@ async function main() {
       answers: item.answers,
       caseState: result.caseState,
       report: result.report,
+      analysisRuns: runs,
       models: ["gemini-live"],
     });
     const path = persistScoreableArtifact(artifact);
     const score = evaluateFrameworkFidelity(artifact);
-    console.log(JSON.stringify({ path, hardPassed: score.hardPassed, scores: score.scores }, null, 2));
-    if (!score.hardPassed) {
+    const rubric = evaluateReport({
+      report: result.report,
+      caseState: result.caseState,
+      requestedInsight:
+        typeof item.answers["Q11.3"] === "string" ? item.answers["Q11.3"] : undefined,
+    });
+    const usage = summarizePassTokenUsage(runs);
+    const table = formatPassTokenUsageTable(usage);
+    const dir = join(process.cwd(), ".local", "eval-artifacts");
+    mkdirSync(dir, { recursive: true });
+    const usagePath = join(dir, `${item.label}-token-usage.md`);
+    writeFileSync(
+      usagePath,
+      [
+        `# Token usage — ${item.label}`,
+        "",
+        `Saved: ${new Date().toISOString()}`,
+        `Artifact: ${path}`,
+        `Hard fidelity: ${score.hardPassed}`,
+        `Rubric: ${rubric.passed}`,
+        "",
+        table,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    console.log(
+      JSON.stringify(
+        {
+          path,
+          usagePath,
+          hardPassed: score.hardPassed,
+          rubricPassed: rubric.passed,
+          tokenTotals: usage.totals,
+          scores: score.scores,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(table);
+    if (!score.hardPassed || !rubric.passed) {
       process.exitCode = 2;
     }
   }

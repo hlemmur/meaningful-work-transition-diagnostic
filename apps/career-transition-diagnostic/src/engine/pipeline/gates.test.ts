@@ -30,6 +30,7 @@ import {
   closeSynthesisAdequate,
   closeInverseProof,
 } from "./gates";
+import { withQuestionIntents } from "./structured";
 
 const originAnswers = JSON.parse(
   readFileSync(join(__dirname, "../test-support/fixtures/origin-case-answers.json"), "utf8"),
@@ -1994,6 +1995,37 @@ describe("client voice gates", () => {
     expect(secondPersonVoice(sections).passed).toBe(true);
   });
 
+  it("second_person allows labeled experiment movements without repeating you/your", () => {
+    const sections = [
+      section("problem", "You stall after leaving IT.", ["o1:Q1.1"]),
+      section(
+        "experiment",
+        "Change: Draft a private 150-word offer note.\n\nObserve: Notice what becomes easier and what charge remains.\n\nBridge: Bring what appeared back to the formulation.",
+        ["o1:Q2.2"],
+      ),
+      section(
+        "questions",
+        "1. If clearer structure made execution easier for you, what tension around visibility would still remain?\n2. What evidence would weaken this hypothesis?\n3. What remains unexplained?",
+        ["o1:Q1.1"],
+      ),
+    ];
+    expect(secondPersonVoice(sections).passed).toBe(true);
+  });
+
+  it("second_person still fails when a non-experiment section lacks you/your", () => {
+    const sections = [
+      section("problem", "A stall appears after leaving IT.", ["o1:Q1.1"]),
+      section(
+        "experiment",
+        "Change: Draft a private note.\n\nObserve: Notice what remains.",
+        ["o1:Q2.2"],
+      ),
+    ];
+    const finding = secondPersonVoice(sections);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/problem/i);
+  });
+
   it("plain_titles fails on thesis subtitles", () => {
     const sections = [
       reportSectionSchema.parse({
@@ -2704,6 +2736,124 @@ describe("questions and close gate", () => {
     ).toBe(true);
   });
 
+  it("requires you/your on numbered question bodies, not on every intent string", () => {
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Visibility",
+        category: "psychological",
+        observedPattern: "Freeze under exposure.",
+        evidenceFor: ["a1:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        confidence: "moderate",
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.5,
+          personSpecificity: 0.5,
+          developmentalFit: 0.5,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.1,
+        },
+      },
+    ];
+    const sections = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. If clearer structure made execution substantially easier for you, what tension around visibility would still remain?\n2. What evidence would weaken the selected formulation for you?\n3. What would make the whole formulation wrong for you?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          {
+            question: "If clearer structure made execution substantially easier, what tension around visibility would still remain?",
+            targetUncertainty: "Residual",
+            couldWeakenSelectedFormulation: false,
+          },
+          {
+            question: "What evidence would weaken the selected formulation?",
+            targetUncertainty: "Weaken",
+            couldWeakenSelectedFormulation: true,
+          },
+          {
+            question: "What would make the whole formulation wrong?",
+            targetUncertainty: "Invalidate",
+            couldWeakenSelectedFormulation: false,
+            couldInvalidateWholeFormulation: true,
+          },
+        ],
+      }),
+      section("close", "A provisional working formulation for you.", ["a1:Q1.1"]),
+    ];
+    expect(questionsAndCloseAdequate(sections, state).passed).toBe(true);
+  });
+
+  it("passes after coercing live-shaped questions that omit you/your", () => {
+    const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
+    state.hypotheses = [
+      {
+        id: "hyp-a",
+        title: "Visibility",
+        category: "psychological",
+        observedPattern: "Freeze under exposure.",
+        evidenceFor: ["a1:Q1.1"],
+        evidenceAgainst: [],
+        contradictionsExplained: [],
+        contradictionsNotExplained: [],
+        simplerAlternatives: [],
+        missingInformation: [],
+        originForks: [],
+        confidence: "moderate",
+        scoring: {
+          evidenceCoverage: 0.8,
+          crossContextRecurrence: 0.5,
+          contradictionResolution: 0.5,
+          personSpecificity: 0.5,
+          developmentalFit: 0.5,
+          imageConstraintFit: 0.5,
+          counterEvidencePenalty: 0.1,
+          simplerAlternativePenalty: 0.1,
+        },
+      },
+    ];
+    const raw = [
+      reportSectionSchema.parse({
+        id: "questions",
+        title: "questions",
+        body: "1. If an external partner provided total daily structural accountability and made administrative execution substantially easier, what tension around visibility would still remain?\n2. What evidence would weaken the selected formulation?\n3. What would make the whole formulation wrong?",
+        evidenceRefs: ["a1:Q1.1"],
+        questionIntents: [
+          {
+            question: "If an external partner provided total daily structural accountability and made administrative execution substantially easier, what tension around visibility would still remain?",
+            targetUncertainty: "Residual",
+            couldWeakenSelectedFormulation: false,
+          },
+          {
+            question: "What evidence would weaken the selected formulation?",
+            targetUncertainty: "Weaken",
+            couldWeakenSelectedFormulation: true,
+          },
+          {
+            question: "What would make the whole formulation wrong?",
+            targetUncertainty: "Invalidate",
+            couldWeakenSelectedFormulation: false,
+            couldInvalidateWholeFormulation: true,
+          },
+        ],
+      }),
+      section("close", "A provisional working formulation for you.", ["a1:Q1.1"]),
+    ];
+    expect(questionsAndCloseAdequate(raw, state).passed).toBe(false);
+    const coerced = withQuestionIntents({ sections: raw }) as { sections: typeof raw };
+    expect(questionsAndCloseAdequate(coerced.sections, state).passed).toBe(true);
+  });
+
   it("rejects a practical-vs-psychological binary question", () => {
     const sections = [
       reportSectionSchema.parse({
@@ -2807,7 +2957,7 @@ describe("questions and close gate", () => {
     const state = extractCaseStateFull("a1", { "Q1.1": "I keep stalling." });
     const result = questionsAndCloseAdequate(sections, state);
     expect(result.passed).toBe(false);
-    expect(result.detail).toMatch(/whole formulation/i);
+    expect(result.detail).toMatch(/couldInvalidateWholeFormulation|whole formulation/i);
   });
 
   it("fails when the questions section has fewer than three questions", () => {
@@ -2917,10 +3067,16 @@ describe("questions and close gate", () => {
     expect(developmentalSectionQuality([
       section("developmental", good, ["a1:Q2.1"]),
     ], state).passed).toBe(true);
+    const synonymGood =
+      "Spontaneous creation may carry vitality and intelligence, while also carrying the cost of exhaustion. Structure may offer strength and continuity, while also trapping aliveness into burnout. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.";
+    expect(developmentalSectionQuality([
+      section("developmental", synonymGood, ["a1:Q2.1"]),
+    ], state).passed).toBe(true);
     for (const bad of [
       "Freedom is childish; structure is mature. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
       "Your psyche wants discipline. Freedom may protect aliveness while structure carries danger. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
       "Integrate both. Freedom may protect aliveness while structure carries the danger of deadening. This is a pattern you may be able to observe and relate to; it is not the whole of who you are.",
+      "Two modes oppose each other without ranking. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
     ]) {
       expect(developmentalSectionQuality([
         section("developmental", bad, ["a1:Q2.1"]),

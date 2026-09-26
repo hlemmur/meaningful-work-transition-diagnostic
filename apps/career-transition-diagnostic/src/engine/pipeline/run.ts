@@ -13,6 +13,7 @@ import {
   sanitizeReportSections,
 } from "./invariants";
 import { realityCheckAgreement } from "./developmental-warrant";
+import { coerceParallelSourceRef } from "./experiment-strategy";
 import {
   assertCaseStateCompleteness,
   critiquesNonEmpty,
@@ -464,7 +465,9 @@ function applyStage(
     case "pass8": {
       const parsed = passOutputSchemas.pass8.parse(output);
       next.realityCheck = parsed.realityCheck;
-      next.experiments = parsed.experiments;
+      next.experiments = parsed.experiments.map((experiment) =>
+        coerceParallelSourceRef(experiment, next),
+      );
       const agreement = realityCheckAgreement(next);
       if (agreement.action === "fail") {
         throwGate({
@@ -476,7 +479,7 @@ function applyStage(
       if (agreement.action === "note") {
         next.gateRemediations = [...(next.gateRemediations ?? []), agreement.detail];
       }
-      const bind = experimentBoundToHypothesis(next, parsed.experiments);
+      const bind = experimentBoundToHypothesis(next, next.experiments);
       if (!bind.passed) {
         throwGate(bind);
       }

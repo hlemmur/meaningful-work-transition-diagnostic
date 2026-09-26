@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { Experiment } from "../schemas/analysis";
 import {
   analogueEligible,
+  coerceParallelSourceRef,
   contrastEligible,
   hasWinnerImplication,
   matchesLearningAimShape,
@@ -100,11 +102,104 @@ describe("learning aim and implication guards", () => {
         "When external structure changed, initiation became easier, while visibility charge remained.",
       ),
     ).toBe(true);
+    expect(
+      matchesLearningAimShape(
+        "When public evaluation was held private, drafting became easier, while authenticity doubt remained.",
+      ),
+    ).toBe(true);
+    expect(
+      matchesLearningAimShape(
+        "When outreach pressure was reduced, wording became easier while bodily freeze remained.",
+      ),
+    ).toBe(true);
     expect(matchesLearningAimShape("Prove which hypothesis wins.")).toBe(false);
+    expect(
+      matchesLearningAimShape(
+        "When structure helped a lot, the practical layer is primary.",
+      ),
+    ).toBe(false);
   });
 
   it("flags winner implications", () => {
     expect(hasWinnerImplication("therefore primary cause")).toBe(true);
     expect(hasWinnerImplication("practical layer stays important")).toBe(false);
+  });
+});
+
+describe("coerceParallelSourceRef", () => {
+  it("fills missing analogue sourceRef from lower-stakes Q4.11", () => {
+    const coerced = coerceParallelSourceRef(
+      {
+        kind: "behavioral",
+        title: "Your experiment",
+        hypothesisTested: "hyp-a",
+        strategy: "analogue",
+        practicalCondition: {
+          factor: "visibility",
+          currentState: "Audience-facing draft stalls.",
+          temporaryChange: "Write privately.",
+          whyThisFactor: "Lower-stakes parallel removes visibility.",
+          processDimensions: ["visibility"],
+          sharedDimensions: ["visibility"],
+        },
+        action: "Write a private draft.",
+        duration: "20 minutes",
+        whatToObserve: [],
+        resultSupportingHypothesis: "",
+        resultWeakeningHypothesis: "",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+        layerUpdates: [],
+      } as Experiment,
+      {
+        assessmentId: "a1",
+        parallelPatterns: {
+          lowerStakesExample: "Private notebook drafting.",
+          evidenceRefs: ["a1:Q4.10", "a1:Q4.11", "a1:Q4.12"],
+        },
+      },
+    );
+    expect(coerced.practicalCondition?.sourceRef).toBe("a1:Q4.11");
+  });
+
+  it("fills missing contrast sourceRef from Q4.12", () => {
+    const coerced = coerceParallelSourceRef(
+      {
+        kind: "behavioral",
+        title: "Your experiment",
+        hypothesisTested: "hyp-a",
+        strategy: "contrast",
+        practicalCondition: {
+          factor: "structure",
+          currentState: "Self-initiated work drifts.",
+          temporaryChange: "Borrow a booked container.",
+          whyThisFactor: "Contrast shows capacity under shared calendar.",
+          processDimensions: ["external_structure"],
+          sharedDimensions: ["external_structure"],
+        },
+        action: "Keep a booked session.",
+        duration: "20 minutes",
+        whatToObserve: [],
+        resultSupportingHypothesis: "",
+        resultWeakeningHypothesis: "",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+        layerUpdates: [],
+      } as Experiment,
+      {
+        assessmentId: "a1",
+        parallelPatterns: {
+          oppositeOrEasyExample: "Booked coaching sessions work.",
+          evidenceRefs: ["a1:Q4.12"],
+        },
+      },
+    );
+    expect(coerced.practicalCondition?.sourceRef).toBe("a1:Q4.12");
   });
 });

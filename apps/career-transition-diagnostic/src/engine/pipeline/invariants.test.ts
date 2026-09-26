@@ -230,9 +230,13 @@ describe("applyImageVotes", () => {
       "Q10.6": "Wait here.",
     });
     state.hypotheses = [hypothesis("hyp-live")];
-    const markerFreeAnswerPrefix = String(
-      trimText(scene, STAGE_INPUT_TRIM.maxAnswerChars),
-    ).slice(0, -1);
+    const snapshotAnswer = String(trimText(scene, STAGE_INPUT_TRIM.maxAnswerChars));
+    expect(snapshotAnswer.endsWith("…")).toBe(true);
+    // Allowed: snapshot with ellipsis, or exact maxAnswerChars prefix without ellipsis.
+    // Cutting into a content word (not only trailing whitespace) stays outside the boundary
+    // after normalize(), which collapses trailing spaces.
+    const allowedPrefix = snapshotAnswer.slice(0, -1);
+    const outsideBoundary = `${allowedPrefix.trimEnd().slice(0, -12)}…`;
 
     expect(() =>
       applyImageVotes(state, {
@@ -243,7 +247,7 @@ describe("applyImageVotes", () => {
           exactClientMaterialUsed: ["a1:Q10.1"],
         }],
         imageAnalysis: {
-          literalFacts: [{ text: markerFreeAnswerPrefix, evidenceRefs: ["a1:Q10.1"] }],
+          literalFacts: [{ text: outsideBoundary, evidenceRefs: ["a1:Q10.1"] }],
           personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
           plausibleReadings: [],
         },
@@ -1026,6 +1030,18 @@ describe("origin fixture symbolic provenance", () => {
     applyImageVotes(state, originImageVote(speech, "a1:Q10.6"));
 
     expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(speech);
+  });
+
+  it("accepts the maxAnswerChars prefix without ellipsis (live truncation flake)", () => {
+    const { state } = prepared();
+    const full = String(originFixtureAnswers["Q10.6"]);
+    expect(full.length).toBeGreaterThan(STAGE_INPUT_TRIM.maxAnswerChars);
+    const prefix = full.slice(0, STAGE_INPUT_TRIM.maxAnswerChars);
+    expect(prefix.endsWith("…")).toBe(false);
+
+    applyImageVotes(state, originImageVote(prefix, "a1:Q10.6"));
+
+    expect(state.imageAnalysis?.personalAssociations[0]?.text).toBe(prefix);
   });
 
   it("rejects a paraphrase of the obstacle speech", () => {
