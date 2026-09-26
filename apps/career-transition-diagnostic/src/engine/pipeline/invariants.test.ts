@@ -583,7 +583,26 @@ describe("applyImageVotes", () => {
 });
 
 describe("applyResolution", () => {
-  it("drops developmental formulation when a practical hypothesis is selected", () => {
+  it("keeps developmental formulation when a practical hypothesis is selected under layered mode", () => {
+    const state = supportedResolutionState();
+    const output = resolutionOutput("hyp-practical");
+    output.finalFormulation.developmentalFormulation = keptFormulation();
+    output.finalFormulation.layerRelationship = {
+      mode: "layered",
+      practicalHypothesisIds: ["hyp-practical"],
+      psychologicalHypothesisIds: ["hyp-depth"],
+      relationship: "Both layers remain live.",
+      uncertainty: "Neither layer is settled.",
+      evidenceRefs: ["a1:Q2.2", "a1:Q0.5"],
+    };
+    output.hiddenPosition = chargedHidden();
+
+    const resolved = applyResolution(state, output);
+
+    expect(resolved.finalFormulation?.developmentalFormulation?.consciousPole).toBe("freedom");
+  });
+
+  it("drops developmental formulation only for practical_primary when development is not warranted", () => {
     const state = emptyCaseState("a1");
     state.hypotheses = [
       hypothesisSchema.parse({
@@ -600,10 +619,56 @@ describe("applyResolution", () => {
       uncertainty: "The practical explanation may be sufficient.",
       evidenceRefs: ["a1:Q2.1", "a1:Q6.1"],
     };
+    output.finalFormulation.layerRelationship = {
+      mode: "practical_primary",
+      practicalHypothesisIds: ["hyp-practical"],
+      psychologicalHypothesisIds: [],
+      relationship: "Practical conditions are sufficient.",
+      uncertainty: "Depth is not warranted.",
+      evidenceRefs: ["a1:Q1.1"],
+    };
 
     const resolved = applyResolution(state, output);
 
     expect(resolved.finalFormulation?.developmentalFormulation).toBeUndefined();
+  });
+
+  it("rejects a developmental task that makes one pole defeat the other", () => {
+    const state = emptyCaseState("a1");
+    state.hypotheses = [hypothesis("hyp-live")];
+    state.openForks = ["history_vs_stated_cause"];
+    state.behavior.actionsTaken = [{
+      id: "a1:Q2.2",
+      assessmentId: "a1",
+      questionId: "Q2.2",
+      normalizedMeaning: "Visibility freezes finished work.",
+      evidenceType: "behavior",
+    }];
+    state.affect.emotions = [{
+      id: "a1:Q3.3",
+      assessmentId: "a1",
+      questionId: "Q3.3",
+      normalizedMeaning: "shame",
+      evidenceType: "emotion",
+    }];
+    state.history.earlierOccurrences = [{
+      id: "a1:Q4.8",
+      assessmentId: "a1",
+      questionId: "Q4.8",
+      normalizedMeaning: "External structure carried continuity.",
+      evidenceType: "history",
+    }];
+    const output = resolutionOutput("hyp-live");
+    output.finalFormulation.developmentalFormulation = {
+      consciousPole: "Freedom",
+      compensatingPole: "Structure",
+      coreOpposition: "Freedom versus structure",
+      possibleDevelopmentalTask: "Choosing structure as the task so freedom must defeat itself.",
+      uncertainty: "Practical pressure remains.",
+      evidenceRefs: ["a1:Q2.2", "a1:Q4.8"],
+    };
+
+    expect(() => applyResolution(state, output)).toThrow(/coexist|defeat the other/i);
   });
 
   it("rejects developmental evidence refs that are not present in the case", () => {
@@ -615,7 +680,8 @@ describe("applyResolution", () => {
       consciousPole: "Freedom",
       compensatingPole: "Commitment",
       coreOpposition: "Freedom versus commitment",
-      possibleDevelopmentalTask: "Try chosen structure.",
+      possibleDevelopmentalTask:
+        "discovering a form in which Freedom and Commitment can coexist without either having to defeat the other",
       uncertainty: "A job-shape mismatch may suffice.",
       evidenceRefs: ["a1:Q98.1", "a1:Q99.1"],
     };
@@ -623,7 +689,7 @@ describe("applyResolution", () => {
     expect(() => applyResolution(state, output)).toThrow(/developmental.*evidence/i);
   });
 
-  it("drops a maintaining loop when a practical hypothesis is selected", () => {
+  it("drops a maintaining loop only for practical_primary when development is not warranted", () => {
     const state = extractCaseStateFull("a1", {
       "Q0.5": "The labor market in my field collapsed.",
       "Q2.1": "The stall began after layoffs.",
@@ -643,6 +709,14 @@ describe("applyResolution", () => {
       cost: "Time spent.",
       selfConfirmingResult: "Market feedback remains weak.",
       evidenceRefs: ["a1:Q0.5", "a1:Q2.1"],
+    };
+    output.finalFormulation.layerRelationship = {
+      mode: "practical_primary",
+      practicalHypothesisIds: ["hyp-practical"],
+      psychologicalHypothesisIds: [],
+      relationship: "Labor-market conditions are sufficient.",
+      uncertainty: "Depth is not warranted.",
+      evidenceRefs: ["a1:Q0.5"],
     };
 
     expect(applyResolution(state, output).finalFormulation?.maintainingLoop).toBeUndefined();
@@ -1046,7 +1120,8 @@ function keptFormulation(possibleThird?: string) {
     consciousPole: "freedom",
     compensatingPole: "structure",
     coreOpposition: "freedom and structure",
-    possibleDevelopmentalTask: "Relate to both poles without ranking them.",
+    possibleDevelopmentalTask:
+      "discovering a form in which freedom and structure can coexist without either having to defeat the other",
     ...(possibleThird ? { possibleThird } : {}),
     uncertainty: "Practical pressure remains true.",
     evidenceRefs: ["a1:Q2.2", "a1:Q4.8"],

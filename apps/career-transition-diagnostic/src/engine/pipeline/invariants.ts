@@ -15,6 +15,7 @@ import type { z } from "zod";
 import {
   depthIndependentlySupported,
   emergentPossibleThird,
+  evaluateDevelopmentalWarrant,
   suppliedThirdCorpus,
 } from "./developmental-warrant";
 import { CUSTOMER_SAFETY_FAILURE, stripCanonicalEvidenceIds } from "./customer-prose";
@@ -681,6 +682,21 @@ const selectedIsPractical =
             : "Developmental formulation requires evidence from at least two questionnaire sections.",
       });
     }
+    const polesPresent =
+      developmental.consciousPole.trim().length > 0 &&
+      developmental.compensatingPole.trim().length > 0;
+    const task = developmental.possibleDevelopmentalTask;
+    const coexistence =
+      /coexist/i.test(task) &&
+      /without either having to defeat the other/i.test(task);
+    if (polesPresent && !coexistence) {
+      throwGate({
+        id: "developmental-coexistence",
+        passed: false,
+        detail:
+          "When both developmental poles exist, possibleDevelopmentalTask must describe discovering a form in which the poles can coexist without either having to defeat the other.",
+      });
+    }
     const third = developmental.possibleThird;
     if (
       third &&
@@ -715,9 +731,12 @@ const selectedIsPractical =
     }
   }
 
+  const warrant = evaluateDevelopmentalWarrant(candidate);
+  const stripDepth =
+    layer?.mode === "practical_primary" && warrant.mode === "not_warranted";
+
   if (
-    selectedIsPractical &&
-    !supported &&
+    stripDepth &&
     (state.finalFormulation.developmentalFormulation || state.finalFormulation.maintainingLoop)
   ) {
     state.finalFormulation = {
@@ -727,7 +746,7 @@ const selectedIsPractical =
     };
     state.gateRemediations = [
       ...(state.gateRemediations ?? []),
-      "Dropped developmentalFormulation and maintainingLoop because depth is not independently supported.",
+      "Dropped developmentalFormulation and maintainingLoop because layerRelationship is practical_primary and developmental eligibility is not_warranted.",
     ];
   }
 
@@ -741,7 +760,7 @@ const selectedIsPractical =
   if (
     !output.hiddenPosition ||
     selectedRejected ||
-    (selectedIsPractical && !supported) ||
+    stripDepth ||
     paraphrasesInsight
   ) {
     state.hiddenPosition = undefined;

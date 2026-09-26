@@ -210,12 +210,14 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v17");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v18");
     expect(promptRegistry.pass9.text).toMatch(/possibleDevelopmentalTask/);
     expect(promptRegistry.pass9.text).toMatch(/questions section must return questionIntents/i);
     expect(promptRegistry.pass9.text).toMatch(/couldInvalidateWholeFormulation/);
     expect(promptRegistry.pass9.text).toMatch(/invalidat\w* the whole formulation/i);
     expect(promptRegistry.pass9.text).toMatch(/What may also be true/);
+    expect(promptRegistry.pass9.text).toMatch(/Alongside the psychological pattern/);
+    expect(promptRegistry.pass9.text).not.toMatch(/Preserve a plausible mundane\/practical rival/i);
     expect(promptRegistry.pass9.text).not.toMatch(/Freedom is childish/i);
 
     expect(promptRegistry.pass9.text).toMatch(
@@ -274,7 +276,7 @@ expectMentions(promptRegistry.pass8.text, [
       /you are a puer\/senex|archetypal identity/i,
     );
 
-    expect(promptRegistry.pass10.version).toBe("pass-10.v14");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v15");
     expect(promptRegistry.pass10.text).toMatch(/couldInvalidateWholeFormulation/);
     expect(promptRegistry.pass10.text).toMatch(/invalidat\w* the whole formulation/i);
     expect(promptRegistry.pass8.version).toBe("pass-8.v8");
@@ -282,7 +284,9 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass8.text).toMatch(/favors to "inconclusive"/i);
     expect(promptRegistry.pass8.text).toMatch(/No result proves an unconscious motive/i);
     expect(promptRegistry.pass8.text).not.toMatch(/the result proves the unconscious motive/i);
-    expect(promptRegistry.pass6.version).toBe("pass-6.v9");
+    expect(promptRegistry.pass6.version).toBe("pass-6.v10");
+    expect(promptRegistry.pass6.text).toMatch(/coexist without either having to defeat the other/);
+    expect(promptRegistry.pass6.text).toMatch(/not automatically rival hypotheses/);
     expect(promptRegistry.pass6.text).toMatch(/otherwise return null/i);
     expect(promptRegistry.pass6.text).not.toMatch(/otherwise omit it/i);
     expect(promptRegistry.pass6.text).toMatch(/possibleThird: null \| string/);

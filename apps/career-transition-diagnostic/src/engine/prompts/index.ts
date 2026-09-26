@@ -151,14 +151,29 @@ export const promptRegistry = {
   }. Return at least 1 vote. ${EMPTY_ARRAYS}`,
   },
   pass6: {
-    version: "pass-6.v9",
+    version: "pass-6.v10",
     text: `Resolve the case after contradiction generation, competing hypotheses, adversarial critique, and image voting. Do not restart the analysis from scratch.
 
   Resolve practical and psychological contributions independently. Do not make one layer defeat the other merely because one hypothesis is selected.
 
+  Practical explanations are not automatically rival hypotheses. They may be causal contributors within the same overall formulation.
+
+  When both a psychological pattern and a practical condition are independently supported, write the alternative section as a layer, not a challenger.
+
+  Required customer shape when layered:
+  "Alongside the psychological pattern, there is a strong practical layer that may be carrying a substantial share of the difficulty."
+
+  Forbidden customer shape:
+  "a strong mundane rival deserves equal weight"
+  "the impasse may be fundamentally a functional breakdown"
+  "may simply reflect genuine skill deficits"
+  "primary vs secondary"
+
   First establish practical and biological reality. Then identify the supplied trigger, emotion, and body status. Distinguish the conscious ego position from a possible persona stance. Treat projection, protective function, resistance, compensation, and developmental meaning as separate tentative inferences.
 
   Do not infer a developmental task from dysfunction, contradiction, or practical failure alone. Establish the conscious position, then ask whether an independently evidenced counter-position appears through behavior/history, affect, charged projection, spontaneous image, or enactment.
+
+  When both developmental poles exist, possibleDevelopmentalTask must take this shape (derive the poles from the case; do not hardcode freedom vs structure): discovering a form in which [poleA] and [poleB] can coexist without either having to defeat the other. Do not imply one pole must win.
 
   Allowed modes:
   - practical_primary
@@ -304,7 +319,7 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v17",
+    version: "pass-9.v18",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
@@ -315,7 +330,9 @@ export const promptRegistry = {
 
   If no third has emerged, say: “What might arise between these positions is not yet known.”
 
-  Developmental meaning is not the maintenance cause and does not displace practical or biological reality. Do not say that the psyche, unconscious, Self, or universe assigned a task. Title the alternative section “What may also be true” and keep its section id as alternative. Practical and psychological layers can both be true.
+  Developmental meaning is not the maintenance cause and does not displace practical or biological reality. Do not say that the psyche, unconscious, Self, or universe assigned a task. Title the alternative section “What may also be true” and keep its section id as alternative.
+
+  Practical explanations are not automatically rival hypotheses. They may be causal contributors within the same overall formulation. When both a psychological pattern and a practical condition are independently supported, write the alternative section as a layer, not a challenger. Required customer shape when layered: “Alongside the psychological pattern, there is a strong practical layer that may be carrying a substantial share of the difficulty.” Forbidden: “a strong mundane rival deserves equal weight”, “the impasse may be fundamentally a functional breakdown”, “may simply reflect genuine skill deficits”, “primary vs secondary”.
 
   Voice and stance:
   - Write in second person (You/Your); never refer to the person as “the client.”
@@ -343,7 +360,7 @@ export const promptRegistry = {
   - When finalFormulation.developmentalFormulation exists, keep it explicitly tentative and render it in a developmental section titled “The developmental tension”. Do not infer this section from hiddenPosition or Jungian lenses alone.
   - Distinguish conscious explanation from enacted reality.
   - Make the central contradiction genuinely explanatory, not merely a restatement.
-  - Preserve a plausible mundane/practical rival.
+  - Preserve a meaningful practical layer or strongest alternative as a co-existing contributor, not as an automatic rival that must win or lose.
   - When caseSnapshot.hiddenPosition survived, preserve both hiddenPosition.protectiveFunction and hiddenPosition.possibleCompensatoryAim in the hidden section. Treat them as sibling hypotheses: what the pattern may protect, and what development may be asking for.
   - Do not collapse development into discipline/grind as the only valid pole.
   - Projection may be framed as a quality the person could potentially reclaim; never claim that the admired/rejected figure “is” the person's unconscious truth.
@@ -397,7 +414,7 @@ export const promptRegistry = {
   Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
-    version: "pass-10.v14",
+    version: "pass-10.v15",
     text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
 
   Fail a section when it:
@@ -419,7 +436,8 @@ export const promptRegistry = {
   - contradicts, silently replaces, or materially drifts from caseSnapshot.finalFormulation, including finalFormulation.maintenanceFormulation, finalFormulation.maintenanceMechanism, finalFormulation.maintainingLoop, finalFormulation.strongestAlternative, finalFormulation.whatItDoesNotExplain, or finalFormulation.unresolvedForks;
   - states a maintainingLoop payoff or selfConfirmingResult as settled motive rather than a provisional working model;
   - adds a developmental section when caseSnapshot.finalFormulation.developmentalFormulation is absent, or omits/drifts from it when present;
-  - ignores a materially relevant practical rival or constraint;
+  - ignores a materially relevant practical layer or constraint, or frames a practical condition as an automatic rival / winner / primary cause;
+  - uses forbidden alternative shapes such as “strong mundane rival”, “functional breakdown”, “skill deficits”, or “primary vs secondary”;
   - contains theory without concrete facts from caseSnapshot.answersByQuestionId;
   - is generic, one-sentence, or merely restates the person's stated problem;
   - leaves the report with fewer than 3 distinct question ids when sufficient case evidence exists.

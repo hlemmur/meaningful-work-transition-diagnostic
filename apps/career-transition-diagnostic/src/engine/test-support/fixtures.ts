@@ -998,7 +998,8 @@ function finalFormulationFor(
         consciousPole: fixture === "origin-gold" ? "freedom" : "freedom without imposed form",
         compensatingPole: fixture === "origin-gold" ? "structure" : "dependable structure and commitment",
         coreOpposition: fixture === "origin-gold" ? "freedom and structure" : "freedom versus dependable structure",
-        possibleDevelopmentalTask: "Integrate freedom with dependable structure.",
+        possibleDevelopmentalTask:
+          "discovering a form in which freedom and dependable structure can coexist without either having to defeat the other",
         uncertainty: "The practical explanation remains live.",
         evidenceRefs: [`${assessmentId}:Q2.1`, `${assessmentId}:Q6.1`],
       },
