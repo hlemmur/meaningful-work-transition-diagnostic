@@ -120,7 +120,7 @@ export function evaluateDevelopmentalQualification(
     new RegExp(`\\b${location}\\b`, "i").test(text) &&
     !new RegExp(`\\b${location}\\b`, "i").test(warrant.suppliedBody),
   );
-  const goldRequired = state.projectionInterpretations.some((item) => item.possibleDisownedValue);
+  const goldRequired = (state.projectionInterpretations ?? []).some((item) => item.possibleDisownedValue);
   const readings = state.imageAnalysis?.plausibleReadings ?? [];
   const symbolClosed =
     /only possible reading|the image simply means|nothing about the image remains unresolved/i.test(text) ||
