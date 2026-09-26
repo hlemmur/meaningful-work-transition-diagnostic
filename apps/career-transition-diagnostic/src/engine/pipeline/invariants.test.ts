@@ -230,9 +230,11 @@ describe("applyImageVotes", () => {
       "Q10.6": "Wait here.",
     });
     state.hypotheses = [hypothesis("hyp-live")];
-    const markerFreeAnswerPrefix = String(
-      trimText(scene, STAGE_INPUT_TRIM.maxAnswerChars),
-    ).slice(0, -1);
+    const snapshotAnswer = String(trimText(scene, STAGE_INPUT_TRIM.maxAnswerChars));
+    expect(snapshotAnswer.endsWith("…")).toBe(true);
+    // Allowed: snapshot with ellipsis, or exact maxAnswerChars prefix without ellipsis.
+    // One character shorter than that prefix is outside the boundary.
+    const outsideBoundary = snapshotAnswer.slice(0, -2);
 
     expect(() =>
       applyImageVotes(state, {
@@ -243,7 +245,7 @@ describe("applyImageVotes", () => {
           exactClientMaterialUsed: ["a1:Q10.1"],
         }],
         imageAnalysis: {
-          literalFacts: [{ text: markerFreeAnswerPrefix, evidenceRefs: ["a1:Q10.1"] }],
+          literalFacts: [{ text: outsideBoundary, evidenceRefs: ["a1:Q10.1"] }],
           personalAssociations: [{ text: "Wait here.", evidenceRefs: ["a1:Q10.6"] }],
           plausibleReadings: [],
         },
