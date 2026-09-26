@@ -12,6 +12,7 @@ import {
 } from "@/engine/pipeline/gates";
 import { isRequestedInsightSpine } from "@/engine/pipeline/report-grounding";
 import { evaluateDevelopmentalQualification } from "./developmental-qualification";
+import { evaluateEpistemologyQualification } from "./epistemology-qualification";
 
 export type SoftDimId =
   | "surprise"
@@ -186,6 +187,10 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
   scores.push(score("imaginal_when_speech", imaginal.passed, imaginal.detail, false));
 
   for (const item of evaluateDevelopmentalQualification(caseState, sections).scores) {
+    scores.push(score(item.id, item.passed, item.detail, item.hard));
+  }
+
+  for (const item of evaluateEpistemologyQualification(caseState, sections).scores) {
     scores.push(score(item.id, item.passed, item.detail, item.hard));
   }
 

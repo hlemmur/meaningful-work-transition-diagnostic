@@ -1,5 +1,13 @@
 import type { CaseState } from "../schemas/case-state";
 import type { ReportSection } from "../schemas/analysis";
+import {
+  hasBinaryPracticalPsychologicalQuestion,
+  hasClinicalFindingLanguage,
+  hasInverseProofClose,
+  hasRivalLexicon,
+  hasUnhedgedSymbolPredicate,
+  hasUncleanTwoVariableExperiment,
+} from "./epistemology";
 
 export type GateFinding = {
   id: string;
@@ -1007,6 +1015,15 @@ export function questionsAndCloseAdequate(
     };
   }
 
+  if (hasBinaryPracticalPsychologicalQuestion(questions.body)) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        "Questions must not force a practical-vs-psychological binary choice.",
+    };
+  }
+
   return {
     id: "questions-close",
     passed: true,
@@ -1092,7 +1109,10 @@ export function closeSynthesisAdequate(
     return { id: "close-synthesis", passed: Boolean(close), detail: close ? "No resolved formulation to synthesize." : "Close section is missing." };
   }
   const body = close.body;
-  if (/failed,\s+therefore|therefore\s+(?:\w+\s+){0,6}(?:primary|proven|proves)/i.test(body)) {
+  if (
+    /failed,\s+therefore|therefore\s+(?:\w+\s+){0,6}(?:primary|proven|proves)/i.test(body) ||
+    hasInverseProofClose(body)
+  ) {
     return {
       id: "close-synthesis",
       passed: false,
@@ -1401,6 +1421,36 @@ if (!questionsClose.passed) {
       passed: false,
       detail: "Projection gold must stay tentative and must not turn a figure into the client's shadow, discipline, or destiny.",
     });
+  }
+  if (hasRivalLexicon(body)) {
+    throwGate({
+      id: "rival-lexicon",
+      passed: false,
+      detail: "Customer prose must not frame practical conditions as rivals or winners.",
+    });
+  }
+  if (hasClinicalFindingLanguage(body)) {
+    throwGate({
+      id: "clinical-finding",
+      passed: false,
+      detail: "Customer prose must not use clinical finding language in product voice.",
+    });
+  }
+  if (hasUnhedgedSymbolPredicate(body)) {
+    throwGate({
+      id: "certain-symbol",
+      passed: false,
+      detail: "Customer prose must not assign symbolic function as unhedged fact.",
+    });
+  }
+  for (const experiment of state.experiments ?? []) {
+    if (hasUncleanTwoVariableExperiment(experiment)) {
+      throwGate({
+        id: "unclean-two-variable",
+        passed: false,
+        detail: "Experiment must not change structure and exposure together without a named practical condition.",
+      });
+    }
   }
 }
 

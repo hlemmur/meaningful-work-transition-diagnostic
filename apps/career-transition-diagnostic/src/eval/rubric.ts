@@ -50,6 +50,21 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
     re: /this report (finally )?proves you (are|were) legitimate/i,
     detail: "Report must not replace inquiry with authorizing certainty.",
   },
+  {
+    id: "rival-lexicon",
+    re: /\brival\b|primary weight|the real cause|therefore primary|mundane challenger/i,
+    detail: "Report must not frame practical conditions as rivals or winners.",
+  },
+  {
+    id: "clinical-finding",
+    re: /\bnarcissistic\b|personality disorder|functional breakdown|skill deficits|executive dysfunction/i,
+    detail: "Report must not use clinical finding language in product voice.",
+  },
+  {
+    id: "certain-symbol",
+    re: /\bfunctions as\b|\bthis is a classic\b/i,
+    detail: "Report must not assign symbolic function as unhedged fact.",
+  },
 ];
 
 const POLARITY_LANGUAGE = /polarity|enantiodromia|\bboth\b|compensation/i;
