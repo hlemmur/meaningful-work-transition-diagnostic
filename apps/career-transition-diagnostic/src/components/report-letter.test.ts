@@ -147,18 +147,16 @@ describe("report letter", () => {
   });
 
   it("never renders evidenceRefs arrays into the letter markup", () => {
+    const sections = [
+      {
+        id: "close",
+        title: "A working formulation",
+        body: "This stays provisional.",
+        evidenceRefs: ["case:Q1.1", "case:Q2.2"],
+      },
+    ] as unknown as Array<{ id: string; title: string; body: string }>;
     const letter = renderToStaticMarkup(
-      createElement(ReportLetter, {
-        sections: [
-          {
-            id: "close",
-            title: "A working formulation",
-            body: "This stays provisional.",
-            // @ts-expect-error intentional leak attempt for the customer letter contract
-            evidenceRefs: ["case:Q1.1", "case:Q2.2"],
-          } as { id: string; title: string; body: string },
-        ],
-      }),
+      createElement(ReportLetter, { sections }),
     );
     expect(letter).not.toContain("case:Q1.1");
     expect(letter).not.toContain("evidenceRefs");
