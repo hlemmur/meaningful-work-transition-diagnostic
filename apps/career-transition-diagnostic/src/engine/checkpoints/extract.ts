@@ -349,6 +349,22 @@ next.history.evidenceAbsorption =
     next.history.functionWithAccountability,
     evidence(assessmentId, "Q4.8", answers["Q4.8"], "behavior"),
   );
+  const similarStrugglesElsewhere = asText(answers["Q4.10"]);
+  const lowerStakesExample = asText(answers["Q4.11"]);
+  const oppositeOrEasyExample = asText(answers["Q4.12"]);
+  const parallelRefs = [
+    similarStrugglesElsewhere ? `${assessmentId}:Q4.10` : undefined,
+    lowerStakesExample ? `${assessmentId}:Q4.11` : undefined,
+    oppositeOrEasyExample ? `${assessmentId}:Q4.12` : undefined,
+  ].filter((ref): ref is string => Boolean(ref));
+  next.parallelPatterns = {
+    ...(similarStrugglesElsewhere
+      ? { similarStrugglesElsewhere }
+      : {}),
+    ...(lowerStakesExample ? { lowerStakesExample } : {}),
+    ...(oppositeOrEasyExample ? { oppositeOrEasyExample } : {}),
+    evidenceRefs: parallelRefs,
+  };
   next.history.legitimacyLoop = upsertEvidence(
   next.history.legitimacyLoop,
   [

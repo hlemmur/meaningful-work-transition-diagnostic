@@ -52,6 +52,9 @@ export function emptyCaseState(assessmentId: string): CaseState {
       functionWithAccountability: [],
       legitimacyLoop: [],
     },
+    parallelPatterns: {
+      evidenceRefs: [],
+    },
     projections: {
       admiredFigures: [],
       rejectedFigures: [],

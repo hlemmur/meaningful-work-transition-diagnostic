@@ -143,6 +143,31 @@ describe("extractCaseStateFull", () => {
     );
   });
 
+  it("maps optional Q4.10–Q4.12 into parallelPatterns without inventing content", () => {
+    const blank = extractCaseStateFull("a1", {
+      "Q4.8": "Accountability helps me finish.",
+    });
+    expect(blank.parallelPatterns).toEqual({ evidenceRefs: [] });
+
+    const filled = extractCaseStateFull("a1", {
+      "Q4.10": "Same freeze when booking the dentist.",
+      "Q4.11": "Booking a haircut feels easier.",
+      "Q4.12": "I run a community dinner easily.",
+    });
+    expect(filled.parallelPatterns).toEqual({
+      similarStrugglesElsewhere: "Same freeze when booking the dentist.",
+      lowerStakesExample: "Booking a haircut feels easier.",
+      oppositeOrEasyExample: "I run a community dinner easily.",
+      evidenceRefs: ["a1:Q4.10", "a1:Q4.11", "a1:Q4.12"],
+    });
+
+    const origin = extractCaseStateFull("origin-1", originCaseAnswers);
+    expect(origin.parallelPatterns.similarStrugglesElsewhere).toBeUndefined();
+    expect(origin.parallelPatterns.lowerStakesExample).toBeUndefined();
+    expect(origin.parallelPatterns.oppositeOrEasyExample).toBeUndefined();
+    expect(origin.parallelPatterns.evidenceRefs).toEqual([]);
+  });
+
   it("extracts work without identity separately from identity without work", () => {
     const state = extractCaseStateFull(
       "a1",

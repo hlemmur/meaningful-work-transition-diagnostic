@@ -386,6 +386,30 @@ export const questions: QuestionDefinition[] = [
     inputType: "long_text",
   },
   {
+    id: "Q4.10",
+    section: 4,
+    prompt:
+      "Do you notice anything similar happening elsewhere in your life — even in situations that seem unrelated to your main challenge? Think of work, relationships, household tasks, money, health, creativity, learning, social situations, or everyday responsibilities. If yes, describe one or two examples and what usually happens.",
+    optionality: "optional",
+    inputType: "long_text",
+  },
+  {
+    id: "Q4.11",
+    section: 4,
+    prompt:
+      "Is there a similar situation where the stakes feel lower and you are less emotionally invested in the outcome? If yes, describe it.",
+    optionality: "optional",
+    inputType: "long_text",
+  },
+  {
+    id: "Q4.12",
+    section: 4,
+    prompt:
+      "Where does the opposite happen? Is there an area of life where you can do something similar with more ease, confidence, consistency, or freedom? What seems different there?",
+    optionality: "optional",
+    inputType: "long_text",
+  },
+  {
     id: "Q4.9",
     section: 4,
     prompt:

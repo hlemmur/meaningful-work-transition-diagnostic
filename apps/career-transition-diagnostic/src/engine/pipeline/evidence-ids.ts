@@ -57,6 +57,10 @@ export function collectCanonicalEvidenceIds(state: CaseState) {
     items.forEach((item) => ids.add(item.id));
   }
 
+  for (const ref of state.parallelPatterns.evidenceRefs) {
+    ids.add(ref);
+  }
+
   return [...ids];
 }
 

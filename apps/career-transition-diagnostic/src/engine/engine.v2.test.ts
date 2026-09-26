@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateAdaptivePlan } from "../questionnaire/adaptive";
+import { emptyCaseState } from "./checkpoints/empty-case-state";
 import { caseStateSchema } from "./schemas/case-state";
 import { ENGINE_VERSION, promptRegistry } from "./prompts";
 
@@ -54,6 +55,9 @@ describe("engine.v2 contracts", () => {
         functionWithoutAudience: [],
         functionWithAccountability: [],
         legitimacyLoop: [],
+      },
+      parallelPatterns: {
+        evidenceRefs: [],
       },
       projections: {
         admiredFigures: [],
@@ -111,6 +115,13 @@ describe("engine.v2 contracts", () => {
     expect(parsed.userFinalReflection.requestedInsight).toBe(
       "See the contradiction I cannot name",
     );
+  });
+
+  it("accepts a CaseState without parallelPatterns for saved-snapshot resume", () => {
+    const legacy = emptyCaseState("legacy") as Record<string, unknown>;
+    delete legacy.parallelPatterns;
+    const parsed = caseStateSchema.parse(legacy);
+    expect(parsed.parallelPatterns).toEqual({ evidenceRefs: [] });
   });
 
   it("registers versioned stubs for checkpoints A–D and Passes 1–10", () => {
