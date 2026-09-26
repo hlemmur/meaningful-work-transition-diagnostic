@@ -14,6 +14,7 @@ import { ConfirmDeleteAccess } from "../confirm-delete-access";
 import { FailedAnalysisNotice } from "../failed-analysis-notice";
 import { humanAnalysisStatus, humanSafetyLevel, humanStatus } from "../operator-copy";
 import { AnalysisSubmitButton } from "../analysis-submit-button";
+import { visibleReportBody } from "@/components/customer-prose";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
                     <textarea
                       className="mt-1 min-h-28 w-full rounded border border-hairline p-2"
                       name={`body-${index}`}
-                      defaultValue={section.body}
+                      defaultValue={visibleReportBody(section.body)}
                     />
                   </label>
                 </article>
@@ -102,7 +103,7 @@ export default async function AdminCasePage({ params }: AdminCasePageProps) {
                   <p className="text-xs text-muted">
                     Evidence: {section.evidenceRefs.join(", ") || "none"}
                   </p>
-                  <p className="mt-2 leading-7">{section.body}</p>
+                  <p className="mt-2 leading-7">{visibleReportBody(section.body)}</p>
                 </article>
               ))}
             </div>

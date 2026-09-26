@@ -1,3 +1,5 @@
+import { visibleReportBody } from "./customer-prose";
+
 type ReportSection = {
   id: string;
   title: string;
@@ -17,7 +19,7 @@ export function ReportLetter({ sections }: ReportLetterProps) {
       {sections.map((section) => (
         <section key={section.id} className="flex flex-col gap-2">
           <h2 className="font-display text-xl font-medium">{section.title}</h2>
-          <p className={section.id === "experiment" || section.id === "questions" ? "leading-7 whitespace-pre-line" : "leading-7"}>{section.body}</p>
+          <p className={section.id === "experiment" || section.id === "questions" ? "leading-7 whitespace-pre-line" : "leading-7"}>{visibleReportBody(section.body)}</p>
         </section>
       ))}
       <p className="leading-7">With care, Lena</p>

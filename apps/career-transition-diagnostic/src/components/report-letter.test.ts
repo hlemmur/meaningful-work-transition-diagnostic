@@ -52,4 +52,47 @@ describe("report letter", () => {
     expect(css).toMatch(/Browser-owned print headers/);
     expect(css).toMatch(/CSS cannot hide them/);
   });
+
+  it("drops leftover evidence markers from the letter the client reads", () => {
+    const letter = renderToStaticMarkup(
+      createElement(ReportLetter, {
+        sections: [
+          {
+            id: "problem",
+            title: "The problem as you see it",
+            body: "You left a career after burnout [origin-case:Q0.2,, ]. Freezing shows up whenever marketing starts [,, ].",
+          },
+          {
+            id: "experiment",
+            title: "Your experiment",
+            body: "Send the existing draft [, ].\n\nWatch the 25-minute window [,,, ].",
+          },
+        ],
+      }),
+    );
+
+    expect(letter).not.toContain("[origin-case:Q0.2,, ]");
+    expect(letter).not.toContain("[,, ]");
+    expect(letter).not.toContain("[, ]");
+    expect(letter).not.toContain("[,,, ]");
+    expect(letter).toContain("You left a career after burnout.");
+    expect(letter).toContain("Freezing shows up whenever marketing starts.");
+    expect(letter).toContain("Send the existing draft.\n\nWatch the 25-minute window.");
+  });
+
+  it("keeps a client's own bracketed words in the letter", () => {
+    const letter = renderToStaticMarkup(
+      createElement(ReportLetter, {
+        sections: [
+          {
+            id: "hidden",
+            title: "A possible hidden position",
+            body: "You called the holding pattern [a tender romance].",
+          },
+        ],
+      }),
+    );
+
+    expect(letter).toContain("[a tender romance]");
+  });
 });
