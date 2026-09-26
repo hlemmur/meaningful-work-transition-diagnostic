@@ -247,7 +247,8 @@ function pass6LayeredOutput(includeFormulation: boolean) {
               consciousPole: "freedom",
               compensatingPole: "structure",
               coreOpposition: "freedom and structure",
-              possibleDevelopmentalTask: "Relate to both poles without ranking them.",
+              possibleDevelopmentalTask:
+                "discovering a form in which both poles can coexist without either having to defeat the other",
               uncertainty: "Practical pressure remains true.",
               evidenceRefs: ["a1:Q2.2", "a1:Q4.8"],
             },
