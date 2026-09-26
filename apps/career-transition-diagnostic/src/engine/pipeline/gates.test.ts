@@ -2658,6 +2658,19 @@ describe("questions and close gate", () => {
     ])).toEqual(["contradiction"]);
   });
 
+  it("treats unhedged guardian/Self/shadow/anima assignment as epistemically uncalibrated", () => {
+    expect(epistemicallyUncalibratedSectionIds([
+      section("jungian", "The obstacle is a threshold guardian blocking your path.", ["a1:Q4.1"]),
+    ])).toEqual(["jungian"]);
+    expect(epistemicallyUncalibratedSectionIds([
+      section(
+        "jungian",
+        "One possible Jungian amplification is that the obstacle could be approached as a threshold guardian.",
+        ["a1:Q4.1"],
+      ),
+    ])).toEqual([]);
+  });
+
   it("does not treat unresolved question text as a declarative certainty claim", () => {
     expect(epistemicallyUncalibratedSectionIds([
       section("questions", "When do you avoid taking the next step? What do you fear losing? What evidence would change your view?", ["a1:Q1.1"]),

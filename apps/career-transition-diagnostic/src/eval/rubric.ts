@@ -7,6 +7,10 @@ import {
   MIN_DISTINCT_EVIDENCE_QUESTION_IDS,
 } from "@/engine/pipeline/report-grounding";
 import { clientVoiceGates } from "@/engine/pipeline/gates";
+import {
+  hasClinicalFindingLanguage,
+  hasUnhedgedSymbolPredicate,
+} from "@/engine/pipeline/epistemology";
 
 export type RubricFinding = {
   id: string;
@@ -57,12 +61,12 @@ const FAILURE_PATTERNS: { id: string; re: RegExp; detail: string }[] = [
   },
   {
     id: "clinical-finding",
-    re: /\bnarcissistic\b|personality disorder|functional breakdown|skill deficits|executive dysfunction/i,
+    re: /\bnarcissistic\b|\bnarcissism\b|personality disorder|\bborderline\b|functional breakdown|skill deficits|executive dysfunction|\bwounded\b|\bbroken\b|unmanaged ADHD|trauma diagnosis/i,
     detail: "Report must not use clinical finding language in product voice.",
   },
   {
     id: "certain-symbol",
-    re: /\bfunctions as\b|\bthis is a classic\b/i,
+    re: /\bfunctions as\b|\bthis is a classic\b|\bthese figures point toward\b/i,
     detail: "Report must not assign symbolic function as unhedged fact.",
   },
 ];
@@ -158,6 +162,18 @@ export function evaluateReport(input: {
   );
 
   for (const pattern of FAILURE_PATTERNS) {
+    if (pattern.id === "clinical-finding") {
+      findings.push(
+        finding(pattern.id, !hasClinicalFindingLanguage(text), pattern.detail),
+      );
+      continue;
+    }
+    if (pattern.id === "certain-symbol") {
+      findings.push(
+        finding(pattern.id, !hasUnhedgedSymbolPredicate(text), pattern.detail),
+      );
+      continue;
+    }
     findings.push(
       finding(pattern.id, !pattern.re.test(text), pattern.detail),
     );

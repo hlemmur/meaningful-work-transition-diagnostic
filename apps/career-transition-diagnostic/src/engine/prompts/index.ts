@@ -262,8 +262,14 @@ export const promptRegistry = {
   }. ${EMPTY_ARRAYS}`,
   },
   pass7: {
-    version: "pass-7.v3",
-    text: `Jungian amplification only after resolution. Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
+    version: "pass-7.v4",
+    text: `Jungian amplification only after resolution. Amplification, not assignment.
+Use: "One possible Jungian amplification is…", "could be approached as", "these figures may point toward".
+Never: "functions as", "this is a classic", "these figures point toward" as unhedged predicates.
+Never assign guardian / Self / shadow / anima as fact.
+At most three hypotheses about what the image might be doing.
+If no client-supplied image, omit symbolic deepening and do not invent one.
+Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
     version: "pass-8.v9",
@@ -388,7 +394,7 @@ Return JSON {
 }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v19",
+    version: "pass-9.v20",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
@@ -408,9 +414,12 @@ Return JSON {
   - Use hypothesis language. Interpretations are provisional, not diagnoses or verdicts.
   - Never turn an interpretive hypothesis into a fact.
   - Ban clinical/essay openers such as “presents a compelling”, “examining the deeper”, “evocative imagery”, “sophisticated psychological bargain”, and “from a process-oriented”.
+  - Never diagnose or use clinical/product-voice findings: narcissistic, narcissism, personality disorder, borderline, functional breakdown, skill deficits, executive dysfunction, wounded, broken, unmanaged ADHD, trauma diagnosis. Quoted client self-description is allowed.
   - Never name the person as an archetype. Never say “you are a puer/senex” or otherwise turn Jungian language into archetypal identity.
   - Never treat eternal youth, eternal becoming, or similar Jungian language as the person's identity.
   - Jungian language should illuminate a pattern, polarity, or process rather than define the person.
+  - Amplification, not assignment: prefer “One possible Jungian amplification is…”, “could be approached as”, “these figures may point toward”. Never “functions as”, “this is a classic”, or unhedged “these figures point toward”. Never assign guardian / Self / shadow / anima as fact.
+  - When rendering hiddenPosition, keep protectiveFunction and possibleCompensatoryAim as sibling hypotheses — never present either as known motive or certain hidden reason.
 
   Evidence provenance:
   - Every substantive claim must be grounded in evidenceRefs from caseSnapshot.evidenceAllowlist.
@@ -489,7 +498,7 @@ Return JSON {
   Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
-    version: "pass-10.v16",
+    version: "pass-10.v17",
     text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
 
   Fail a section when it:
@@ -504,8 +513,11 @@ Return JSON {
   - collapses multiple live symbolic readings into one settled meaning, answers an unresolvedSymbolicQuestion, or turns projectionInterpretations into raw facts;
   - turns a hypothesis into a fact or otherwise presents an interpretation as established psychological truth;
   - contains an unsupported high-certainty psychological predicate in any sentence; fail only the affected section and calibrate that sentence;
+  - uses clinical/product-voice findings (narcissistic, personality disorder, borderline, functional breakdown, skill deficits, executive dysfunction, wounded, broken, unmanaged ADHD, trauma diagnosis) outside quoted client words;
   - uses archetypal identity framing such as “you are a puer/senex/shadow”;
   - treats eternal becoming, eternal youth, or similar Jungian language as the person's identity;
+  - assigns guardian / Self / shadow / anima as fact, or uses unhedged “functions as” / “this is a classic” / “these figures point toward”;
+  - presents hiddenPosition protectiveFunction or possibleCompensatoryAim as known motive rather than sibling hypotheses;
   - treats discipline/grind as the only developmental answer;
   - when caseSnapshot.hiddenPosition exists, omits hiddenPosition.protectiveFunction or hiddenPosition.possibleCompensatoryAim from the hidden section;
   - contradicts, silently replaces, or materially drifts from caseSnapshot.finalFormulation, including finalFormulation.maintenanceFormulation, finalFormulation.maintenanceMechanism, finalFormulation.maintainingLoop, finalFormulation.strongestAlternative, finalFormulation.whatItDoesNotExplain, or finalFormulation.unresolvedForks;
@@ -541,6 +553,7 @@ Return JSON {
 
   Jungian section:
   - keep it brief, image-first, conditional on surviving lenses, and subordinate to the existing analytical center.
+  - require amplification hedges (“One possible Jungian amplification is…”, “could be approached as”, “these figures may point toward”); reject assignment-as-fact.
 
   Required ids:
   problem, reality, contradiction, alternative, experiment, questions, close.

@@ -285,12 +285,33 @@ describe("epistemology qualification (CAR-127)", () => {
 
   it("fails unhedged symbol predicates and passes hedged amplification", () => {
     expect(hasUnhedgedSymbolPredicate("the obstacle voice functions as a threshold guardian")).toBe(true);
+    expect(hasUnhedgedSymbolPredicate("this figure is your shadow")).toBe(true);
+    expect(hasUnhedgedSymbolPredicate("the image is the Self speaking")).toBe(true);
+    expect(hasUnhedgedSymbolPredicate("this is shadow work you named")).toBe(false);
     expect(hasUnhedgedSymbolPredicate("these figures may point toward a threshold tension")).toBe(false);
+    expect(
+      hasUnhedgedSymbolPredicate(
+        "One possible Jungian amplification is that the figure could be approached as a threshold guardian.",
+      ),
+    ).toBe(false);
 
     const result = evaluateEpistemologyQualification(teacherLayered(), baseSections({
       jungian: "The obstacle voice functions as a threshold guardian. This is a classic image.",
     }));
     expect(result.scores.find((score) => score.id === "certain_symbol")?.passed).toBe(false);
+
+    const hedged = evaluateEpistemologyQualification(teacherLayered(), baseSections({
+      jungian:
+        "One possible Jungian amplification is that these figures may point toward a threshold tension.",
+    }));
+    expect(hedged.scores.find((score) => score.id === "certain_symbol")?.passed).toBe(true);
+  });
+
+  it("fails clinical finding language across the plan term list but allows quoted client wording", () => {
+    expect(hasClinicalFindingLanguage("Hidden: borderline pattern with wounded attachment.")).toBe(true);
+    expect(hasClinicalFindingLanguage("The freeze looks like unmanaged ADHD.")).toBe(true);
+    expect(hasClinicalFindingLanguage("This may be trauma diagnosis territory.")).toBe(true);
+    expect(hasClinicalFindingLanguage('You wrote "I feel broken"; that remains your language.')).toBe(false);
   });
 
   it("fails unclean two-variable experiments without a named practicalCondition factor", () => {
