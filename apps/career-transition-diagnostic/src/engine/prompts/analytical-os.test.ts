@@ -85,16 +85,16 @@ describe("analytical OS contracts", () => {
     );
 
     expect(passCardFor("pass8")).toMatch(
-      /behavioral experiment/i,
+      /Change → Observe → Deepen → Bridge|Change -> Observe -> Deepen -> Bridge/i,
     );
     expect(passCardFor("pass8")).toMatch(
-      /exact id/i,
+      /strategy|direct|analogue|contrast/i,
     );
     expect(passCardFor("pass8")).toMatch(
-      /competing explanations|discriminate/i,
+      /learningAim|When X changed/i,
     );
     expect(passCardFor("pass8")).toMatch(
-      /imaginal/i,
+      /imaginal|symbolic/i,
     );
     expect(passCardFor("pass8")).not.toMatch(/\bpipe\b/i);
     expect(passCardFor("pass8")).not.toMatch(/\bprovider\b/i);

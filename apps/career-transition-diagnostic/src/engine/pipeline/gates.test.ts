@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractCaseStateFull } from "@/engine/checkpoints/extract";
 import { reportSectionSchema } from "@/engine/schemas/analysis";
+import { cumulativeExperiment } from "./cumulative-experiment";
 import {
   assertCaseStateCompleteness,
   isParaphraseOf,
@@ -230,6 +231,7 @@ describe("experiment binding gate", () => {
         resultWeakeningHypothesis:
           "Execution stays unchanged.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
       },
     ];
@@ -242,6 +244,100 @@ describe("experiment binding gate", () => {
     ).toBe(true);
 
   });
+
+  it("passes a direct cumulative Change→Observe experiment", () => {
+    const state = experimentState();
+    state.experiments = [
+      cumulativeExperiment({
+        title: "Your experiment",
+        hypothesisTested: "hyp-structure",
+        strategy: "direct",
+        action:
+          "Use a one-page template for the next draft while holding exposure private.",
+        practicalCondition: {
+          factor: "ambiguity of the next step",
+          currentState: "blank page each time",
+          temporaryChange: "one-page template",
+          whyThisFactor: "Ambiguity is carrying part of the freeze.",
+          processDimensions: ["ambiguity", "self_initiation"],
+          sharedDimensions: [],
+        },
+        learningAim:
+          "When the template changed, starting became easier, while visibility charge remained.",
+      }),
+    ];
+    expect(experimentBoundToHypothesis(state).passed).toBe(true);
+  });
+
+  it("rejects analogue strategy without a cited Q4 source", () => {
+    const state = experimentState();
+    state.parallelPatterns = {
+      lowerStakesExample: "Booking a haircut feels easier.",
+      evidenceRefs: ["a1:Q4.11"],
+    };
+    state.experiments = [
+      cumulativeExperiment({
+        title: "Your experiment",
+        hypothesisTested: "hyp-structure",
+        strategy: "analogue",
+        action: "Book a haircut appointment this week using a fixed slot.",
+        practicalCondition: {
+          factor: "self_initiation",
+          currentState: "core deed is too hot",
+          temporaryChange: "fixed slot",
+          whyThisFactor: "Lower-stakes initiation is already supplied.",
+          processDimensions: ["self_initiation"],
+          sharedDimensions: ["self_initiation"],
+        },
+        learningAim:
+          "When the fixed slot changed, booking became easier, while core visibility charge remained.",
+      }),
+    ];
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/Q4\.10|Q4\.11|Q4\.12|sourceRef/i);
+  });
+
+  it("rejects inventing an analogue kitchen task when none was supplied", () => {
+    const state = experimentState();
+    state.experiments = [
+      cumulativeExperiment({
+        title: "Your experiment",
+        hypothesisTested: "hyp-structure",
+        strategy: "analogue",
+        action: "Try cleaning your kitchen for twenty minutes.",
+        practicalCondition: {
+          factor: "initiation",
+          currentState: "stuck",
+          temporaryChange: "kitchen cleaning",
+          whyThisFactor: "invented",
+          processDimensions: ["self_initiation"],
+          sharedDimensions: ["self_initiation"],
+          sourceRef: "a1:Q4.11",
+        },
+        learningAim:
+          "When kitchen cleaning changed, starting became easier, while core charge remained.",
+      }),
+    ];
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+  });
+
+  it("rejects learningAim that does not use the When X / Y / Z shape", () => {
+    const state = experimentState();
+    state.experiments = [
+      cumulativeExperiment({
+        title: "Your experiment",
+        hypothesisTested: "hyp-structure",
+        strategy: "direct",
+        learningAim: "Prove which hypothesis wins after the timer.",
+      }),
+    ];
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/learningAim/i);
+  });
+
   it("passes when hypothesisTested exactly matches a live hypothesis id", () => {
     const state = experimentState();
 
@@ -260,6 +356,7 @@ describe("experiment binding gate", () => {
         resultWeakeningHypothesis:
           "Execution remains unchanged.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external accountability",
@@ -487,7 +584,7 @@ describe("experiment binding gate", () => {
     expect(finding.passed, finding.detail).toBe(true);
   });
 
-  it("rejects a held factor the action never names, even when the action says existing and without", () => {
+  it.skip("rejects a held factor the action never names, even when the action says existing and without (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -499,6 +596,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The draft is sent.",
       resultWeakeningHypothesis: "The draft is not sent.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "private sharing",
@@ -522,7 +620,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/heldConstant/i);
   });
 
-  it("rejects an outcome that favors neither a live explanation nor inconclusive", () => {
+  it.skip("rejects an outcome that favors neither a live explanation nor inconclusive (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -534,6 +632,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The draft is sent.",
       resultWeakeningHypothesis: "The draft is not sent.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "private sharing",
@@ -557,7 +656,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/different live explanations/i);
   });
 
-  it("rejects an inconclusive outcome that names no observable event", () => {
+  it.skip("rejects an inconclusive outcome that names no observable event (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -569,6 +668,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The draft is sent.",
       resultWeakeningHypothesis: "The draft is not sent.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "private sharing",
@@ -731,6 +831,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Execution improves materially.",
       resultWeakeningHypothesis: "Execution remains unchanged.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -753,7 +854,7 @@ describe("experiment binding gate", () => {
     expect(finding.passed, finding.detail).toBe(true);
   });
 
-  it("rejects shame and hiding during reading when no observable event word is present", () => {
+  it.skip("rejects shame and hiding during reading when no observable event word is present (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.hypotheses = [
       rivalHypothesis("hyp-hidden-bargain-potential", "Hidden bargain", "psychological"),
@@ -769,6 +870,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Shame appears.",
       resultWeakeningHypothesis: "Reading proceeds.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-executive-container-collapse"],
       manipulatedVariable: "reading the existing offering",
@@ -792,7 +894,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/observable/i);
   });
 
-  it("rejects one discriminating outcome plus an inconclusive interruption", () => {
+  it.skip("rejects one discriminating outcome plus an inconclusive interruption (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -804,6 +906,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The draft is sent.",
       resultWeakeningHypothesis: "The call stops.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "private sharing",
@@ -827,7 +930,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/different live explanations/i);
   });
 
-  it("rejects success and failure labels even when an inconclusive interruption is also recorded", () => {
+  it.skip("rejects success and failure labels even when an inconclusive interruption is also recorded (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -859,7 +962,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/non-success\/failure outcomes/i);
   });
 
-  it("rejects oversized, inverse-proof, and invented-body experiments", () => {
+  it.skip("rejects oversized, inverse-proof, and invented-body experiments (retired discrimination contract; CAR-130)", () => {
     const cases: Array<{ patch: Record<string, unknown>; pattern: RegExp }> = [
       {
         patch: { sessionMinutes: 90, audienceCount: 3, exposure: "public" },
@@ -935,6 +1038,7 @@ describe("experiment binding gate", () => {
         resultSupportingHypothesis: "Output rises.",
         resultWeakeningHypothesis: "Output stays low.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external accountability",
@@ -971,6 +1075,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The draft is completed.",
       resultWeakeningHypothesis: "The draft is not completed.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "trusted feedback",
@@ -999,6 +1104,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The prototype is finished and shared.",
       resultWeakeningHypothesis: "Domain-specific defects persist.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1047,6 +1153,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Private messages go out and the public post freezes.",
       resultWeakeningHypothesis: "Both tasks stall.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: ["one peer"],
       competingHypothesisIds: ["container_loss_adhd_scaffolding"],
       manipulatedVariable: "Degree of public identity exposure (private direct message vs. public broadcast)",
@@ -1072,7 +1179,7 @@ describe("experiment binding gate", () => {
     expect(experimentBoundToHypothesis(state).passed).toBe(true);
   });
 
-  it("rejects vague internal-state outcomes without a measure or observable action", () => {
+  it.skip("rejects vague internal-state outcomes without a measure or observable action (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -1084,6 +1191,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The experience feels easier.",
       resultWeakeningHypothesis: "The experience feels harder.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1107,7 +1215,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/observable/i);
   });
 
-  it("rejects success and failure paraphrases with generic experiment wording", () => {
+  it.skip("rejects success and failure paraphrases with generic experiment wording (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -1119,6 +1227,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "The experiment works well.",
       resultWeakeningHypothesis: "The experiment does not work well.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1142,7 +1251,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/non-success\/failure outcomes/i);
   });
 
-  it("rejects a behavioral experiment whose manipulated variable is irrelevant to its action", () => {
+  it.skip("rejects a behavioral experiment whose manipulated variable is irrelevant to its action (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [
       {
@@ -1155,6 +1264,7 @@ describe("experiment binding gate", () => {
         resultSupportingHypothesis: "Execution improves with structure.",
         resultWeakeningHypothesis: "Execution does not improve.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external accountability",
@@ -1198,6 +1308,7 @@ describe("experiment binding gate", () => {
         resultWeakeningHypothesis:
           "Execution does not improve.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: ["hyp-skill"],
         manipulatedVariable: "external structure",
@@ -1222,7 +1333,7 @@ describe("experiment binding gate", () => {
     ).toBe(true);
   });
 
-  it("fails free-form hypothesisTested prose", () => {
+  it.skip("fails free-form hypothesisTested prose (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
 
     state.experiments = [
@@ -1239,6 +1350,7 @@ describe("experiment binding gate", () => {
         resultWeakeningHypothesis:
           "No change.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: [],
         heldConstant: [],
@@ -1255,7 +1367,7 @@ describe("experiment binding gate", () => {
     );
   });
 
-  it("fails unknown competing hypothesis ids", () => {
+  it.skip("fails unknown competing hypothesis ids (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
 
     state.experiments = [
@@ -1271,6 +1383,7 @@ describe("experiment binding gate", () => {
         resultWeakeningHypothesis:
           "No change.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: [
           "hyp-does-not-exist",
@@ -1289,7 +1402,7 @@ describe("experiment binding gate", () => {
     );
   });
 
-  it("rejects outcomes that all favor the same hypothesis", () => {
+  it.skip("rejects outcomes that all favor the same hypothesis (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -1301,6 +1414,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Completion rises.",
       resultWeakeningHypothesis: "Completion stays low.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1324,7 +1438,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/different live explanations/i);
   });
 
-  it("rejects success-versus-failure labels without observable outcomes", () => {
+  it.skip("rejects success-versus-failure labels without observable outcomes (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -1336,6 +1450,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Success.",
       resultWeakeningHypothesis: "Failure.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1351,7 +1466,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/non-success\/failure outcomes/i);
   });
 
-  it("rejects outcome mappings without a stated reason", () => {
+  it.skip("rejects outcome mappings without a stated reason (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -1363,6 +1478,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Completion rises.",
       resultWeakeningHypothesis: "Task-specific errors persist.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1386,7 +1502,7 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/for stated reasons/i);
   });
 
-  it("rejects a false exposure experiment that varies structure instead of exposure", () => {
+  it.skip("rejects a false exposure experiment that varies structure instead of exposure (retired discrimination contract; CAR-130)", () => {
     const state = experimentState();
     state.experiments = [{
       kind: "behavioral",
@@ -1398,6 +1514,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Completion rises.",
       resultWeakeningHypothesis: "Completion stays low.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1433,6 +1550,7 @@ describe("experiment binding gate", () => {
       resultSupportingHypothesis: "Completion rises under accountability.",
       resultWeakeningHypothesis: "Task-specific errors persist.",
       riskLevel: "low",
+      layerUpdates: [],
       practicalRequirements: [],
       competingHypothesisIds: ["hyp-skill"],
       manipulatedVariable: "external accountability",
@@ -1468,6 +1586,7 @@ describe("experiment binding gate", () => {
         resultSupportingHypothesis: "Support changes the scene.",
         resultWeakeningHypothesis: "Support makes no difference.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: [],
         heldConstant: [],
@@ -1478,7 +1597,7 @@ describe("experiment binding gate", () => {
     const finding = experimentBoundToHypothesis(state);
 
     expect(finding.passed).toBe(false);
-    expect(finding.detail).toMatch(/behavioral experiment/i);
+    expect(finding.detail).toMatch(/behavioral or integrated experiment|imaginal experiment must be grounded/i);
   });
 
   it("rejects imaginal experiments without supplied symbolic material", () => {
@@ -1567,6 +1686,7 @@ describe("experiment binding gate", () => {
         resultSupportingHypothesis: "The response changes.",
         resultWeakeningHypothesis: "The response stays stable.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: [],
         heldConstant: [],
@@ -1610,6 +1730,7 @@ describe("experiment binding gate", () => {
         resultSupportingHypothesis: "The response changes.",
         resultWeakeningHypothesis: "The response stays stable.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: [],
         heldConstant: [],
@@ -1625,6 +1746,7 @@ describe("experiment binding gate", () => {
         resultSupportingHypothesis: "The supplied scene changes.",
         resultWeakeningHypothesis: "The supplied scene stays stable.",
         riskLevel: "low",
+      layerUpdates: [],
         practicalRequirements: [],
         competingHypothesisIds: [],
         heldConstant: [],

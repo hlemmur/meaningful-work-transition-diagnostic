@@ -152,17 +152,18 @@ expectMentions(promptRegistry.pass6.text, [
     ]);
     // pass8
 expectMentions(promptRegistry.pass8.text, [
-  "competingHypothesisIds",
-  "manipulatedVariable",
-  "heldConstant",
-  "outcomeInterpretations",
-  "outcome",
-  "favors",
-  "because",
+  "strategy",
+  "practicalCondition",
+  "processDimensions",
+  "observe",
+  "learningAim",
+  "layerUpdates",
+  "When X changed",
 ]);
-    expect(promptRegistry.pass8.text).toMatch(/exactly one|exact id|exactly matching/i);
+    expect(promptRegistry.pass8.text).toMatch(/exactly one strategy|Choose exactly one strategy/i);
     expect(promptRegistry.pass8.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass8.text).not.toMatch(/\bprovider\b/i);
+    expect(promptRegistry.pass8.text).not.toMatch(/competingHypothesisIds must/i);
 
     expectMentions(promptRegistry.pass9.text, [
       "sections",
@@ -279,10 +280,9 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass10.version).toBe("pass-10.v15");
     expect(promptRegistry.pass10.text).toMatch(/couldInvalidateWholeFormulation/);
     expect(promptRegistry.pass10.text).toMatch(/invalidat\w* the whole formulation/i);
-    expect(promptRegistry.pass8.version).toBe("pass-8.v8");
-    expect(promptRegistry.pass8.text).toMatch(/existing factor/i);
-    expect(promptRegistry.pass8.text).toMatch(/favors to "inconclusive"/i);
-    expect(promptRegistry.pass8.text).toMatch(/No result proves an unconscious motive/i);
+    expect(promptRegistry.pass8.version).toBe("pass-8.v9");
+    expect(promptRegistry.pass8.text).toMatch(/When X changed, Y became easier, while Z remained/i);
+    expect(promptRegistry.pass8.text).toMatch(/not intended to prove which explanation/i);
     expect(promptRegistry.pass8.text).not.toMatch(/the result proves the unconscious motive/i);
     expect(promptRegistry.pass6.version).toBe("pass-6.v10");
     expect(promptRegistry.pass6.text).toMatch(/coexist without either having to defeat the other/);

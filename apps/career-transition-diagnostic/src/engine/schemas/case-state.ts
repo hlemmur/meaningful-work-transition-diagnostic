@@ -215,4 +215,6 @@ jungianLenses: z.array(
   gateRemediations: z.array(z.string()).optional(),
 });
 
-export type CaseState = z.infer<typeof caseStateSchema>;
+export type CaseState = Omit<z.infer<typeof caseStateSchema>, "experiments"> & {
+  experiments: import("./analysis").Experiment[];
+};

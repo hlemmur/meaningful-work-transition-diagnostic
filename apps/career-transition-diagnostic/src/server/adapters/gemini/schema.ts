@@ -69,7 +69,7 @@ export function jsonSchemaForStage(stage: string) {
       return requirePass6DevelopmentalFormulation(requirePass6LayerRelationship(schema));
     }
     if (stage === "pass8") {
-      return requirePass8LayerUpdates(requireNullablePass8ManipulatedVariable(schema));
+      return requirePass8CumulativeContract(requireNullablePass8ManipulatedVariable(schema));
     }
     if (stage === "pass9") {
       return requirePass9QuestionIntents(schema);
@@ -129,28 +129,29 @@ function requirePass9QuestionIntents(schema: JsonSchema) {
   return schema;
 }
 
-function requirePass8LayerUpdates(schema: JsonSchema) {
+function requirePass8CumulativeContract(schema: JsonSchema) {
   const properties = schema.properties as JsonSchema | undefined;
   const experiments = properties?.experiments as JsonSchema | undefined;
   const item = experiments?.items as JsonSchema | undefined;
   const itemProperties = item?.properties as JsonSchema | undefined;
-  const outcomes = itemProperties?.outcomeInterpretations as JsonSchema | undefined;
-  const outcomeItem = outcomes?.items as JsonSchema | undefined;
-  const outcomeProperties = outcomeItem?.properties as JsonSchema | undefined;
-  if (!item || !itemProperties || !outcomeItem || !outcomeProperties?.layerUpdates) {
+  if (!item || !itemProperties) {
     return schema;
   }
-  const experimentRequired = Array.isArray(item.required) ? item.required as string[] : [];
-  item.required = [...new Set([
-    ...experimentRequired,
-    "sessionMinutes",
-    "audienceCount",
-    "exposure",
-    "reversible",
-    "outcomeInterpretations",
-  ])];
-  const outcomeRequired = Array.isArray(outcomeItem.required) ? outcomeItem.required as string[] : [];
-  outcomeItem.required = [...new Set([...outcomeRequired, "layerUpdates"])];
+  const experimentRequired = Array.isArray(item.required) ? (item.required as string[]) : [];
+  item.required = [
+    ...new Set([
+      ...experimentRequired,
+      "strategy",
+      "practicalCondition",
+      "observe",
+      "learningAim",
+      "layerUpdates",
+      "sessionMinutes",
+      "audienceCount",
+      "exposure",
+      "reversible",
+    ]),
+  ];
   return schema;
 }
 
@@ -167,8 +168,6 @@ function requireNullablePass8ManipulatedVariable(schema: JsonSchema) {
     ...(fieldSchema as JsonSchema),
     nullable: true,
   };
-  const required = Array.isArray(item.required) ? item.required as string[] : [];
-  item.required = [...new Set([...required, "manipulatedVariable"])] as string[];
   return schema;
 }
 

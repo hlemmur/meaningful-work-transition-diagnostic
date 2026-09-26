@@ -184,25 +184,30 @@ describe("Gemini schema sanitizer", () => {
     const pass8 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass8")).properties);
     const experiment = asObject(asObject(pass8.experiments).items);
     expect(experiment.required).toEqual(expect.arrayContaining([
+      "strategy",
+      "practicalCondition",
+      "observe",
+      "learningAim",
+      "layerUpdates",
       "sessionMinutes",
       "audienceCount",
       "exposure",
       "reversible",
     ]));
-    const outcome = asObject(asObject(asObject(experiment.properties).outcomeInterpretations).items);
-    expect(outcome.required).toContain("layerUpdates");
   });
 
-  it("keeps the Pass 8 manipulated variable as a required nullable Gemini property", () => {
+  it("keeps the Pass 8 manipulated variable nullable when present", () => {
     const pass8 = asObject(sanitizeGeminiSchema(jsonSchemaForStage("pass8")).properties);
     const experiments = asObject(pass8.experiments);
     const item = asObject(experiments.items);
     const properties = asObject(item.properties);
 
-    expect(item.required).toContain("manipulatedVariable");
-    expect(properties.manipulatedVariable).toEqual(
-      expect.objectContaining({ nullable: true }),
-    );
+    if (properties.manipulatedVariable) {
+      expect(properties.manipulatedVariable).toEqual(
+        expect.objectContaining({ nullable: true }),
+      );
+    }
+    expect(item.required).not.toContain("manipulatedVariable");
   });
 });
 
