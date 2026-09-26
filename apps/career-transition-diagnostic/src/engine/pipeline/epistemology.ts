@@ -31,10 +31,10 @@ const BINARY_LAYER_QUESTION =
 const CLINICAL_FINDING =
   /\bnarcissistic\b|\bnarcissism\b|personality disorder|\bborderline\b|functional breakdown|skill deficits|executive dysfunction|\bwounded\b|\bbroken\b|unmanaged ADHD|trauma diagnosis/i;
 
-const CERTAIN_SYMBOL =
-  /\bfunctions as\b|\bthis is a classic\b|\bthese figures point toward\b(?!\s+(?:could|may|might|possible|one reading))/i;
+const ARCHETYPE_AS_FACT =
+  /\b(?:is|are)\s+(?:a |an |the |your )?(?:threshold )?guardian\b|\bis\s+(?:the\s+)?Self\b|\bis\s+(?:the\s+|your\s+)shadow\b|\bis\s+(?:the\s+|your\s+)anima\b|\byou are\s+(?:a |an |the |your )?(?:threshold )?guardian\b/i;
 
-const SYMBOL_HEDGE = /\b(?:could|may|might|possible|one (?:possible )?reading|one possible Jungian amplification)\b/i;
+const SYMBOL_HEDGE = /\b(?:could|may|might|possible|one (?:possible )?reading|one possible Jungian amplification|could be approached as|these figures may point toward)\b/i;
 
 const STRUCTURE_TOKENS = /\b(?:structure|timebox|timer|deadline|accountability|checklist)\b/i;
 const EXPOSURE_TOKENS = /\b(?:send|show|exposure|visibility|publish)\b/i;
@@ -77,9 +77,6 @@ export function hasClinicalFindingLanguage(text: string) {
 }
 
 export function hasUnhedgedSymbolPredicate(text: string) {
-  if (!CERTAIN_SYMBOL.test(text) && !/\bfunctions as\b|\bthis is a classic\b/i.test(text)) {
-    return false;
-  }
   const sentences = text.split(/(?<=[.!?])\s+/);
   return sentences.some((sentence) => {
     const unhedgedClassic =
@@ -89,7 +86,9 @@ export function hasUnhedgedSymbolPredicate(text: string) {
       !/\bthese figures may point toward\b|\bcould\b|\bmay\b|\bmight\b|\bpossible\b|\bone reading\b/i.test(
         sentence,
       );
-    return unhedgedClassic || unhedgedPoint;
+    const unhedgedArchetype =
+      ARCHETYPE_AS_FACT.test(sentence) && !SYMBOL_HEDGE.test(sentence);
+    return unhedgedClassic || unhedgedPoint || unhedgedArchetype;
   });
 }
 

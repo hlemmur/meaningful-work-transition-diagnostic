@@ -149,6 +149,10 @@ expectMentions(promptRegistry.pass6.text, [
       "omitReason",
       "You are a Puer",
       "tentative",
+      "Amplification, not assignment",
+      "One possible Jungian amplification",
+      "functions as",
+      "guardian",
     ]);
     // pass8
 expectMentions(promptRegistry.pass8.text, [
@@ -211,7 +215,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v19");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v20");
     expect(promptRegistry.pass9.text).toMatch(/residual-layer question/i);
     expect(promptRegistry.pass9.text).toMatch(/cumulative per-layer updates/i);
     expect(promptRegistry.pass9.text).toMatch(/Forbidden shapes/i);
@@ -233,7 +237,10 @@ expectMentions(promptRegistry.pass8.text, [
     );
     expect(promptRegistry.pass9.text).toMatch(
       /you are a puer\/senex|archetypal identity/i,
-    )
+    );
+    expect(promptRegistry.pass9.text).toMatch(/Amplification, not assignment/i);
+    expect(promptRegistry.pass9.text).toMatch(/narcissistic|personality disorder|unmanaged ADHD/i);
+    expect(promptRegistry.pass9.text).toMatch(/Quoted client self-description is allowed/i);
 
     expectMentions(promptRegistry.pass10.text, [
       "failingSectionIds",
@@ -280,8 +287,11 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass10.text).toMatch(
       /you are a puer\/senex|archetypal identity/i,
     );
+    expect(promptRegistry.pass10.text).toMatch(/clinical\/product-voice findings/i);
+    expect(promptRegistry.pass10.text).toMatch(/guardian \/ Self \/ shadow \/ anima/i);
+    expect(promptRegistry.pass10.text).toMatch(/One possible Jungian amplification/i);
 
-    expect(promptRegistry.pass10.version).toBe("pass-10.v16");
+    expect(promptRegistry.pass10.version).toBe("pass-10.v17");
     expect(promptRegistry.pass10.text).toMatch(/residual-layer question/i);
     expect(promptRegistry.pass10.text).toMatch(/inverse-proof/i);
     expect(promptRegistry.pass10.text).toMatch(/couldInvalidateWholeFormulation/);

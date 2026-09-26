@@ -83,6 +83,9 @@ describe("analytical OS contracts", () => {
     expect(passCardFor("pass7")).toMatch(
       /identity labels|diagnos/i,
     );
+    expect(passCardFor("pass7")).toMatch(
+      /Amplification, not assignment|functions as|guardian/i,
+    );
 
     expect(passCardFor("pass8")).toMatch(
       /Change → Observe → Deepen → Bridge|Change -> Observe -> Deepen -> Bridge/i,

@@ -1092,7 +1092,7 @@ export function questionsAndCloseAdequate(
 }
 
 const CERTAIN_PSYCHOLOGICAL_PREDICATE =
-  /\b(?:unconsciously|secretly|the real reason|you (?:avoid|fear|refuse)|you are driven by|this protects you from)\b/i;
+  /\b(?:unconsciously|secretly|the real reason|you (?:avoid|fear|refuse)|you are driven by|this protects you from|is (?:a |an |the |your )?(?:threshold )?guardian|is (?:the )?Self\b|is (?:the |your )shadow|is (?:the |your )anima|you are (?:a |an |the |your )?(?:threshold )?guardian)\b/i;
 const EPISTEMIC_HEDGE =
   /\b(?:may|might|could|perhaps|possibly|seems?|suggests?|working (?:hypothesis|formulation)|one possibility|it is possible)\b/i;
 

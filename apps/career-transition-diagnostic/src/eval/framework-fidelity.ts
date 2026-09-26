@@ -10,6 +10,7 @@ import {
   antiInflationDiagnosis,
   imaginalWhenSpeech,
 } from "@/engine/pipeline/gates";
+import { hasClinicalFindingLanguage } from "@/engine/pipeline/epistemology";
 import { isRequestedInsightSpine } from "@/engine/pipeline/report-grounding";
 import { evaluateDevelopmentalQualification } from "./developmental-qualification";
 import { evaluateEpistemologyQualification } from "./epistemology-qualification";
@@ -149,7 +150,9 @@ export function evaluateFrameworkFidelity(artifact: FrameworkArtifact): Framewor
     ),
   );
 
-  const clinical = /you have (a |an )?(complex|disorder|diagnosis)|unconscious is definitely/i.test(text);
+  const clinical =
+    hasClinicalFindingLanguage(text) ||
+    /you have (a |an )?(complex|disorder|diagnosis)|unconscious is definitely/i.test(text);
   scores.push(
     score(
       "hypothesis_language",
