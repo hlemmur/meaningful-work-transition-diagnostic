@@ -162,10 +162,14 @@ describe("extractCaseStateFull", () => {
     });
 
     const origin = extractCaseStateFull("origin-1", originCaseAnswers);
-    expect(origin.parallelPatterns.similarStrugglesElsewhere).toBeUndefined();
-    expect(origin.parallelPatterns.lowerStakesExample).toBeUndefined();
-    expect(origin.parallelPatterns.oppositeOrEasyExample).toBeUndefined();
-    expect(origin.parallelPatterns.evidenceRefs).toEqual([]);
+    expect(origin.parallelPatterns.similarStrugglesElsewhere).toMatch(/freeze|dentist|unsent/i);
+    expect(origin.parallelPatterns.lowerStakesExample).toMatch(/private|notebook|draft/i);
+    expect(origin.parallelPatterns.oppositeOrEasyExample).toMatch(/calendar|coaching|container/i);
+    expect(origin.parallelPatterns.evidenceRefs).toEqual([
+      "origin-1:Q4.10",
+      "origin-1:Q4.11",
+      "origin-1:Q4.12",
+    ]);
   });
 
   it("extracts work without identity separately from identity without work", () => {
