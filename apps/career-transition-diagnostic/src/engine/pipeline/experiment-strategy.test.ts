@@ -136,7 +136,9 @@ describe("coerceParallelSourceRef", () => {
         strategy: "analogue",
         practicalCondition: {
           factor: "visibility",
+          currentState: "Audience-facing draft stalls.",
           temporaryChange: "Write privately.",
+          whyThisFactor: "Lower-stakes parallel removes visibility.",
           processDimensions: ["visibility"],
           sharedDimensions: ["visibility"],
         },
@@ -172,7 +174,9 @@ describe("coerceParallelSourceRef", () => {
         strategy: "contrast",
         practicalCondition: {
           factor: "structure",
+          currentState: "Self-initiated work drifts.",
           temporaryChange: "Borrow a booked container.",
+          whyThisFactor: "Contrast shows capacity under shared calendar.",
           processDimensions: ["external_structure"],
           sharedDimensions: ["external_structure"],
         },
