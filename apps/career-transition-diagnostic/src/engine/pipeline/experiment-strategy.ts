@@ -106,3 +106,52 @@ export function isQ4ParallelRef(ref: string, assessmentId: string) {
     ref as `${string}:Q4.10` | `${string}:Q4.11` | `${string}:Q4.12`,
   );
 }
+
+/**
+ * When the model chooses analogue/contrast but omits practicalCondition.sourceRef,
+ * attach the matching Q4.10–Q4.12 ref already present on parallelPatterns.
+ */
+export function coerceParallelSourceRef<T extends Experiment>(
+  experiment: T,
+  state: Pick<CaseState, "assessmentId" | "parallelPatterns">,
+): T {
+  const strategy = experiment.strategy;
+  if (strategy !== "analogue" && strategy !== "contrast") {
+    return experiment;
+  }
+  const condition = experiment.practicalCondition;
+  if (!condition || typeof condition !== "object") {
+    return experiment;
+  }
+  const existing =
+    typeof condition.sourceRef === "string" ? condition.sourceRef.trim() : "";
+  if (existing && isQ4ParallelRef(existing, state.assessmentId)) {
+    return experiment;
+  }
+
+  const refs = new Set(state.parallelPatterns.evidenceRefs ?? []);
+  const prefer =
+    strategy === "contrast"
+      ? [`${state.assessmentId}:Q4.12`]
+      : [
+          state.parallelPatterns.lowerStakesExample?.trim()
+            ? `${state.assessmentId}:Q4.11`
+            : "",
+          state.parallelPatterns.similarStrugglesElsewhere?.trim()
+            ? `${state.assessmentId}:Q4.10`
+            : "",
+        ].filter(Boolean);
+
+  const sourceRef = prefer.find((ref) => refs.has(ref));
+  if (!sourceRef) {
+    return experiment;
+  }
+
+  return {
+    ...experiment,
+    practicalCondition: {
+      ...condition,
+      sourceRef,
+    },
+  };
+}

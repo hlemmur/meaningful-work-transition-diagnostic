@@ -272,7 +272,7 @@ If no client-supplied image, omit symbolic deepening and do not invent one.
 Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v10",
+    version: "pass-8.v11",
     text: `Produce a reality check and one psychologically informative experiment.
 Title stays "Your experiment".
 
@@ -316,6 +316,9 @@ Decision flow:
    - symbolic_only: behavioral step inappropriate AND a supplied image exists
    If analogue/contrast fields are empty, do not invent them. Use direct
    with a smaller same-domain step, or symbolic_only.
+   For analogue or contrast, practicalCondition.sourceRef is REQUIRED and
+   must be exactly one of caseSnapshot.parallelPatterns.evidenceRefs
+   (assessmentId:Q4.10, Q4.11, or Q4.12). Never omit sourceRef.
 3. Action: small, reversible, at most one session of 30 minutes unless
    a case-specific justification exists. Prefer private or one trusted
    other over public exposure when that still changes the condition.

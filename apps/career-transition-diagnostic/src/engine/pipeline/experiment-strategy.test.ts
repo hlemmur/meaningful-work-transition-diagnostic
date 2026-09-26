@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { Experiment } from "../schemas/analysis";
 import {
   analogueEligible,
+  coerceParallelSourceRef,
   contrastEligible,
   hasWinnerImplication,
   matchesLearningAimShape,
@@ -121,5 +123,79 @@ describe("learning aim and implication guards", () => {
   it("flags winner implications", () => {
     expect(hasWinnerImplication("therefore primary cause")).toBe(true);
     expect(hasWinnerImplication("practical layer stays important")).toBe(false);
+  });
+});
+
+describe("coerceParallelSourceRef", () => {
+  it("fills missing analogue sourceRef from lower-stakes Q4.11", () => {
+    const coerced = coerceParallelSourceRef(
+      {
+        kind: "behavioral",
+        title: "Your experiment",
+        hypothesisTested: "hyp-a",
+        strategy: "analogue",
+        practicalCondition: {
+          factor: "visibility",
+          temporaryChange: "Write privately.",
+          processDimensions: ["visibility"],
+          sharedDimensions: ["visibility"],
+        },
+        action: "Write a private draft.",
+        duration: "20 minutes",
+        whatToObserve: [],
+        resultSupportingHypothesis: "",
+        resultWeakeningHypothesis: "",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+        layerUpdates: [],
+      } as Experiment,
+      {
+        assessmentId: "a1",
+        parallelPatterns: {
+          lowerStakesExample: "Private notebook drafting.",
+          evidenceRefs: ["a1:Q4.10", "a1:Q4.11", "a1:Q4.12"],
+        },
+      },
+    );
+    expect(coerced.practicalCondition?.sourceRef).toBe("a1:Q4.11");
+  });
+
+  it("fills missing contrast sourceRef from Q4.12", () => {
+    const coerced = coerceParallelSourceRef(
+      {
+        kind: "behavioral",
+        title: "Your experiment",
+        hypothesisTested: "hyp-a",
+        strategy: "contrast",
+        practicalCondition: {
+          factor: "structure",
+          temporaryChange: "Borrow a booked container.",
+          processDimensions: ["external_structure"],
+          sharedDimensions: ["external_structure"],
+        },
+        action: "Keep a booked session.",
+        duration: "20 minutes",
+        whatToObserve: [],
+        resultSupportingHypothesis: "",
+        resultWeakeningHypothesis: "",
+        riskLevel: "low",
+        practicalRequirements: [],
+        competingHypothesisIds: [],
+        heldConstant: [],
+        outcomeInterpretations: [],
+        layerUpdates: [],
+      } as Experiment,
+      {
+        assessmentId: "a1",
+        parallelPatterns: {
+          oppositeOrEasyExample: "Booked coaching sessions work.",
+          evidenceRefs: ["a1:Q4.12"],
+        },
+      },
+    );
+    expect(coerced.practicalCondition?.sourceRef).toBe("a1:Q4.12");
   });
 });
