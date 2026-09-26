@@ -53,11 +53,11 @@ function peelSections(assessmentId = "a1") {
       id: "questions" as const,
       title: "Three questions to stay with",
       body:
-        "What would make you question this explanation? What changes when you test structure directly? What still feels unexplained to you?",
+        "If clearer structure made execution substantially easier for you, what tension around visibility would still remain? What would make you question this explanation? What still feels unexplained to you?",
       evidenceRefs: [q("Q1.1"), q("Q1.3")],
       questionIntents: [
+        { question: "If clearer structure made execution substantially easier for you, what tension around visibility would still remain?", targetUncertainty: "Residual tension", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: false },
         { question: "What would make you question this explanation?", targetUncertainty: "Whether the explanation fits", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: true },
-        { question: "What changes when you test structure directly?", targetUncertainty: "Whether structure changes action", relatedHypothesisId: "h1", couldWeakenSelectedFormulation: false },
         { question: "What still feels unexplained to you?", targetUncertainty: "The unexplained remainder", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: true },
       ],
     },

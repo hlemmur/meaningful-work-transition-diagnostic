@@ -115,6 +115,9 @@ describe("analytical OS contracts", () => {
       /strongest alternative|unresolved forks/i,
     );
     expect(passCardFor("pass9")).toMatch(
+      /residual-layer|cumulative per-layer/i,
+    );
+    expect(passCardFor("pass9")).toMatch(
       /never invent dialogue|bodily locations|evidenceRefs/i,
     );
     expect(passCardFor("pass9")).toMatch(

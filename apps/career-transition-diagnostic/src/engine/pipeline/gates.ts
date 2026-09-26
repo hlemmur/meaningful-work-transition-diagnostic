@@ -4,6 +4,7 @@ import {
   hasBinaryPracticalPsychologicalQuestion,
   hasClinicalFindingLanguage,
   hasInverseProofClose,
+  hasResidualLayerQuestion,
   hasRivalLexicon,
   hasUnhedgedSymbolPredicate,
   hasUncleanTwoVariableExperiment,
@@ -1073,6 +1074,15 @@ export function questionsAndCloseAdequate(
     };
   }
 
+  if (!hasResidualLayerQuestion(questions.body)) {
+    return {
+      id: "questions-close",
+      passed: false,
+      detail:
+        "Questions must include a residual-layer inquiry: if the practical change made execution easier, what tension would still remain.",
+    };
+  }
+
   return {
     id: "questions-close",
     passed: true,
@@ -1145,6 +1155,27 @@ export function experimentCopyAgrees(
     detail: agreed
       ? "Customer experiment copy does not contradict the structured audience."
       : "Customer experiment copy names a different recipient count than the structured action.",
+  };
+}
+
+export function closeInverseProof(
+  sections: ReportSection[],
+): GateFinding {
+  const close = sections.find((section) => section.id === "close");
+  if (!close) {
+    return {
+      id: "close-inverse-proof",
+      passed: false,
+      detail: "Close section is missing.",
+    };
+  }
+  const failed = hasInverseProofClose(close.body);
+  return {
+    id: "close-inverse-proof",
+    passed: !failed,
+    detail: failed
+      ? "Close must not use inverse-proof winner language (if works/fails → primary/central leverage/real cause)."
+      : "Close avoids inverse-proof winner language.",
   };
 }
 
@@ -1452,6 +1483,10 @@ export function assertPeelHardGates(sections: ReportSection[], state: CaseState)
 if (!questionsClose.passed) {
   throwGate(questionsClose);
 }
+  const inverseProof = closeInverseProof(sections);
+  if (!inverseProof.passed) {
+    throwGate(inverseProof);
+  }
   const closeSynthesis = closeSynthesisAdequate(sections, state);
   if (!closeSynthesis.passed) {
     throwGate(closeSynthesis);

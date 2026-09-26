@@ -155,14 +155,14 @@ function ensureQuestionsAndClose(
         id: "questions",
         title: "Three questions to stay with",
         body:
-          "1. What changes when you treat the stall as information rather than proof that you cannot do the work?\n\n2. What if your whole formulation is wrong because depleted resources explain your stall better than either layer?\n\n3. What would you learn if the next step became smaller and more observable?",
+          "1. If clearer external structure made execution substantially easier for you, what tension around visibility or self-initiation would still remain?\n\n2. What if your whole formulation is wrong because depleted resources explain your stall better than either layer?\n\n3. What would you learn if the next step became smaller and more observable?",
         evidenceRefs: [
           q("Q1.1"),
           q("Q1.3"),
           q("Q2.2"),
         ],
         questionIntents: [
-          { question: "What changes when you treat the stall as information rather than proof that you cannot do the work?", targetUncertainty: "Whether the stall is information or incapacity", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: false },
+          { question: "If clearer external structure made execution substantially easier for you, what tension around visibility or self-initiation would still remain?", targetUncertainty: "What residual tension remains after a practical change", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: false },
           { question: "What if your whole formulation is wrong because depleted resources explain your stall better than either layer?", targetUncertainty: "Whether the whole formulation is the wrong frame", couldWeakenSelectedFormulation: true, couldInvalidateWholeFormulation: true },
           { question: "What would you learn if the next step became smaller and more observable?", targetUncertainty: "Whether task size changes action", couldWeakenSelectedFormulation: false, couldInvalidateWholeFormulation: false },
         ],

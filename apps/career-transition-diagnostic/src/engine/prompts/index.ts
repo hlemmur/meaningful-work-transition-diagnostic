@@ -388,7 +388,7 @@ Return JSON {
 }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v18",
+    version: "pass-9.v19",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
@@ -461,12 +461,18 @@ Return JSON {
   - The questions section must return questionIntents. Do not omit them.
   - At least one question must be capable of weakening the selected formulation.
   - At least one question must be capable of invalidating the whole formulation, not only choosing among the supplied explanations. Set couldInvalidateWholeFormulation true on that question. Avoid leading forms that preload a motive or answer.
+  - None of the three questions may force a choice between a practical explanation and a psychological explanation.
+  - Forbidden shapes: "Is your primary difficulty X or Y?", "Which hypothesis is true?", and any or-question whose poles are practical vs psychological.
+  - Required: at least one residual-layer question of this shape: "If [the changed practical condition] made execution substantially easier, what tension around [process dimensions actually in this case] would still remain?" Do not invent dimensions that were not in the formulation. Do not preload the answer (protection, shadow, ADHD, etc.).
 
   Close:
   - End with a short working formulation.
   - Explicitly frame it as provisional and testable, not settled truth.
   - Synthesize the maintenance hypothesis, strongest alternative, warranted developmental opposition when present, remaining unknowns, and evidence that would update the formulation.
   - When developmentalFormulation is present, name its possibleDevelopmentalTask in the close. A different open question does not replace that task.
+  - The close may say the transition sits at the intersection of more than one force. It must then use cumulative per-layer updates, never a winner.
+  - Required customer logic (adapt nouns to this case's layers): practical change helps a lot → that practical contribution is clearly important and psychological material is not retired; practical change helps but residual charge remains → both layers stay; practical change helps little → that particular practical hypothesis weakens while other practical and psychological explanations remain open; little extra difficulty from the targeted psychological condition → that specific psychological hypothesis weakens without saying "no depth"; neither explains much → name other open candidates already in whatItDoesNotExplain without inventing new ones.
+  - Forbidden: "if structure works, the practical hypothesis gains primary weight"; "if freeze persists, the protective defense remains the central leverage"; "therefore the real cause is".
 
   Return JSON {
     sections: array of {
@@ -483,7 +489,7 @@ Return JSON {
   Never return a single thin section. ${EMPTY_ARRAYS}`,
   },
   pass10: {
-    version: "pass-10.v15",
+    version: "pass-10.v16",
     text: `Act as the final report critic. Inspect draftReport.sections against caseSnapshot and regenerate only failing sections.
 
   Fail a section when it:
@@ -523,11 +529,15 @@ Return JSON {
   - require structured questionIntents for all three questions, with target uncertainty and optional live hypothesis/fork relation;
   - reject leading or preloaded questions;
   - require at least one question that could weaken the selected formulation and at least one that could invalidate the whole formulation, not only choose among the supplied explanations.
+  - reject any practical-vs-psychological forced choice ("Is your primary difficulty X or Y?", "Which hypothesis is true?").
+  - require at least one residual-layer question: if the changed practical condition made execution substantially easier, what tension around the case's process dimensions would still remain.
 
   Close section:
   - must contain a short provisional working formulation;
   - fail it if it presents the formulation as diagnosis, settled truth, or verdict.
   - require synthesis of maintenance, the strongest alternative, warranted developmental opposition, remaining unknowns, and evidence that would update the formulation.
+  - fail inverse-proof / winner closes such as "if structure works, the practical hypothesis gains primary weight" or "if freeze persists, the protective defense remains the central leverage".
+  - require cumulative per-layer update logic rather than declaring a primary cause.
 
   Jungian section:
   - keep it brief, image-first, conditional on surviving lenses, and subordinate to the existing analytical center.
