@@ -597,6 +597,268 @@ describe("experiment binding gate", () => {
     expect(finding.detail).toMatch(/observable/i);
   });
 
+  function rivalHypothesis(
+    id: string,
+    title: string,
+    category: "psychological" | "practical",
+  ) {
+    return {
+      id,
+      title,
+      category,
+      observedPattern: title,
+      evidenceFor: ["exp:Q1.1"],
+      evidenceAgainst: [],
+      contradictionsExplained: [],
+      contradictionsNotExplained: [],
+      simplerAlternatives: [],
+      missingInformation: [],
+      originForks: ["container_loss_vs_capacity" as const],
+      scoring: {
+        evidenceCoverage: 0.6,
+        crossContextRecurrence: 0.5,
+        contradictionResolution: 0.6,
+        personSpecificity: 0.5,
+        developmentalFit: 0.3,
+        imageConstraintFit: 0.5,
+        counterEvidencePenalty: 0.1,
+        simplerAlternativePenalty: 0,
+      },
+      confidence: "moderate" as const,
+    };
+  }
+
+  it("accepts the stored peer-offering review whose discriminating outcome says freezing", () => {
+    const state = experimentState();
+    state.hypotheses = [
+      rivalHypothesis("hyp-hidden-bargain-potential", "Hidden bargain", "psychological"),
+      rivalHypothesis("hyp-executive-container-collapse", "Container collapse", "practical"),
+      rivalHypothesis("hyp-commercial-soul-conflict", "Commercial soul", "psychological"),
+    ];
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Scaffolded Peer Offering Review",
+      hypothesisTested: "hyp-hidden-bargain-potential",
+      action: "Schedule a single 25-minute quiet co-working video call with one trusted peer where you read your existing one-page coaching offering aloud to them and ask for their plain understanding of what problem it solves, without making any commercial pitch or social media post.",
+      duration: "25 minutes",
+      whatToObserve: [
+        "Whether having a live external container enables immediate execution or if freezing persists",
+        "Somatic and emotional responses during reading (such as anxiety, sadness, or shame about being seen)",
+        "Whether resistance focuses on executive initiation, fear of judgment, or moral aversion to commercial language",
+      ],
+      resultSupportingHypothesis: "Even when external accountability and co-presence are fully supplied, intense internal resistance or shame arises around having the offering witnessed, confirming that preserving uncommitted potential operates independently of executive structure.",
+      resultWeakeningHypothesis: "Once the live relational container and session time are established, reading and reviewing the draft proceeds smoothly without debilitating freeze, suggesting executive scaffolding deficits were the primary barrier.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-executive-container-collapse", "hyp-commercial-soul-conflict"],
+      manipulatedVariable: "Relational co-presence and external pacing during task execution",
+      heldConstant: [
+        "Using your existing coaching offering draft on paper without drafting new copy",
+        "A private relational setting with one peer, completely excluding public social media posting or commercial sales asks",
+      ],
+      sessionMinutes: 25,
+      audienceCount: 1,
+      exposure: "trusted",
+      reversible: true,
+      outcomeInterpretations: [
+        {
+          outcome: "With the live peer container active, reading and reviewing the draft proceeds with clear focus and minimal emotional distress, but initiating solo self-directed work remains blocked when unprompted.",
+          favors: "hyp-executive-container-collapse",
+          because: "External relational scaffolding directly resolves the execution block, demonstrating that executive dysfunction and missing structure are the principal operational friction.",
+          layerUpdates: [
+            { layer: "practical", effect: "strengthens" },
+            { layer: "psychological", effect: "weakens" },
+            { layer: "developmental", effect: "unchanged" },
+          ],
+        },
+        {
+          outcome: "Despite the presence of the trusted peer container, acute shame and freezing emerge during reading, accompanied by strong impulses to deprecate the work or hide the text from view.",
+          favors: "hyp-hidden-bargain-potential",
+          because: "Resistance persists even when practical executive support is present, pointing toward a protective defense against reality testing and vulnerability.",
+          layerUpdates: [
+            { layer: "practical", effect: "unchanged" },
+            { layer: "psychological", effect: "strengthens" },
+            { layer: "developmental", effect: "strengthens" },
+          ],
+        },
+        {
+          outcome: "The reading is executed easily, but acute distress arises specifically around feeling like an infobusiness hustler who sells air or loses soul for money.",
+          favors: "hyp-commercial-soul-conflict",
+          because: "The block is specifically localized to moral and identity conflict regarding commercial offerings rather than executive initiation or general exposure.",
+          layerUpdates: [
+            { layer: "practical", effect: "unchanged" },
+            { layer: "psychological", effect: "strengthens" },
+            { layer: "developmental", effect: "weakens" },
+          ],
+        },
+        {
+          outcome: "The peer is unresponsive or the call is interrupted before the offering can be read aloud, leaving the interaction uncompleted within the 25-minute window.",
+          favors: "inconclusive",
+          because: "A concrete logistical interruption prevented the live test of task execution under relational scaffolding.",
+          layerUpdates: [
+            { layer: "practical", effect: "inconclusive" },
+            { layer: "psychological", effect: "inconclusive" },
+            { layer: "developmental", effect: "inconclusive" },
+          ],
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed, finding.detail).toBe(true);
+  });
+
+  it.each([
+    ["freezing", "Acute freezing appears before the peer hears the offering."],
+    ["froze", "The person froze before the peer hears the offering."],
+    ["frozen", "The offering stays frozen before the peer hears it."],
+    ["charging", "The person keeps charging a fee before the peer hears the offering."],
+    ["completing", "The person is completing it before the peer hears the offering."],
+    ["scoring", "The person is scoring the step before the peer hears the offering."],
+    ["messaging", "The person is messaging before the peer hears the offering."],
+    ["prototyping", "The person is prototyping before the peer hears the offering."],
+    ["noting", "The person is noting a reaction before the peer hears the offering."],
+    ["mistaking", "The person is mistaking the step before the peer hears the offering."],
+  ])("accepts %s as an observable outcome inflection", (_label, outcome) => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Inflected outcome",
+      hypothesisTested: "hyp-structure",
+      action: "Add external accountability while holding task difficulty unchanged.",
+      duration: "2 weeks",
+      whatToObserve: ["Number of five planned task attempts completed under accountability."],
+      resultSupportingHypothesis: "Execution improves materially.",
+      resultWeakeningHypothesis: "Execution remains unchanged.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "external accountability",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome,
+          favors: "hyp-structure",
+          because: "The changed condition produced this event while task difficulty stayed stable.",
+        },
+        {
+          outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
+          favors: "hyp-skill",
+          because: "Persistent task-specific errors fit limited experience better than missing structure.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed, finding.detail).toBe(true);
+  });
+
+  it("rejects shame and hiding during reading when no observable event word is present", () => {
+    const state = experimentState();
+    state.hypotheses = [
+      rivalHypothesis("hyp-hidden-bargain-potential", "Hidden bargain", "psychological"),
+      rivalHypothesis("hyp-executive-container-collapse", "Container collapse", "practical"),
+    ];
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Shame without an event",
+      hypothesisTested: "hyp-hidden-bargain-potential",
+      action: "Read the existing offering aloud to one peer while holding the draft unchanged.",
+      duration: "25 minutes",
+      whatToObserve: ["Whether reading the existing offering proceeds."],
+      resultSupportingHypothesis: "Shame appears.",
+      resultWeakeningHypothesis: "Reading proceeds.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-executive-container-collapse"],
+      manipulatedVariable: "reading the existing offering",
+      heldConstant: ["existing offering draft"],
+      outcomeInterpretations: [
+        {
+          outcome: "Despite the presence of the trusted peer container, acute shame emerges during reading, accompanied by strong impulses to deprecate the work or hide the text from view.",
+          favors: "hyp-hidden-bargain-potential",
+          because: "Resistance persists even when a peer is present.",
+        },
+        {
+          outcome: "The draft is reviewed with minimal distress.",
+          favors: "hyp-executive-container-collapse",
+          because: "The peer container was enough to move the draft.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/observable/i);
+  });
+
+  it("rejects one discriminating outcome plus an inconclusive interruption", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Single discrimination",
+      hypothesisTested: "hyp-structure",
+      action: "Share the existing draft while holding task difficulty unchanged.",
+      duration: "25 minutes",
+      whatToObserve: ["Whether one draft is sent."],
+      resultSupportingHypothesis: "The draft is sent.",
+      resultWeakeningHypothesis: "The call stops.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "private sharing",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        {
+          outcome: "Acute freezing appears before the peer hears the offering.",
+          favors: "hyp-structure",
+          because: "The private step still produced a freeze.",
+        },
+        {
+          outcome: "The peer is unresponsive or the call is interrupted before the offering can be read aloud, leaving the interaction uncompleted within the 25-minute window.",
+          favors: "inconclusive",
+          because: "A logistical interruption stopped the session before either explanation could be favored.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/different live explanations/i);
+  });
+
+  it("rejects success and failure labels even when an inconclusive interruption is also recorded", () => {
+    const state = experimentState();
+    state.experiments = [{
+      kind: "behavioral",
+      title: "Binary plus interruption",
+      hypothesisTested: "hyp-structure",
+      action: "Share the existing draft while holding task difficulty unchanged.",
+      duration: "25 minutes",
+      whatToObserve: ["Whether one draft is sent."],
+      resultSupportingHypothesis: "Success.",
+      resultWeakeningHypothesis: "Failure.",
+      riskLevel: "low",
+      practicalRequirements: [],
+      competingHypothesisIds: ["hyp-skill"],
+      manipulatedVariable: "private sharing",
+      heldConstant: ["task difficulty"],
+      outcomeInterpretations: [
+        { outcome: "Success", favors: "hyp-structure", because: "The test worked." },
+        { outcome: "Failure", favors: "hyp-skill", because: "The test failed." },
+        {
+          outcome: "The peer is unresponsive or the call is interrupted before the offering can be read aloud, leaving the interaction uncompleted within the 25-minute window.",
+          favors: "inconclusive",
+          because: "The interruption is not evidence for either explanation.",
+        },
+      ],
+    }];
+
+    const finding = experimentBoundToHypothesis(state);
+    expect(finding.passed).toBe(false);
+    expect(finding.detail).toMatch(/non-success\/failure outcomes/i);
+  });
+
   it("rejects oversized, inverse-proof, and invented-body experiments", () => {
     const cases: Array<{ patch: Record<string, unknown>; pattern: RegExp }> = [
       {
