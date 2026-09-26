@@ -2750,6 +2750,7 @@ describe("questions and close gate", () => {
         simplerAlternatives: [],
         missingInformation: [],
         originForks: [],
+        confidence: "moderate",
         scoring: {
           evidenceCoverage: 0.8,
           crossContextRecurrence: 0.5,
