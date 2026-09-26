@@ -24,6 +24,14 @@ describe("customer provenance", () => {
     expect(stripCanonicalEvidenceIds(body, ids)).toBe(body);
   });
 
+  it("removes leftover empty parenthetical cites after stripping ids", () => {
+    const body =
+      'You left engineering ("origin-real-local:Q1.3", ""). You kept an unbound attitude ("", "").';
+    const cleaned = stripCanonicalEvidenceIds(body, ids);
+    expect(cleaned).toBe("You left engineering. You kept an unbound attitude.");
+    expect(cleaned).not.toContain('""');
+  });
+
   it("allows a reported diagnosis and rejects direct causality, nudging, and healing", () => {
     expect(CUSTOMER_SAFETY_FAILURE.test(
       "You reported an ADHD diagnosis; this report cannot determine how much it contributes.",
