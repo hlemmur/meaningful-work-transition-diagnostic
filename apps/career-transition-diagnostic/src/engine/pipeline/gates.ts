@@ -1,5 +1,5 @@
 import type { CaseState } from "../schemas/case-state";
-import type { ReportSection } from "../schemas/analysis";
+import type { ProcessDimension, ReportSection } from "../schemas/analysis";
 import {
   hasBinaryPracticalPsychologicalQuestion,
   hasClinicalFindingLanguage,
@@ -8,6 +8,11 @@ import {
   hasUnhedgedSymbolPredicate,
   hasUncleanTwoVariableExperiment,
 } from "./epistemology";
+import {
+  hasWinnerImplication,
+  isQ4ParallelRef,
+  matchesLearningAimShape,
+} from "./experiment-strategy";
 
 export type GateFinding = {
   id: string;
@@ -293,341 +298,104 @@ export function experimentBoundToHypothesis(
     return {
       id: "experiment-bind",
       passed: false,
-      detail: "At least one behavioral experiment is required.",
+      detail: "At least one behavioral or integrated experiment is required.",
     };
   }
 
-  const hypothesisIds = new Set(
-    state.hypotheses.map((item) => item.id),
-  );
-
+  const hypothesisIds = new Set(state.hypotheses.map((item) => item.id));
   const forkIds = new Set(state.openForks);
-
-  const validTestIds = new Set<string>([
-    ...hypothesisIds,
-    ...forkIds,
-  ]);
+  const validTestIds = new Set<string>([...hypothesisIds, ...forkIds]);
+  const evidenceAllowlist = new Set<string>();
+  for (const hyp of state.hypotheses) {
+    hyp.evidenceFor.forEach((ref) => evidenceAllowlist.add(ref));
+    hyp.evidenceAgainst.forEach((ref) => evidenceAllowlist.add(ref));
+  }
+  for (const items of [
+    state.affect.emotions,
+    state.affect.bodyResponses,
+    state.history.functionWithoutAudience,
+    state.projections.admiredFigures,
+    state.projections.rejectedFigures,
+  ]) {
+    for (const item of items) {
+      if ("id" in item && typeof item.id === "string") {
+        evidenceAllowlist.add(item.id);
+      }
+      if ("evidenceRefs" in item && Array.isArray(item.evidenceRefs)) {
+        item.evidenceRefs.forEach((ref: string) => evidenceAllowlist.add(ref));
+      }
+    }
+  }
+  for (const ref of state.parallelPatterns?.evidenceRefs ?? []) {
+    evidenceAllowlist.add(ref);
+  }
 
   const failures: string[] = [];
   const suppliedSymbolicMaterial = Object.values(state.symbolicMaterial)
-    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 
-  if (
-    !experiments.some(
-      (experiment) =>
-        Boolean(experiment) &&
-        typeof experiment === "object" &&
-        (experiment as { kind?: unknown }).kind === "behavioral",
-    )
-  ) {
-    failures.push("At least one behavioral experiment is required.");
+  const hasBehavioralOrIntegrated = experiments.some((experiment) => {
+    if (!experiment || typeof experiment !== "object") return false;
+    const kind = (experiment as { kind?: unknown }).kind;
+    return kind === "behavioral" || kind === "integrated";
+  });
+  const hasSymbolicOnly = experiments.some((experiment) => {
+    if (!experiment || typeof experiment !== "object") return false;
+    return (
+      (experiment as { strategy?: unknown }).strategy === "symbolic_only" ||
+      (experiment as { kind?: unknown }).kind === "imaginal"
+    );
+  });
+  if (!hasBehavioralOrIntegrated && !hasSymbolicOnly) {
+    failures.push("At least one behavioral or integrated experiment is required.");
   }
 
   for (const rawExperiment of experiments) {
-    if (
-      !rawExperiment ||
-      typeof rawExperiment !== "object"
-    ) {
-      failures.push(
-        "Experiment is not a valid object.",
-      );
+    if (!rawExperiment || typeof rawExperiment !== "object") {
+      failures.push("Experiment is not a valid object.");
       continue;
     }
 
     const experiment = rawExperiment as {
       kind?: unknown;
       title?: unknown;
+      strategy?: unknown;
       hypothesisTested?: unknown;
       action?: unknown;
-      competingHypothesisIds?: unknown;
-      manipulatedVariable?: unknown;
+      practicalCondition?: unknown;
+      observe?: unknown;
+      deepen?: unknown;
+      learningAim?: unknown;
+      layerUpdates?: unknown;
       heldConstant?: unknown;
-      whatToObserve?: unknown;
       outcomeInterpretations?: unknown;
+      sessionMinutes?: unknown;
+      audienceCount?: unknown;
+      exposure?: unknown;
+      largerActionJustification?: unknown;
     };
 
     const title =
-      typeof experiment.title === "string"
-        ? experiment.title
-        : "Untitled experiment";
-
+      typeof experiment.title === "string" ? experiment.title : "Untitled experiment";
+    const kind = typeof experiment.kind === "string" ? experiment.kind : "";
+    const strategy = typeof experiment.strategy === "string" ? experiment.strategy : "";
+    const action = typeof experiment.action === "string" ? experiment.action : "";
     const hypothesisTested =
-      typeof experiment.hypothesisTested === "string"
-        ? experiment.hypothesisTested
-        : "";
+      typeof experiment.hypothesisTested === "string" ? experiment.hypothesisTested : "";
 
-    const kind =
-      typeof experiment.kind === "string"
-        ? experiment.kind
-        : "";
-
-        const rawCompetingHypothesisIds =
-        experiment.competingHypothesisIds;
-
-      const hasNewBindingField =
-        Array.isArray(rawCompetingHypothesisIds);
-
-      const competingHypothesisIds: string[] =
-        Array.isArray(rawCompetingHypothesisIds)
-          ? rawCompetingHypothesisIds.filter(
-              (id): id is string =>
-                typeof id === "string",
-            )
-          : [];
-
-    const exactBinding =
-      validTestIds.has(hypothesisTested);
-
-    if (!hypothesisTested) {
-      failures.push(
-        `${title}: missing hypothesisTested`,
-      );
-      continue;
-    }
-
-    if (!exactBinding && hasNewBindingField) {
+    if (hypothesisTested && strategy && !validTestIds.has(hypothesisTested)) {
       failures.push(
         `${title}: hypothesisTested must exactly match a live hypothesis or open fork id`,
       );
     }
 
-    const invalidCompetingIds =
-      competingHypothesisIds.filter(
-        (id) => !hypothesisIds.has(id),
-      );
-
-    if (invalidCompetingIds.length) {
-      failures.push(
-        `${title}: unknown competingHypothesisIds ${invalidCompetingIds.join(", ")}`,
-      );
-    }
-
-    if (
-      kind === "behavioral" &&
-      competingHypothesisIds.includes(
-        hypothesisTested,
-      )
-    ) {
-      failures.push(
-        `${title}: hypothesisTested must not also be listed as a competing hypothesis`,
-      );
-    }
-
-    if (kind === "behavioral" && hasNewBindingField) {
-      const manipulatedVariable =
-        typeof experiment.manipulatedVariable === "string"
-          ? experiment.manipulatedVariable.trim()
-          : "";
-      const heldConstant = Array.isArray(experiment.heldConstant)
-        ? experiment.heldConstant.filter(
-            (item): item is string => typeof item === "string" && item.trim().length > 0,
-          )
-        : [];
-      const observations = Array.isArray(experiment.whatToObserve)
-        ? experiment.whatToObserve.filter((item): item is string => typeof item === "string")
-        : [];
-      const action = typeof experiment.action === "string" ? experiment.action : "";
-      const actionAndObservationTokens = overlapTokens(
-        `${action} ${observations.join(" ")}`,
-      );
-      const manipulatedTokens = overlapTokens(manipulatedVariable);
-      const genericVariableTokens = new Set([
-        "external",
-        "internal",
-        "level",
-        "amount",
-        "degree",
-        "condition",
-        "variable",
-      ]);
-      const variableAppearsInTest = [...manipulatedTokens].some(
-        (token) =>
-          !genericVariableTokens.has(token) && actionAndObservationTokens.has(token),
-      );
-
-      if (!manipulatedVariable || !variableAppearsInTest) {
-        failures.push(
-          `${title}: manipulatedVariable must name the variable actually changed in the action or observations`,
-        );
-      }
-
-      const actionTokens = overlapTokens(action);
-      const constantsAppearInAction = heldConstant.every((constant) =>
-        [...overlapTokens(constant)].some((token) => actionTokens.has(token)),
-      );
-      const actionKeepsFactorStable =
-        /\b(?:hold|held|keep|kept|same|unchanged|stable|constant|leav(?:e|ing)|existing|already|current|without|excluding)\b/i.test(
-          action,
-        );
-      if (
-        !heldConstant.length ||
-        !constantsAppearInAction ||
-        !actionKeepsFactorStable
-      ) {
-        failures.push(
-          `${title}: heldConstant must name a meaningful factor explicitly kept stable in the action`,
-        );
-      }
-
-      if (!competingHypothesisIds.length) {
-        failures.push(
-          `${title}: a discriminating behavioral experiment requires at least one live competing hypothesis id`,
-        );
-      }
-
-      const outcomes = Array.isArray(experiment.outcomeInterpretations)
-        ? experiment.outcomeInterpretations.filter(
-            (item): item is { outcome: string; favors: string; because: string } =>
-              Boolean(item) &&
-              typeof item === "object" &&
-              typeof (item as { outcome?: unknown }).outcome === "string" &&
-              typeof (item as { favors?: unknown }).favors === "string" &&
-              typeof (item as { because?: unknown }).because === "string",
-          )
-        : [];
-      const allowedOutcomeIds = new Set([hypothesisTested, ...competingHypothesisIds]);
-      const nonDiscriminatingFavors = new Set(["inconclusive"]);
-      const discriminatingOutcomes = outcomes.filter(
-        (outcome) => !nonDiscriminatingFavors.has(outcome.favors),
-      );
-      const invalidOutcomeIds = outcomes
-        .map((outcome) => outcome.favors)
-        .filter((id) => !nonDiscriminatingFavors.has(id) && !allowedOutcomeIds.has(id));
-      const favoredIds = new Set(discriminatingOutcomes.map((outcome) => outcome.favors));
-      const vagueBinaryOutcome = outcomes.some((outcome) =>
-        /^(?:(?:(?:the|this|an?)\s+)?(?:experiment|test|action|approach|plan|prototype|task)\s+)?(?:success|failure|succeeds?|fails?|works?|does not work|improves?|does not improve|no change)(?:\s+(?:well|poorly|better|worse))?[.!:]?$/i.test(
-          outcome.outcome.trim(),
-        ),
-      );
-      const missingOutcomeReason = outcomes.some(
-        (outcome) => !outcome.outcome.trim() || !outcome.because.trim(),
-      );
-      const unobservableOutcome = outcomes.some(
-        (outcome) =>
-          !/\b(?:\d+|one|two|three|four|five|attempt|complet(?:e|ing)|completion|error|send|publish|reply|response|responsiveness|feedback|window|minute|day|week|task|output|action|session|application|interview|messag(?:e|ing)|draft|prototyp(?:e|ing)|document|not(?:e|ing)|plan|artifact|revision|defect|mistak(?:e|ing)|charg(?:e|ing)|anxiety|distress|rating|scor(?:e|ing)|freez(?:e|ing)|froz(?:e|en)|stall|outreach|post)\w*\b/i.test(
-            outcome.outcome,
-          ),
-      );
-      const distinctReasons = new Set(
-        discriminatingOutcomes.map((outcome) => normalize(outcome.because)),
-      );
-      if (
-        discriminatingOutcomes.length < 2 ||
-        favoredIds.size < 2 ||
-        !favoredIds.has(hypothesisTested) ||
-        !competingHypothesisIds.some((id) => favoredIds.has(id)) ||
-        invalidOutcomeIds.length > 0 ||
-        vagueBinaryOutcome ||
-        missingOutcomeReason ||
-        unobservableOutcome ||
-        distinctReasons.size < 2
-      ) {
-        failures.push(
-          `${title}: outcomeInterpretations must give at least two observable, non-success/failure outcomes that favor different live explanations for stated reasons`,
-        );
-      }
-
-      const exposureClaim =
-        /\b(?:exposure|visibility|audience(?:\s+size)?)\b/i.test(manipulatedVariable) ||
-        /\b(?:exposure|visibility|audience(?:\s+size)?)\s+(?:test|experiment)\b|\b(?:test|vary|change|increase|decrease|compare)\w*\s+(?:public\s+)?(?:exposure|visibility|audience(?:\s+size)?)\b/i.test(
-          `${title} ${action}`,
-        );
-      const experimentText = JSON.stringify(rawExperiment);
-      if (
-        /proves an unconscious|isolates the real cause|therefore primary|therefore proven|disproves all depth/i.test(
-          experimentText,
-        )
-      ) {
-        failures.push(
-          `${title}: no outcome proves a motive or turns a weakened explanation into a primary one`,
-        );
-      }
-      const inventedLocation = ["chest", "shoulder", "throat", "stomach", "jaw", "gut", "belly"].find(
-        (location) =>
-          new RegExp(`\\b${location}\\b`, "i").test(experimentText) &&
-          !state.affect.bodyResponses.some((item) =>
-            new RegExp(`\\b${location}\\b`, "i").test(`${item.rawQuote ?? ""} ${item.normalizedMeaning}`),
-          ),
-      );
-      if (inventedLocation) {
-        failures.push(`${title}: invents a ${inventedLocation} sensation that was not supplied`);
-      }
-      const bounded = rawExperiment as {
-        sessionMinutes?: unknown;
-        audienceCount?: unknown;
-        exposure?: unknown;
-        largerActionJustification?: unknown;
-        outcomeInterpretations?: unknown;
-      };
-      const declaresBounds =
-        typeof bounded.sessionMinutes === "number" ||
-        typeof bounded.audienceCount === "number" ||
-        typeof bounded.exposure === "string";
-      if (declaresBounds) {
-        const minutes = typeof bounded.sessionMinutes === "number" ? bounded.sessionMinutes : 0;
-        const audience = typeof bounded.audienceCount === "number" ? bounded.audienceCount : 0;
-        const exposure = typeof bounded.exposure === "string" ? bounded.exposure : "private";
-        const justified = typeof bounded.largerActionJustification === "string" &&
-          bounded.largerActionJustification.trim().length > 0;
-        if ((minutes > 30 || audience > 1 || exposure === "public") && !justified) {
-          failures.push(
-            `${title}: a session over 30 minutes, more than one recipient, or public exposure needs a case-specific justification`,
-          );
-        }
-        const updates = (Array.isArray(bounded.outcomeInterpretations) ? bounded.outcomeInterpretations : [])
-          .flatMap((item) => {
-            const layers = (item as { layerUpdates?: unknown }).layerUpdates;
-            return Array.isArray(layers) ? layers : [];
-          })
-          .filter((item): item is { layer: string; effect: string } =>
-            Boolean(item) && typeof item === "object" && typeof (item as { effect?: unknown }).effect === "string",
-          );
-        const layers = new Set(updates.map((item) => item.layer));
-        if (
-          !updates.some((item) => item.effect === "inconclusive" || item.effect === "new_unknown") ||
-          !layers.has("practical") ||
-          !layers.has("psychological")
-        ) {
-          failures.push(
-            `${title}: layer updates must cover practical and psychological layers independently and include an inconclusive path`,
-          );
-        }
-      }
-
-      if (exposureClaim) {
-        const variesExposure =
-          /\b(?:exposure|visible|visibility|public|publish|audience|outreach)\b/i.test(
-            manipulatedVariable,
-          ) &&
-          /\b(?:vary|change|increase|decrease|more|less|visible|private|public|publish|send|outreach)\b/i.test(
-            action,
-          );
-        const rivalText = state.hypotheses
-          .filter((hypothesis) => competingHypothesisIds.includes(hypothesis.id))
-          .map((hypothesis) => `${hypothesis.title} ${hypothesis.observedPattern}`)
-          .join(" ");
-        const rivalTokens = contentTokens(rivalText);
-        const stabilizesRival = heldConstant.some((constant) =>
-          [...contentTokens(constant)].some((token) => rivalTokens.has(token)),
-        );
-        if (!variesExposure || !stabilizesRival) {
-          failures.push(
-            `${title}: an exposure experiment must vary exposure and hold the main rival explanation stable`,
-          );
-        }
-      }
-    }
-
-    if (kind === "imaginal") {
-      const suppliedSpeech = state.symbolicMaterial.obstacleSpeech?.trim();
+    if (kind === "imaginal" || strategy === "symbolic_only") {
       const experimentText = JSON.stringify(rawExperiment).replaceAll('\\"', '"');
       const experimentTokens = contentTokens(experimentText);
       const grounded = suppliedSymbolicMaterial.some((material) => {
         const materialTokens = contentTokens(material);
-        if (materialTokens.size < 2) {
-          return false;
-        }
+        if (materialTokens.size < 2) return false;
         const sharedTokens = [...materialTokens].filter((token) => experimentTokens.has(token));
         return isParaphraseOf(experimentText, material) || sharedTokens.length >= 2;
       });
@@ -636,11 +404,12 @@ export function experimentBoundToHypothesis(
           `${title}: imaginal experiment must be grounded in supplied symbolic material`,
         );
       }
+      const suppliedSpeech = state.symbolicMaterial.obstacleSpeech?.trim();
       const inventedSpeech = attributedImageSpeech(experimentText).some(
         (speech) => !suppliedSpeech || normalize(speech) !== normalize(suppliedSpeech),
       );
       const invitesGeneratedSpeech =
-        /(?:allow|let|invite)(?:ing)?\s+(?:the\s+)?(?:voice|image|figure|obstacle|scene|gate|it)\s+(?:to\s+)?(?:speak|reply|respond|answer|continue)/i.test(
+        /(?:allow|let|invite)(?:ing)?\s+(?:the\s+)?(?:voice|image|figure|obstacle|scene|gate|it)\s+(?:to\s+)?(?:speak|reply|respond|answer|continue)|you reply/i.test(
           experimentText,
         );
       if (inventedSpeech || invitesGeneratedSpeech) {
@@ -648,6 +417,285 @@ export function experimentBoundToHypothesis(
           `${title}: imaginal experiment contains invented or unsupplied dialogue`,
         );
       }
+      if (strategy === "symbolic_only") {
+        if (
+          typeof experiment.learningAim === "string" &&
+          experiment.learningAim.trim() &&
+          !matchesLearningAimShape(experiment.learningAim)
+        ) {
+          failures.push(
+            `${title}: learningAim must match When X changed, Y became easier, while Z remained`,
+          );
+        }
+        continue;
+      }
+      if (kind === "imaginal" && !strategy) {
+        continue;
+      }
+    }
+
+    if (kind !== "behavioral" && kind !== "integrated") {
+      continue;
+    }
+
+    // Legacy saved experiments without strategy: accept basic action only.
+    if (!strategy) {
+      if (!action.trim()) {
+        failures.push(`${title}: missing action`);
+      }
+      continue;
+    }
+
+    if (!["direct", "analogue", "contrast", "symbolic_only"].includes(strategy)) {
+      failures.push(`${title}: strategy must be direct, analogue, contrast, or symbolic_only`);
+      continue;
+    }
+
+    const condition = experiment.practicalCondition as
+      | {
+          factor?: unknown;
+          temporaryChange?: unknown;
+          processDimensions?: unknown;
+          sharedDimensions?: unknown;
+          sourceRef?: unknown;
+        }
+      | undefined;
+
+    if (strategy !== "symbolic_only") {
+      if (!condition || typeof condition !== "object") {
+        failures.push(`${title}: practicalCondition is required`);
+        continue;
+      }
+      const temporaryChange =
+        typeof condition.temporaryChange === "string" ? condition.temporaryChange.trim() : "";
+      const factor = typeof condition.factor === "string" ? condition.factor.trim() : "";
+      if (!factor || !temporaryChange) {
+        failures.push(`${title}: practicalCondition.factor and temporaryChange are required`);
+      } else {
+        const changeTokens = overlapTokens(temporaryChange);
+        const actionTokens = overlapTokens(action);
+        const changeAppears = [...changeTokens].some((token) => actionTokens.has(token));
+        if (!changeAppears && !action.toLowerCase().includes(temporaryChange.toLowerCase())) {
+          failures.push(
+            `${title}: practicalCondition.temporaryChange must appear in the action`,
+          );
+        }
+      }
+      const dims = Array.isArray(condition.processDimensions)
+        ? condition.processDimensions.filter((item): item is string => typeof item === "string")
+        : [];
+      if (!dims.length) {
+        failures.push(
+          `${title}: practicalCondition.processDimensions must list at least one dimension`,
+        );
+      }
+    }
+
+    const observe = experiment.observe as
+      | {
+          whatBecomesEasier?: unknown;
+          whatRemainsDifficult?: unknown;
+          unexpectedMaterial?: unknown;
+        }
+      | undefined;
+    if (
+      !observe ||
+      typeof observe.whatBecomesEasier !== "string" ||
+      !observe.whatBecomesEasier.trim() ||
+      typeof observe.whatRemainsDifficult !== "string" ||
+      !observe.whatRemainsDifficult.trim() ||
+      typeof observe.unexpectedMaterial !== "string" ||
+      !observe.unexpectedMaterial.trim()
+    ) {
+      failures.push(
+        `${title}: observe must include whatBecomesEasier, whatRemainsDifficult, and unexpectedMaterial`,
+      );
+    }
+
+    const learningAim =
+      typeof experiment.learningAim === "string" ? experiment.learningAim.trim() : "";
+    if (!learningAim || !matchesLearningAimShape(learningAim)) {
+      failures.push(
+        `${title}: learningAim must match When X changed, Y became easier, while Z remained`,
+      );
+    }
+
+    const layerUpdates = Array.isArray(experiment.layerUpdates)
+      ? experiment.layerUpdates.filter(
+          (
+            item,
+          ): item is {
+            layer: string;
+            effect: string;
+            implication?: string;
+          } => Boolean(item) && typeof item === "object",
+        )
+      : [];
+    const layers = new Set(layerUpdates.map((item) => item.layer));
+    const hasInconclusive = layerUpdates.some(
+      (item) => item.effect === "inconclusive" || item.effect === "new_unknown",
+    );
+    if (!hasInconclusive || !layers.has("practical") || !layers.has("psychological")) {
+      failures.push(
+        `${title}: layerUpdates must cover practical and psychological layers and include an inconclusive path`,
+      );
+    }
+    for (const update of layerUpdates) {
+      if (typeof update.implication === "string" && hasWinnerImplication(update.implication)) {
+        failures.push(
+          `${title}: layerUpdates.implication must not use winner / primary-cause language`,
+        );
+        break;
+      }
+    }
+
+    const outcomes = Array.isArray(experiment.outcomeInterpretations)
+      ? experiment.outcomeInterpretations
+      : [];
+    if (
+      !layerUpdates.length &&
+      outcomes.some(
+        (item) =>
+          item &&
+          typeof item === "object" &&
+          typeof (item as { favors?: unknown }).favors === "string" &&
+          (item as { favors: string }).favors !== "inconclusive",
+      )
+    ) {
+      failures.push(
+        `${title}: favors-winner outcomes are not sufficient without cumulative layerUpdates`,
+      );
+    }
+
+    if (strategy === "analogue" || strategy === "contrast") {
+      const sourceRef =
+        typeof condition?.sourceRef === "string" ? condition.sourceRef.trim() : "";
+      const shared = Array.isArray(condition?.sharedDimensions)
+        ? condition.sharedDimensions.filter((item): item is string => typeof item === "string")
+        : [];
+      if (!sourceRef || !isQ4ParallelRef(sourceRef, state.assessmentId)) {
+        failures.push(
+          `${title}: analogue/contrast strategy requires a cited Q4.10–Q4.12 sourceRef`,
+        );
+      }
+      if (shared.length < 1) {
+        failures.push(
+          `${title}: analogue/contrast strategy requires sharedDimensions length >= 1`,
+        );
+      }
+      const supplied =
+        strategy === "analogue"
+          ? [
+              state.parallelPatterns.lowerStakesExample,
+              state.parallelPatterns.similarStrugglesElsewhere,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          : (state.parallelPatterns.oppositeOrEasyExample ?? "");
+      if (!supplied.trim()) {
+        failures.push(
+          `${title}: ${strategy} strategy requires supplied parallelPatterns material`,
+        );
+      } else if (action.trim()) {
+        const suppliedTokens = contentTokens(supplied);
+        const actionTokens = contentTokens(action);
+        const sharedAction = [...suppliedTokens].filter((token) => actionTokens.has(token));
+        if (sharedAction.length < 1 && !isParaphraseOf(action, supplied, 0.2)) {
+          failures.push(
+            `${title}: ${strategy} action domain must appear in the supplied parallel example`,
+          );
+        }
+      }
+    }
+
+    if (experiment.deepen && typeof experiment.deepen === "object") {
+      const deepen = experiment.deepen as {
+        sourceRef?: unknown;
+        prompt?: unknown;
+      };
+      const sourceRef = typeof deepen.sourceRef === "string" ? deepen.sourceRef.trim() : "";
+      const prompt = typeof deepen.prompt === "string" ? deepen.prompt : "";
+      if (!sourceRef || (!evidenceAllowlist.has(sourceRef) && !/:Q\d/.test(sourceRef))) {
+        if (!sourceRef || !/:Q\d/.test(sourceRef)) {
+          failures.push(`${title}: deepen.sourceRef must be a case evidence ref`);
+        }
+      }
+      if (!prompt.includes("?")) {
+        failures.push(`${title}: deepen.prompt must be one open question`);
+      }
+      const deepenText = JSON.stringify(experiment.deepen);
+      if (/you reply|figure (?:says|replies)|obstacle (?:says|replies)/i.test(deepenText)) {
+        failures.push(`${title}: deepen must not generate figure speech or a reply`);
+      }
+    }
+
+    const structureHit =
+      /\b(?:structure|timebox|timer|deadline|accountability|checklist)\b/i.test(action);
+    const exposureHit = /\b(?:send|show|publish|visibility|exposure)\b/i.test(action);
+    if (structureHit && exposureHit) {
+      const heldConstant = Array.isArray(experiment.heldConstant)
+        ? experiment.heldConstant.filter((item): item is string => typeof item === "string")
+        : [];
+      const namedSingle =
+        typeof condition?.temporaryChange === "string" &&
+        condition.temporaryChange.trim().length > 0;
+      const otherHeld = heldConstant.some((item) =>
+        /\b(?:structure|timebox|timer|deadline|accountability|send|show|publish|visibility|exposure)\b/i.test(
+          item,
+        ),
+      );
+      if (!(strategy === "contrast" && namedSingle && otherHeld)) {
+        failures.push(
+          `${title}: do not change structure and exposure in the same action unless contrast names one change and holds the other`,
+        );
+      }
+    }
+
+    if (hasUncleanTwoVariableExperiment(rawExperiment as never)) {
+      failures.push(
+        `${title}: unclean two-variable change without a named practicalCondition.factor`,
+      );
+    }
+
+    const inventedLocation = ["chest", "shoulder", "throat", "stomach", "jaw", "gut", "belly"].find(
+      (location) =>
+        new RegExp(`\\b${location}\\b`, "i").test(JSON.stringify(rawExperiment)) &&
+        !state.affect.bodyResponses.some((item) =>
+          new RegExp(`\\b${location}\\b`, "i").test(
+            `${item.rawQuote ?? ""} ${item.normalizedMeaning}`,
+          ),
+        ),
+    );
+    if (inventedLocation) {
+      failures.push(`${title}: invents a ${inventedLocation} sensation that was not supplied`);
+    }
+
+    const declaresBounds =
+      typeof experiment.sessionMinutes === "number" ||
+      typeof experiment.audienceCount === "number" ||
+      typeof experiment.exposure === "string";
+    if (declaresBounds) {
+      const minutes = typeof experiment.sessionMinutes === "number" ? experiment.sessionMinutes : 0;
+      const audience = typeof experiment.audienceCount === "number" ? experiment.audienceCount : 0;
+      const exposure = typeof experiment.exposure === "string" ? experiment.exposure : "private";
+      const justified =
+        typeof experiment.largerActionJustification === "string" &&
+        experiment.largerActionJustification.trim().length > 0;
+      if ((minutes > 30 || audience > 1 || exposure === "public") && !justified) {
+        failures.push(
+          `${title}: a session over 30 minutes, more than one recipient, or public exposure needs a case-specific justification`,
+        );
+      }
+    }
+
+    if (
+      /proves an unconscious|isolates the real cause|therefore primary|therefore proven|disproves all depth/i.test(
+        JSON.stringify(rawExperiment),
+      )
+    ) {
+      failures.push(
+        `${title}: no outcome proves a motive or turns a weakened explanation into a primary one`,
+      );
     }
   }
 
@@ -656,10 +704,11 @@ export function experimentBoundToHypothesis(
     passed: failures.length === 0,
     detail:
       failures.length === 0
-        ? "All experiments are bound to live hypotheses or open forks."
+        ? "Experiments follow the Change → Observe → Deepen → Bridge contract."
         : failures.join("; "),
   };
 }
+
 
 const LAYER_PATTERNS: Record<string, RegExp> = {
   persona: /persona|identity|legitimacy|authenticity|role|self-image/i,

@@ -739,9 +739,21 @@ export function buildCaseSnapshot(input: {
     experiments: caseState.experiments.slice(0, STAGE_INPUT_TRIM.maxExperiments).map((item) => ({
       kind: item.kind,
       title: item.title,
+      strategy: item.strategy,
       action: trimText(item.action),
       hypothesisTested: trimText(item.hypothesisTested),
-      evidenceHint: item.whatToObserve.slice(0, 3),
+      learningAim: trimText(item.learningAim),
+      practicalCondition: item.practicalCondition
+        ? {
+            factor: trimText(item.practicalCondition.factor),
+            temporaryChange: trimText(item.practicalCondition.temporaryChange),
+            processDimensions: item.practicalCondition.processDimensions,
+            sharedDimensions: item.practicalCondition.sharedDimensions,
+            sourceRef: item.practicalCondition.sourceRef,
+          }
+        : undefined,
+      observe: item.observe,
+      evidenceHint: (item.whatToObserve ?? []).slice(0, 3),
     })),
     requestedInsightNote:
   "requestedInsight (Q11.3) is the client's wish for the report — not the report spine. Ground claims in evidenceAllowlist and the available case material. requiredCitations indicate material that should appear somewhere in the report when present; they do not prescribe section placement.",

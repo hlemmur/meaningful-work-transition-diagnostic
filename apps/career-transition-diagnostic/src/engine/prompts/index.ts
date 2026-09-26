@@ -266,57 +266,126 @@ export const promptRegistry = {
     text: `Jungian amplification only after resolution. Return JSON { jungianLenses: 0-3 items, omitReason?: string }. Zero concepts is acceptable ONLY with a non-empty omitReason explaining why no lens is warranted. Never say You are a Puer. Each lens needs concept, observedPatternItIlluminates, whyUseful, evidenceRefs, limitsOfInterpretation, confidence tentative|moderate|strong. ${EMPTY_ARRAYS}`,
   },
   pass8: {
-    version: "pass-8.v8",
-    text: `Produce a reality check and at least one low-risk behavioral experiment. The behavioral experiment should discriminate between at least two live explanations when possible rather than merely encouraging action.
+    version: "pass-8.v9",
+    text: `Produce a reality check and one psychologically informative experiment.
+Title stays "Your experiment".
 
-  Design one small, voluntary, reversible action that follows from the integration statement. Test one variable while holding the principal rival stable. Prefer a private or trusted-relational step over public exposure when it provides enough information.
+The experiment is not intended to prove which explanation is the true cause.
+Its purpose is to alter one meaningful practical condition around the stuck
+pattern and observe how the pattern reorganizes.
 
-  For each observable outcome, update every relevant layer independently: strengthens, weakens, unchanged, inconclusive, or new_unknown.
+Governing rules:
+- The inquiry should generate new material, not resolve the case.
+- Remove what can reasonably be removed; then become curious about what remains.
+- Prefer questions whose answer is not already implied by the formulation.
+- A useful inquiry changes one condition, observes what emerges, and returns
+  the result to the formulation without declaring a winner.
+- Result sentence: When X changed, Y became easier, while Z remained.
+- One change only. One vessel. One experiment.
+- Do not change structure and exposure in the same action.
+- Do not invent analogues, contrasts, images, body data, or dialogue.
+- Never supply the image's answer or a symbolic translation table.
+- No full active imagination. No AI-generated figure replies.
+- If the client named a practical difficulty, first design an honest
+  condition in which that difficulty is temporarily less true.
+- Do not diagnose. Do not use ADHD, marketing, or any stock scene
+  unless the current case supplied it.
 
-  No result proves an unconscious motive. Weakening a practical explanation does not prove a psychological explanation. Weakening a psychological explanation does not establish medical, neurodevelopmental, occupational, or practical causality.
+Decision flow:
+1. Identify one practical factor supported by the client's evidence
+   that can be safely and temporarily reduced, supported, clarified,
+   or changed. Name its processDimensions from the closed enum
+   (self_initiation, ambiguity, external_structure, visibility, evaluation,
+   identity_stakes, commercial_exchange, perfectionism, dependency,
+   uncertainty, sustained_repetition, resource_constraint).
+2. Choose exactly one strategy:
+   - direct: core situation is safe enough and informative
+   - analogue: core is highly charged AND caseSnapshot.parallelPatterns
+     .lowerStakesExample or similarStrugglesElsewhere is non-empty AND
+     shared processDimensions are explicit AND stakes are lower, not zero
+   - contrast: oppositeOrEasyExample is non-empty AND names conditions
+     where the capacity already lives; test one transferable condition,
+     do not claim the gift transfers
+   - symbolic_only: behavioral step inappropriate AND a supplied image exists
+   If analogue/contrast fields are empty, do not invent them. Use direct
+   with a smaller same-domain step, or symbolic_only.
+3. Action: small, reversible, at most one session of 30 minutes unless
+   a case-specific justification exists. Prefer private or one trusted
+   other over public exposure when that still changes the condition.
+4. Observe: what becomes easier; what remains; whether difficulty moves;
+   affect, thought, impulse, image, avoidance; anything unexpected.
+   Treat remaining material as new material, not failure.
+5. Deepen only if supplied image / affect / projection exists.
+   Image: re-enter only the scene they described; one open question
+   derived from unresolved developmental tension; notice first response;
+   stop; write it down.
+   Affect: what emotion appears when the task becomes possible, and
+   what it seems to protect or object to.
+   Projection: whether the admired/judged figure comes to mind now,
+   and what quality seems relevant — hypothesis, not identity.
+6. Bridge: if something concrete appeared, invite the client to consider
+   one small waking-life equivalent. Do not pre-generate the mapping.
+7. layerUpdates: update practical, psychological, and developmental
+   layers independently. Include an inconclusive / new_unknown path.
+   Forbidden in implications: proves, isolates the real cause,
+   therefore primary, central leverage point, winner.
 
-  Use only emotions and body observations supplied by the client. Keep the action identical in CaseState and customer copy. Default to one session of at most 30 minutes and at most one trusted recipient. A larger or public action needs largerActionJustification.
+Adaptive deepen:
+- strong supplied image → integrated practical + image deepen
+- weak/no image but affect/projection → practical + reflective deepen
+- predominantly practical → reality-only; omit deepen
+- rich image but behavior inappropriate → symbolic_only
 
-  Use caseSnapshot.finalFormulation.selectedHypothesisId when present. hypothesisTested must use exactly one id from caseSnapshot.experimentBindings.hypothesisIds or caseSnapshot.experimentBindings.openForkIds; do not use free-form prose in hypothesisTested.
+Use only emotions and body observations supplied by the client.
+Keep the action identical in CaseState and customer copy.
+Default to one session of at most 30 minutes and at most one trusted recipient.
+A larger or public action needs largerActionJustification.
 
-  For a behavioral experiment:
-  - competingHypothesisIds must name at least one meaningful live rival hypothesis
-  - manipulatedVariable must name the relevant variable deliberately changed and the action must actually vary it
-  - heldConstant must name meaningful alternative factors explicitly kept stable in the action. State that stability by holding, keeping, or leaving the factor unchanged, by using the existing factor, or by excluding a change to it, as in sharing the existing draft without a commercial ask. A factor that never appears in the action is not held stable.
-  - outcomeInterpretations must contain at least two observable outcomes that favor different live explanation ids for stated reasons. favors is that live id. One further outcome may set favors to "inconclusive" only when it names a concrete interruption, such as non-responsiveness, missing feedback, or the allocated window ending, that blocks discrimination.
-  - success versus failure labels alone are not discriminating outcomes
-  - an experiment that claims to test exposure must vary exposure itself while holding the main rival explanation stable
+When hypothesisTested is present, use exactly one id from
+caseSnapshot.experimentBindings.hypothesisIds or openForkIds.
 
-  An imaginal experiment is optional. Use it only when supplied symbolic material is sufficiently rich and analytically relevant. Never script the figure's answer, invent dialogue, or place words in the image's mouth. You may ask the client a new question to the image/figure, but stop before answering it.
-
-  Return JSON {
-    realityCheck: {
-      sufficientWithoutDepth,
-      categories,
-      narrative,
-      evidenceRefs
+Return JSON {
+  realityCheck: {
+    sufficientWithoutDepth,
+    categories,
+    narrative,
+    evidenceRefs
+  },
+  experiments: [{
+    kind: "behavioral"|"imaginal"|"integrated",
+    title,
+    strategy: "direct"|"analogue"|"contrast"|"symbolic_only",
+    targetPattern,
+    practicalCondition: {
+      factor,
+      currentState,
+      temporaryChange,
+      whyThisFactor,
+      processDimensions,
+      sharedDimensions,
+      sourceRef
     },
-    experiments: [{
-      kind: "behavioral"|"imaginal",
-      title,
-      hypothesisTested,
-      action,
-      duration,
-      whatToObserve,
-      resultSupportingHypothesis,
-      resultWeakeningHypothesis,
-      riskLevel: "low"|"moderate",
-      practicalRequirements,
-      competingHypothesisIds,
-      manipulatedVariable,
-      heldConstant,
-      outcomeInterpretations: [{
-        outcome,
-        favors,
-        because
-      }]
-    }]
-  }. ${EMPTY_ARRAYS}`,
+    action,
+    duration,
+    observe: {
+      whatBecomesEasier,
+      whatRemainsDifficult,
+      whatChangesForm,
+      unexpectedMaterial
+    },
+    deepen?: { mode, sourceRef, prompt, stopInstruction },
+    bridge?: { invitation },
+    learningAim,
+    layerUpdates: [{ layer, ifObserved, effect, implication }],
+    riskLevel: "low"|"moderate",
+    practicalRequirements,
+    sessionMinutes,
+    audienceCount,
+    exposure,
+    reversible,
+    hypothesisTested?
+  }]
+}. ${EMPTY_ARRAYS}`,
   },
   pass9: {
     version: "pass-9.v18",

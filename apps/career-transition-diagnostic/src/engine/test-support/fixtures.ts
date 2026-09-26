@@ -1,7 +1,6 @@
 import type { Contradiction, Hypothesis, ReportSection } from "../schemas/analysis";
 import {
   contradictionSchema,
-  experimentSchema,
   hiddenPositionSchema,
   hypothesisSchema,
   imageVoteSchema,
@@ -10,6 +9,7 @@ import {
   reportSectionSchema,
 } from "../schemas/analysis";
 import type { AnalysisStage } from "../pipeline/models";
+import { cumulativeExperiment } from "../pipeline/cumulative-experiment";
 import { failingReportSectionIds } from "../pipeline/report-grounding";
 
 export type AnalysisFixture =
@@ -1468,9 +1468,6 @@ export function passOutputFor(
             : fixture === "origin-gold"
               ? "container_loss_vs_capacity"
               : "hyp-depth");
-      const competingHypothesisId =
-        ctx.experimentBindings?.hypothesisIds.find((id) => id !== hypothesisTested) ??
-        "hyp-practical";
       return {
         realityCheck: realityCheckSchema.parse({
           sufficientWithoutDepth: fixture === "critic-constraints-win",
@@ -1485,62 +1482,38 @@ export function passOutputFor(
           evidenceRefs: [ctx.evidenceRef],
         }),
         experiments: [
-          experimentSchema.parse({
-            kind: "behavioral",
+          cumulativeExperiment({
             title:
               fixture === "wrong-experiment"
                 ? "Mentor critique interview"
-                : "Two weeks of external deadlines",
+                : "Your experiment",
             hypothesisTested,
+            strategy: "direct",
             action:
               fixture === "wrong-experiment"
                 ? "Ask a mentor to list three blind spots while holding the method and task scope stable."
                 : "Add two external deadline blocks and one accountability check-in each week while holding task difficulty stable.",
-            duration: "14 days",
-            whatToObserve: ["completed attempts out of four", "task-specific errors"],
-            resultSupportingHypothesis: "Output rises when someone else holds the deadline.",
-            resultWeakeningHypothesis: "Nothing changes even with accountability.",
-            riskLevel: "low",
-            practicalRequirements: ["one reviewer", "two calendar blocks"],
-            competingHypothesisIds: [competingHypothesisId],
-            manipulatedVariable: fixture === "wrong-experiment"
-              ? "mentor feedback"
-              : "external deadline and accountability",
+            practicalCondition: {
+              factor:
+                fixture === "wrong-experiment"
+                  ? "mentor feedback"
+                  : "external deadline and accountability",
+              currentState: "No external container carries the next step.",
+              temporaryChange:
+                fixture === "wrong-experiment"
+                  ? "mentor feedback"
+                  : "external deadline",
+              whyThisFactor: "Client evidence points at a missing container.",
+              processDimensions: ["external_structure", "self_initiation"],
+              sharedDimensions: [],
+            },
             heldConstant: ["task difficulty"],
+            learningAim:
+              "When the external deadline changed, completed attempts became easier, while task-specific charge remained.",
             sessionMinutes: 30,
             audienceCount: 1,
             exposure: "private",
             reversible: true,
-            outcomeInterpretations: [
-              {
-                outcome: "At least three of four planned attempts are completed under the added deadline.",
-                favors: hypothesisTested,
-                because: "Execution changed when the named variable changed while task difficulty stayed stable.",
-                layerUpdates: [
-                  { layer: "practical", effect: "strengthens" },
-                  { layer: "psychological", effect: "unchanged" },
-                ],
-              },
-              {
-                outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
-                favors: competingHypothesisId,
-                because: "Persistent task-specific errors fit the live rival better than the selected explanation.",
-                layerUpdates: [
-                  { layer: "practical", effect: "weakens" },
-                  { layer: "psychological", effect: "unchanged" },
-                ],
-              },
-              {
-                outcome: "Neither private nor slightly more visible conditions change the number of completed drafts.",
-                favors: hypothesisTested,
-                because: "No change leaves the practical contribution and the psychological charge inconclusive.",
-                layerUpdates: [
-                  { layer: "practical", effect: "inconclusive" },
-                  { layer: "psychological", effect: "new_unknown" },
-                  { layer: "developmental", effect: "unchanged" },
-                ],
-              },
-            ],
           }),
         ],
       };

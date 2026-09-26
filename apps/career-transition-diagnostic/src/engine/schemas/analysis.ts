@@ -351,25 +351,101 @@ export const realityCheckSchema = z.object({
   evidenceRefs: z.array(z.string()),
 });
 
+export const processDimensionSchema = z.enum([
+  "self_initiation",
+  "ambiguity",
+  "external_structure",
+  "visibility",
+  "evaluation",
+  "identity_stakes",
+  "commercial_exchange",
+  "perfectionism",
+  "dependency",
+  "uncertainty",
+  "sustained_repetition",
+  "resource_constraint",
+]);
+
+export const layerUpdateSchema = z.object({
+  layer: z.enum(["practical", "psychological", "developmental"]),
+  ifObserved: z.string().trim().min(1),
+  effect: z.enum([
+    "strengthens",
+    "weakens",
+    "unchanged",
+    "inconclusive",
+    "new_unknown",
+  ]),
+  implication: z.string().trim().min(1),
+});
+
 export const experimentSchema = z.object({
   kind: z.enum([
     "behavioral",
     "imaginal",
+    "integrated",
   ]),
 
   title: z.string(),
 
-  hypothesisTested: z.string(),
+  strategy: z
+    .enum(["direct", "analogue", "contrast", "symbolic_only"])
+    .optional(),
+
+  targetPattern: z.string().trim().min(1).optional(),
+
+  practicalCondition: z
+    .object({
+      factor: z.string().trim().min(1),
+      currentState: z.string().trim().min(1),
+      temporaryChange: z.string().trim().min(1),
+      whyThisFactor: z.string().trim().min(1),
+      processDimensions: z.array(processDimensionSchema).min(1),
+      sharedDimensions: z.array(processDimensionSchema).default([]),
+      sourceRef: z.string().trim().min(1).optional(),
+    })
+    .optional(),
 
   action: z.string(),
 
   duration: z.string(),
 
-  whatToObserve: z.array(z.string()),
+  observe: z
+    .object({
+      whatBecomesEasier: z.string().trim().min(1),
+      whatRemainsDifficult: z.string().trim().min(1),
+      whatChangesForm: z.string().trim().min(1),
+      unexpectedMaterial: z.string().trim().min(1),
+    })
+    .optional(),
 
-  resultSupportingHypothesis: z.string(),
+  deepen: z
+    .object({
+      mode: z.enum(["image", "affect", "projection"]),
+      sourceRef: z.string().trim().min(1),
+      prompt: z.string().trim().min(1),
+      stopInstruction: z.string().trim().min(1),
+    })
+    .optional(),
 
-  resultWeakeningHypothesis: z.string(),
+  bridge: z
+    .object({
+      invitation: z.string().trim().min(1),
+    })
+    .optional(),
+
+  learningAim: z.string().trim().min(1).optional(),
+
+  layerUpdates: z.array(layerUpdateSchema).optional().default([]),
+
+  // Legacy discrimination fields — optional for saved analyses; not the customer purpose.
+  hypothesisTested: z.string().optional(),
+
+  whatToObserve: z.array(z.string()).default([]),
+
+  resultSupportingHypothesis: z.string().default(""),
+
+  resultWeakeningHypothesis: z.string().default(""),
 
   riskLevel: z.enum([
     "low",
@@ -377,7 +453,7 @@ export const experimentSchema = z.object({
   ]),
 
   practicalRequirements:
-    z.array(z.string()),
+    z.array(z.string()).default([]),
 
   competingHypothesisIds:
     z.array(z.string()).default([]),
@@ -477,7 +553,21 @@ export type ProjectionInterpretation = z.infer<typeof projectionInterpretationSc
 export type HiddenPosition = z.infer<typeof hiddenPositionSchema>;
 export type JungianLens = z.infer<typeof jungianLensSchema>;
 export type RealityCheck = z.infer<typeof realityCheckSchema>;
-export type Experiment = z.infer<typeof experimentSchema>;
+export type Experiment = Omit<
+  z.infer<typeof experimentSchema>,
+  "layerUpdates" | "whatToObserve" | "resultSupportingHypothesis" | "resultWeakeningHypothesis" | "practicalRequirements" | "competingHypothesisIds" | "heldConstant" | "outcomeInterpretations"
+> & {
+  layerUpdates?: z.infer<typeof layerUpdateSchema>[];
+  whatToObserve?: string[];
+  resultSupportingHypothesis?: string;
+  resultWeakeningHypothesis?: string;
+  practicalRequirements?: string[];
+  competingHypothesisIds?: string[];
+  heldConstant?: string[];
+  outcomeInterpretations?: z.infer<typeof experimentSchema>["outcomeInterpretations"];
+};
+export type ProcessDimension = z.infer<typeof processDimensionSchema>;
+export type LayerUpdate = z.infer<typeof layerUpdateSchema>;
 export type ReportSection = z.infer<typeof reportSectionSchema>;
 export type Report = z.infer<typeof reportSchema>;
 export type HypothesisCritique = z.infer<typeof hypothesisCritiqueSchema>;

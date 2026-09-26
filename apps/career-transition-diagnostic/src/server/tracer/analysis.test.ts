@@ -108,7 +108,7 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
       "mock-strong",
     );
     expect((await listAnalysisRuns(assessmentId)).find((run) => run.stage === "pass8")?.promptVersion).toBe(
-      "pass-8.v8",
+      "pass-8.v9",
     );
     expect((await listAnalysisRuns(assessmentId)).find((run) => run.stage === "pass9")?.promptVersion).toBe(
       "pass-9.v18",

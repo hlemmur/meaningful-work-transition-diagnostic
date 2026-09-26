@@ -154,6 +154,7 @@ function layered(): CaseState {
     resultSupportingHypothesis: "The draft is completed.",
     resultWeakeningHypothesis: "The draft is not completed.",
     riskLevel: "low",
+      layerUpdates: [],
     practicalRequirements: [],
     competingHypothesisIds: ["hyp-depth"],
     heldConstant: ["task difficulty"],

@@ -296,8 +296,12 @@ describe("mock vendor adapters", () => {
     const [, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
     const body = JSON.parse(String(init.body));
     const item = body.generationConfig.responseSchema.properties.experiments.items;
-    expect(item.required).toContain("manipulatedVariable");
-    expect(item.properties.manipulatedVariable.nullable).toBe(true);
+    expect(item.required).toContain("strategy");
+    expect(item.required).toContain("learningAim");
+    expect(item.required).not.toContain("manipulatedVariable");
+    if (item.properties.manipulatedVariable) {
+      expect(item.properties.manipulatedVariable.nullable).toBe(true);
+    }
   });
 
   it("ignores leftover OpenAI model ids and still posts to Gemini", async () => {

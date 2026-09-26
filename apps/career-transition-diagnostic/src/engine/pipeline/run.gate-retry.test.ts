@@ -68,30 +68,60 @@ function pass8Output(action: string) {
     },
     experiments: [{
       kind: "behavioral",
-      title: "Deadline contrast",
+      title: "Your experiment",
+      strategy: "direct",
+      targetPattern: "initiation stall",
       hypothesisTested: "hyp-depth",
+      practicalCondition: {
+        factor: "external deadline",
+        currentState: "no container",
+        temporaryChange: "external deadline",
+        whyThisFactor: "Missing structure is in evidence.",
+        processDimensions: ["external_structure"],
+        sharedDimensions: [],
+      },
       action,
       duration: "14 days",
+      observe: {
+        whatBecomesEasier: "Starting planned attempts",
+        whatRemainsDifficult: "Visibility charge",
+        whatChangesForm: "Whether stall moves",
+        unexpectedMaterial: "Any affect that appears",
+      },
+      learningAim:
+        "When the external deadline changed, completed attempts became easier, while visibility charge remained.",
+      layerUpdates: [
+        {
+          layer: "practical",
+          ifObserved: "attempts complete",
+          effect: "strengthens",
+          implication: "Container is an important contributor.",
+        },
+        {
+          layer: "psychological",
+          ifObserved: "charge remains",
+          effect: "unchanged",
+          implication: "Psychological material is not retired.",
+        },
+        {
+          layer: "practical",
+          ifObserved: "no change",
+          effect: "inconclusive",
+          implication: "This change did not clarify the layers.",
+        },
+      ],
       whatToObserve: ["completed attempts out of four"],
       resultSupportingHypothesis: "Output rises when the deadline is added.",
       resultWeakeningHypothesis: "Output stays low.",
       riskLevel: "low",
       practicalRequirements: ["calendar"],
-      competingHypothesisIds: ["hyp-practical"],
-      manipulatedVariable: "external deadline",
+      competingHypothesisIds: [],
       heldConstant: ["task difficulty"],
-      outcomeInterpretations: [
-        {
-          outcome: "At least three of four planned attempts are completed.",
-          favors: "hyp-depth",
-          because: "The deadline changed the completion count.",
-        },
-        {
-          outcome: "Completion stays low and errors cluster in unfamiliar task steps.",
-          favors: "hyp-practical",
-          because: "Task-specific errors fit the rival.",
-        },
-      ],
+      outcomeInterpretations: [],
+      sessionMinutes: 25,
+      audienceCount: 0,
+      exposure: "private",
+      reversible: true,
     }],
   };
 }
@@ -145,12 +175,12 @@ describe("deterministic gate retry", () => {
     expect(result.caseState.imageAnalysis?.personalAssociations[0]?.text).toBe(speech);
   });
 
-  it("still fails a Pass 8 experiment that moves both rival variables", async () => {
+  it("still fails a Pass 8 experiment that changes structure and exposure together", async () => {
     const previous = extractCaseStateFull("a1", originAnswers);
     previous.hypotheses = [hypothesis("hyp-depth"), hypothesis("hyp-practical", "practical")];
     const calls: StructuredLlmRequest[] = [];
     const movingBoth =
-      "Change the external deadline and also change task difficulty during that week.";
+      "Set a 25-minute timer and send the draft to one trusted person in the same session.";
     const result = await executeAnalysis({
       assessmentId: "a1",
       answers: originAnswers,
@@ -166,9 +196,11 @@ describe("deterministic gate retry", () => {
 
     expect(result.status).toBe("failed");
     expect(result.failedStage).toBe("pass8");
-    expect(result.error).toMatch(/heldConstant/i);
+    expect(result.error).toMatch(/structure and exposure|unclean two-variable|practicalCondition/i);
     expect(calls).toHaveLength(2);
-    expect((calls[1]?.input.gateIssues as string[])[0]).toMatch(/heldConstant/i);
+    expect((calls[1]?.input.gateIssues as string[])[0]).toMatch(
+      /structure and exposure|unclean two-variable|practicalCondition/i,
+    );
   });
 
   it("retries Pass 6 once when layered mode omits developmentalFormulation", async () => {
