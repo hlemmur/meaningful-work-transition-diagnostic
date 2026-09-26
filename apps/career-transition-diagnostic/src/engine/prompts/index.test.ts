@@ -215,7 +215,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v20");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v21");
     expect(promptRegistry.pass9.text).toMatch(/residual-layer question/i);
     expect(promptRegistry.pass9.text).toMatch(/cumulative per-layer updates/i);
     expect(promptRegistry.pass9.text).toMatch(/Forbidden shapes/i);
@@ -228,6 +228,8 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).toMatch(/Alongside the psychological pattern/);
     expect(promptRegistry.pass9.text).not.toMatch(/Preserve a plausible mundane\/practical rival/i);
     expect(promptRegistry.pass9.text).not.toMatch(/Freedom is childish/i);
+    expect(promptRegistry.pass9.text).toMatch(/labeled movements|Change\. Observe\. Deepen/i);
+    expect(promptRegistry.pass9.text).toMatch(/line breaks between movements/i);
 
     expect(promptRegistry.pass9.text).toMatch(
       /never generate.*reply|second turn of dialogue|new speech/i,
