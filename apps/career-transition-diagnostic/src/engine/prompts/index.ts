@@ -395,12 +395,12 @@ Return JSON {
 }. ${EMPTY_ARRAYS}`,
   },
   pass9: {
-    version: "pass-9.v21",
+    version: "pass-9.v22",
     text: `Compose the full client report in peel order from caseSnapshot evidence — not from requestedInsight.
 
   Render a developmental section only when the resolved formulation contains warranted developmental material.
 
-  Describe the intelligence, protection, vitality, and danger in both poles. Do not make either pole defective, immature, superior, more adult, or more integrated because it is more productive or socially approved.
+  Describe the intelligence, protection, vitality, and danger in both poles. Explicitly name a protective/vitality gift and a danger/cost/risk for each pole (use those word families). Do not make either pole defective, immature, superior, more adult, or more integrated because it is more productive or socially approved.
 
   Include plain non-identification: “This is a pattern you may be able to observe and relate to; it is not the whole of who you are.”
 

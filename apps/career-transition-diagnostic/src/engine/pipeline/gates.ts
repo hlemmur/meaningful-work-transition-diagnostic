@@ -919,7 +919,8 @@ export function secondPersonVoice(sections: ReportSection[]): GateFinding {
     // being customer-facing instructions (Change / Observe / Deepen / Bridge).
     if (
       section.id === "experiment" &&
-      /\bChange\b[\s\S]{0,400}\bObserve\b/i.test(section.body)
+      /\bChange\b/i.test(section.body) &&
+      /\bObserve\b/i.test(section.body)
     ) {
       return false;
     }
@@ -1265,7 +1266,14 @@ export function developmentalSectionQuality(
   if (/integrate both/i.test(body) && !formulation.possibleThird) {
     problems.push("integrate both without emergence");
   }
-  if (!/protect/i.test(body) || !/danger|hard to sustain|deadening|risk/i.test(body)) {
+  if (
+    !/\b(?:protect|protection|protective|vitality|intelligence|gift|strength|aliveness)\b/i.test(
+      body,
+    ) ||
+    !/\b(?:danger|dangerous|hard to sustain|deadening|risk|cost|collapse|trap|exhaust(?:ion|ing)?|burn(?:out|ing)?)\b/i.test(
+      body,
+    )
+  ) {
     problems.push("both poles need value and danger");
   }
   const maintenance = state.finalFormulation?.maintenanceFormulation ?? "";

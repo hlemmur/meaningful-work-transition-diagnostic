@@ -2948,10 +2948,16 @@ describe("questions and close gate", () => {
     expect(developmentalSectionQuality([
       section("developmental", good, ["a1:Q2.1"]),
     ], state).passed).toBe(true);
+    const synonymGood =
+      "Spontaneous creation may carry vitality and intelligence, while also carrying the cost of exhaustion. Structure may offer strength and continuity, while also trapping aliveness into burnout. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.";
+    expect(developmentalSectionQuality([
+      section("developmental", synonymGood, ["a1:Q2.1"]),
+    ], state).passed).toBe(true);
     for (const bad of [
       "Freedom is childish; structure is mature. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
       "Your psyche wants discipline. Freedom may protect aliveness while structure carries danger. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
       "Integrate both. Freedom may protect aliveness while structure carries the danger of deadening. This is a pattern you may be able to observe and relate to; it is not the whole of who you are.",
+      "Two modes oppose each other without ranking. This is a pattern you may be able to observe and relate to; it is not the whole of who you are. What might arise between these positions is not yet known.",
     ]) {
       expect(developmentalSectionQuality([
         section("developmental", bad, ["a1:Q2.1"]),

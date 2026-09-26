@@ -215,7 +215,7 @@ expectMentions(promptRegistry.pass8.text, [
     expect(promptRegistry.pass9.text).not.toMatch(/\bpipe\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bprovider\b/i);
     expect(promptRegistry.pass9.text).not.toMatch(/\bmustCiteIn\b/i);
-    expect(promptRegistry.pass9.version).toBe("pass-9.v21");
+    expect(promptRegistry.pass9.version).toBe("pass-9.v22");
     expect(promptRegistry.pass9.text).toMatch(/residual-layer question/i);
     expect(promptRegistry.pass9.text).toMatch(/cumulative per-layer updates/i);
     expect(promptRegistry.pass9.text).toMatch(/Forbidden shapes/i);
