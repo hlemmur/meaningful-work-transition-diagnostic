@@ -32,22 +32,51 @@ function throwIfError(error: { message: string } | null, action: string) {
   }
 }
 
+/** PostgREST default max-rows is 1000; stay at or below that per request. */
+const LOAD_PAGE_SIZE = 1000;
+
 export class SupabaseTracerDb implements TracerDb {
   constructor(private readonly client: SupabaseClient) {}
 
   async loadAll(): Promise<TracerTables> {
     const tables = {} as TracerTables;
     for (const table of TRACER_TABLES) {
-      const { data, error } = await this.client.from(table).select("*");
-      throwIfError(error, `select ${table}`);
-      tables[table] = (data ?? []) as Record<string, unknown>[];
+      tables[table] = await this.loadTable(table);
     }
     return tables;
+  }
+
+  private async loadTable(table: TracerTableName): Promise<Record<string, unknown>[]> {
+    const rows: Record<string, unknown>[] = [];
+    let from = 0;
+    while (true) {
+      const { data, error, count } = await this.client
+        .from(table)
+        .select("*", { count: "exact" })
+        .order("id", { ascending: true })
+        .range(from, from + LOAD_PAGE_SIZE - 1);
+      throwIfError(error, `select ${table}`);
+      const page = (data ?? []) as Record<string, unknown>[];
+      if (page.length === 0) {
+        break;
+      }
+      rows.push(...page);
+      from += page.length;
+      if (typeof count === "number" && rows.length >= count) {
+        break;
+      }
+      if (page.length < LOAD_PAGE_SIZE && typeof count !== "number") {
+        break;
+      }
+    }
+    return rows;
   }
 
   async replaceAll(tables: TracerTables) {
     // Beta-scale snapshot replace. Callers must serialize via withStore so two
     // overlapping requests cannot load the same snapshot and drop each other's writes.
+    // loadAll paginates because an unpaged select is capped (default 1000 rows);
+    // a truncated load followed by this delete+insert would permanently drop the rest.
     for (const table of DELETE_ORDER) {
       const { error } = await this.client.from(table).delete().not("id", "is", null);
       throwIfError(error, `delete ${table}`);
