@@ -12,7 +12,11 @@ export function stripCanonicalEvidenceIds(body: string, ids: Iterable<string>) {
   for (const id of sorted) {
     const escaped = escapeRegExp(id);
     next = next.replace(new RegExp(`\\[\\s*${escaped}\\s*\\]`, "g"), "");
-    next = next.replace(new RegExp(escaped, "g"), "");
+    // Do not strip a shorter id (Q4.1) out of a longer one (Q4.10, Q2.4F).
+    next = next.replace(
+      new RegExp(`(?<![A-Za-z0-9._-])${escaped}(?![A-Za-z0-9._-])`, "g"),
+      "",
+    );
   }
   return next
     .replace(/[ \t]{2,}/g, " ")

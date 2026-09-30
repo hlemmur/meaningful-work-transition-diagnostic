@@ -892,6 +892,28 @@ describe("sanitizeReportSections", () => {
     ]);
   });
 
+  it("does not carve a leftover Q4.10 citation down to 0 when only Q4.1 is in the case", () => {
+    const state = extractCaseStateFull("a1", {
+      "Q1.1": "I keep stalling.",
+      "Q4.1": "This started years ago.",
+    });
+    const [section] = sanitizeReportSections(
+      [
+        reportSectionSchema.parse({
+          id: "problem",
+          title: "The problem as you see it",
+          body: "The stall shows up in lower-stakes work too [a1:Q4.10].",
+          evidenceRefs: ["a1:Q1.1"],
+        }),
+      ],
+      state,
+    );
+
+    expect(section?.body).toContain("[a1:Q4.10]");
+    expect(section?.body).not.toContain("[0]");
+    expect(section?.body).not.toMatch(/\b0\b/);
+  });
+
   it("strips an exact canonical id from prose and keeps client brackets and metadata", () => {
     const state = extractCaseStateFull("a1", {
       "Q1.1": "I keep stalling.",
