@@ -18,7 +18,7 @@ import {
 import { assertMockMode, isMockMode, supabasePersistenceEnabled } from "@/config/app-mode";
 import { retentionMs } from "@/config/launch-gate";
 import { getActiveStore, getRepository, withStore } from "./repository";
-import { uniqueIdempotencyKey } from "./mapper";
+import { uniqueIdempotencyKey, latestCaseStateSnapshot } from "./mapper";
 import type { AssessmentRecord, MarketingConsentRecord, TracerStore } from "./records";
 import { createEmptyTracerStore } from "./records";
 import type { ReportSection } from "@/engine/schemas/analysis";
@@ -779,9 +779,11 @@ export async function runAnalysisPipeline(
     const adapters = createVendorAdapters();
     const priorRuns = getStore().analysisRuns.filter((item) => item.assessmentId === assessmentId);
     const completed = priorRuns.filter((item) => item.status === "success").map((item) => item.stage);
-    const previous = getStore()
-      .caseStateVersions.filter((item) => item.assessmentId === assessmentId)
-      .at(-1)?.snapshot;
+    const previous = latestCaseStateSnapshot(
+      getStore().caseStateVersions,
+      assessmentId,
+      completed,
+    );
     const existingReport = getDraftReportInStore(assessmentId)?.generated;
 
     const result = await executeAnalysis({
@@ -860,9 +862,7 @@ export async function runAssessmentCheckpoint(
       };
     }
 
-    const previous = store.caseStateVersions
-      .filter((item) => item.assessmentId === assessment.id)
-      .at(-1)?.snapshot;
+    const previous = latestCaseStateSnapshot(store.caseStateVersions, assessment.id);
 
     const adapters = createVendorAdapters();
     const result = await runCheckpoint({

@@ -178,6 +178,52 @@ describe("persisted Pass 1–10 analysis pipeline", () => {
     ).toBe(false);
   });
 
+  it("keeps pass3 hypotheses when resume reloads a reversed case-state snapshot list", async () => {
+    const persisted = new MemoryTracerDb();
+    const db = {
+      async loadAll() {
+        const tables = await persisted.loadAll();
+        return {
+          ...tables,
+          case_state_versions: [...tables.case_state_versions].reverse(),
+        };
+      },
+      async replaceAll(tables: TracerTables) {
+        await persisted.replaceAll(tables);
+      },
+    };
+    bindTracerRepository(new TableTracerRepository(db));
+
+    try {
+      const { assessmentId } = await submittedAssessment({
+        "Q1.1": "I feel stuck in the transition",
+        "Q0.5": "No savings and a dependent parent.",
+        "Q11.3": "See the contradiction I cannot name",
+      });
+
+      const interrupted = await runAnalysisPipeline(assessmentId, {
+        llm: llmForFixture("critic-constraints-win"),
+        failStage: "pass5",
+      });
+      expect(interrupted.status).toBe("failed");
+      expect(interrupted.failedStage).toBe("pass5");
+      const hypIds = interrupted.caseState.hypotheses.map((item) => item.id);
+      expect(hypIds.length).toBeGreaterThan(0);
+
+      bindTracerRepository(new TableTracerRepository(db));
+      const result = await runAnalysisPipeline(assessmentId, {
+        llm: llmForFixture("critic-constraints-win"),
+      });
+
+      expect(result.status).toBe("completed");
+      expect(result.caseState.hypotheses.map((item) => item.id)).toEqual(
+        expect.arrayContaining(hypIds),
+      );
+    } finally {
+      resetRepositoryBinding();
+    }
+  });
+
   it("keeps unique analysis-run keys when a failed stage is resumed and fails again", async () => {
     const { assessmentId } = await submittedAssessment({
       "Q1.1": "I stall",

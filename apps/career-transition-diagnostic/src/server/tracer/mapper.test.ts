@@ -4,6 +4,7 @@ import type { AnalysisRunRecord } from "@/engine/pipeline/run";
 import {
   createEmptyTables,
   lastRunsByIdempotencyKey,
+  latestCaseStateSnapshot,
   storeToTables,
   tablesToStore,
   uniqueIdempotencyKey,
@@ -50,6 +51,118 @@ describe("tablesToStore", () => {
     expect(restored?.finalFormulation?.maintenanceMechanism.response).toBe(
       "External structure carried action.",
     );
+  });
+
+  it("restores case state versions in created_at order even when select order is reversed", () => {
+    const tables = createEmptyTables();
+    const checkpoint = emptyCaseState("a1");
+    checkpoint.practicalContext.professionalBackground = "checkpoint";
+    const pass3 = emptyCaseState("a1");
+    pass3.practicalContext.professionalBackground = "pass3";
+    tables.case_state_versions.push(
+      {
+        assessment_id: "a1",
+        stage: "pass3",
+        snapshot: pass3,
+        created_at: "2026-09-26T00:02:00.000Z",
+      },
+      {
+        assessment_id: "a1",
+        stage: "checkpoint-A",
+        snapshot: checkpoint,
+        created_at: "2026-09-26T00:01:00.000Z",
+      },
+    );
+
+    const restored = tablesToStore(tables).caseStateVersions;
+
+    expect(restored.map((item) => item.stage)).toEqual(["checkpoint-A", "pass3"]);
+    expect(restored.at(-1)?.snapshot.practicalContext.professionalBackground).toBe("pass3");
+  });
+
+  it("orders same-millisecond versions by pipeline stage so a checkpoint cannot outrank a later pass", () => {
+    const tables = createEmptyTables();
+    const ts = "2026-09-26T00:01:00.000Z";
+    tables.case_state_versions.push(
+      {
+        assessment_id: "a1",
+        stage: "pass3",
+        snapshot: emptyCaseState("a1"),
+        created_at: ts,
+      },
+      {
+        assessment_id: "a1",
+        stage: "checkpoint-D",
+        snapshot: emptyCaseState("a1"),
+        created_at: ts,
+      },
+      {
+        assessment_id: "a1",
+        stage: "pass1",
+        snapshot: emptyCaseState("a1"),
+        created_at: ts,
+      },
+    );
+
+    expect(tablesToStore(tables).caseStateVersions.map((item) => item.stage)).toEqual([
+      "checkpoint-D",
+      "pass1",
+      "pass3",
+    ]);
+  });
+
+  it("picks the last completed pass snapshot even when a later checkpoint row is last in the array", () => {
+    const checkpoint = emptyCaseState("a1");
+    checkpoint.practicalContext.professionalBackground = "checkpoint";
+    const pass3 = emptyCaseState("a1");
+    pass3.practicalContext.professionalBackground = "pass3";
+    const versions = [
+      {
+        assessmentId: "a1",
+        stage: "pass3",
+        snapshot: pass3,
+        createdAt: "2026-09-26T00:02:00.000Z",
+      },
+      {
+        assessmentId: "a1",
+        stage: "checkpoint-D",
+        snapshot: checkpoint,
+        createdAt: "2026-09-26T00:03:00.000Z",
+      },
+    ];
+
+    expect(
+      latestCaseStateSnapshot(versions, "a1", ["pass1", "pass2", "pass3"])
+        ?.practicalContext.professionalBackground,
+    ).toBe("pass3");
+  });
+
+  it("does not resume from another assessment's later pass snapshot", () => {
+    const mine = emptyCaseState("a1");
+    mine.practicalContext.professionalBackground = "mine";
+    const other = emptyCaseState("a2");
+    other.practicalContext.professionalBackground = "other";
+
+    expect(
+      latestCaseStateSnapshot(
+        [
+          {
+            assessmentId: "a1",
+            stage: "pass3",
+            snapshot: mine,
+            createdAt: "2026-09-26T00:01:00.000Z",
+          },
+          {
+            assessmentId: "a2",
+            stage: "pass8",
+            snapshot: other,
+            createdAt: "2026-09-26T00:02:00.000Z",
+          },
+        ],
+        "a1",
+        ["pass3"],
+      )?.practicalContext.professionalBackground,
+    ).toBe("mine");
   });
 });
 
