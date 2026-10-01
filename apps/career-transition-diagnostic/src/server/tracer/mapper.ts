@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AnalysisRunRecord } from "@/engine/pipeline/run";
-import type { AnalysisStage } from "@/engine/pipeline/models";
+import { ANALYSIS_STAGES, type AnalysisStage } from "@/engine/pipeline/models";
 import { caseStateSchema } from "@/engine/schemas/case-state";
 import type { ForkId } from "@/engine/schemas/analysis";
 import type { Report } from "@/engine/schemas/analysis";
@@ -36,6 +36,62 @@ export function uniqueIdempotencyKey(
     return key;
   }
   return `${key}:${randomUUID()}`;
+}
+
+const CHECKPOINT_STAGE_RANK = ["A", "B", "C", "D"] as const;
+
+function caseStateStageRank(stage: string) {
+  if (stage.startsWith("checkpoint-")) {
+    const index = CHECKPOINT_STAGE_RANK.indexOf(
+      stage.slice("checkpoint-".length) as (typeof CHECKPOINT_STAGE_RANK)[number],
+    );
+    return index >= 0 ? index : CHECKPOINT_STAGE_RANK.length;
+  }
+  const passIndex = ANALYSIS_STAGES.indexOf(stage as AnalysisStage);
+  return passIndex >= 0 ? 10 + passIndex : 100;
+}
+
+export function compareCaseStateVersionOrder(
+  a: { stage: string; createdAt: string },
+  b: { stage: string; createdAt: string },
+) {
+  const byTime = a.createdAt.localeCompare(b.createdAt);
+  if (byTime !== 0) {
+    return byTime;
+  }
+  return caseStateStageRank(a.stage) - caseStateStageRank(b.stage);
+}
+
+export function latestCaseStateSnapshot<
+  T extends {
+    assessmentId: string;
+    stage: string;
+    snapshot: unknown;
+    createdAt: string;
+  },
+>(
+  versions: T[],
+  assessmentId: string,
+  completedStages?: Iterable<string>,
+): T["snapshot"] | undefined {
+  const mine = versions.filter((item) => item.assessmentId === assessmentId);
+  const completed = new Set(completedStages ?? []);
+  if (completed.size > 0) {
+    for (let index = ANALYSIS_STAGES.length - 1; index >= 0; index -= 1) {
+      const stage = ANALYSIS_STAGES[index];
+      if (!stage || !completed.has(stage)) {
+        continue;
+      }
+      const matches = mine
+        .filter((item) => item.stage === stage)
+        .sort(compareCaseStateVersionOrder);
+      const snapshot = matches.at(-1)?.snapshot;
+      if (snapshot !== undefined) {
+        return snapshot;
+      }
+    }
+  }
+  return [...mine].sort(compareCaseStateVersionOrder).at(-1)?.snapshot;
 }
 
 export const TRACER_TABLES = [
@@ -291,7 +347,12 @@ export function tablesToStore(tables: TracerTables): TracerStore {
     store.adaptiveQuestions.push(question);
   }
 
-  for (const row of tables.case_state_versions) {
+  for (const row of [...tables.case_state_versions].sort((left, right) =>
+    compareCaseStateVersionOrder(
+      { stage: String(left.stage ?? ""), createdAt: String(left.created_at ?? "") },
+      { stage: String(right.stage ?? ""), createdAt: String(right.created_at ?? "") },
+    ),
+  )) {
     store.caseStateVersions.push({
       assessmentId: String(row.assessment_id),
       stage: String(row.stage),
@@ -300,7 +361,9 @@ export function tablesToStore(tables: TracerTables): TracerStore {
     });
   }
 
-  for (const row of tables.analysis_runs) {
+  for (const row of [...tables.analysis_runs].sort((left, right) =>
+    String(left.created_at ?? "").localeCompare(String(right.created_at ?? "")),
+  )) {
     const run: AnalysisRunRecord = {
       assessmentId: String(row.assessment_id),
       stage: row.stage as AnalysisStage,
