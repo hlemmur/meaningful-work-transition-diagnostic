@@ -46,6 +46,7 @@ export async function runCheckpoint(input: {
   answers: Record<string, unknown>;
   existingAdaptive?: ExistingAdaptiveQuestion[];
   previousCaseState?: CaseState;
+  previousSafetyLevel?: "none" | "high";
   llm: LlmAdapter;
 }): Promise<CheckpointResult> {
   const localSafety = classifySafety(input.answers);
@@ -58,8 +59,10 @@ export async function runCheckpoint(input: {
     input.previousCaseState,
   );
 
-  if (localSafety.level === "high") {
-    caseState.safetyFlags = localSafety.flags;
+  if (localSafety.level === "high" || input.previousSafetyLevel === "high") {
+    if (localSafety.level === "high") {
+      caseState.safetyFlags = localSafety.flags;
+    }
     return {
       caseState,
       adaptiveQuestion: null,
