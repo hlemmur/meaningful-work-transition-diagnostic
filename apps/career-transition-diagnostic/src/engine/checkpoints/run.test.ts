@@ -79,6 +79,46 @@ describe("adaptive checkpoints A–D", () => {
     expect(result.safetyLevel).toBe("none");
   });
 
+  it("keeps a prior high safety flag when a later checkpoint LLM fails", async () => {
+    const llmCalls: string[] = [];
+    const result = await runCheckpoint({
+      assessmentId: "assess-1",
+      checkpoint: "B",
+      answers: { "Q1.1": "FORCE_LLM_FAILURE" },
+      previousSafetyLevel: "high",
+      llm: {
+        async completeStructured(request) {
+          llmCalls.push(request.stage);
+          throw new Error("later checkpoint LLM should not run after high safety");
+        },
+      },
+    });
+
+    expect(result.safetyLevel).toBe("high");
+    expect(result.adaptiveQuestion).toBeNull();
+    expect(result.reportDepth).toBe("reduced");
+    expect(result.supportCopy).toBe(SUPPORT_COPY);
+    expect(llmCalls).toEqual([]);
+  });
+
+  it("does not ask an adaptive follow-up after a prior high safety flag", async () => {
+    const result = await runCheckpoint({
+      assessmentId: "assess-1",
+      checkpoint: "B",
+      answers: {
+        "Q1.1": "I left a career that still pays my bills.",
+        "Q1.3": "I lack confidence.",
+        "Q2.2": "I rewrote the website twice.",
+      },
+      previousSafetyLevel: "high",
+      llm,
+    });
+
+    expect(result.safetyLevel).toBe("high");
+    expect(result.adaptiveQuestion).toBeNull();
+    expect(result.reportDepth).toBe("reduced");
+  });
+
   it("will not exceed the preferred cap of four adaptive questions", async () => {
     const existing = [
       {

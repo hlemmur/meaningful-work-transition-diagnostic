@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { listVisibleQuestionIds } from "@/questionnaire/branching";
 import { resetMockOutbox } from "../adapters/resend/mock";
 import {
   approveAssessment,
@@ -100,6 +101,58 @@ describe("mock purchase-to-report tracer", () => {
     expect(await listAdaptiveQuestions(assessmentId)).toHaveLength(1);
     expect((await listCaseStateVersions(assessmentId))[0]?.stage).toBe("checkpoint-A");
     await saveAnswer(accessToken, result.adaptiveQuestion!.id, "The website still did not ship.");
+  });
+
+  it("does not clear a prior high safety flag when a later checkpoint LLM fails", async () => {
+    process.env.APP_MODE = "mock";
+    const { accessToken } = await purchaseWithConsent();
+    await saveAnswer(accessToken, "Q1.1", "The stall survived every plan I wrote.");
+
+    const snapshot = await exportMockTracerStore();
+    const assessment = snapshot.assessments[0];
+    expect(assessment).toBeDefined();
+    assessment!.safetyLevel = "high";
+    assessment!.reportDepth = "reduced";
+    await importMockTracerStore(snapshot);
+
+    await saveAnswer(
+      accessToken,
+      "Q1.1",
+      "FORCE_LLM_FAILURE the stall survived every plan I wrote.",
+    );
+
+    const result = await runAssessmentCheckpoint(accessToken, "B");
+    const resumed = await getAssessmentByAccessToken(accessToken);
+
+    expect(result.safetyLevel).toBe("high");
+    expect(result.reportDepth).toBe("reduced");
+    expect(result.adaptiveQuestion).toBeNull();
+    expect(result.supportCopy).toBeTruthy();
+    expect(resumed?.safetyLevel).toBe("high");
+    expect(resumed?.reportDepth).toBe("reduced");
+    expect(listVisibleQuestionIds(resumed?.answers ?? {}, resumed?.safetyLevel ?? "none")).not.toContain(
+      "Q9.3",
+    );
+    expect(listVisibleQuestionIds(resumed?.answers ?? {}, resumed?.safetyLevel ?? "none")).not.toContain(
+      "Q10.6",
+    );
+  });
+
+  it("still allows a later checkpoint when safety was never high", async () => {
+    process.env.APP_MODE = "mock";
+    const { accessToken } = await purchaseWithConsent();
+    await saveAnswer(accessToken, "Q1.1", "FORCE_LLM_FAILURE the stall survived.");
+
+    const result = await runAssessmentCheckpoint(accessToken, "B");
+    const resumed = await getAssessmentByAccessToken(accessToken);
+
+    expect(result.safetyLevel).toBe("none");
+    expect(result.reportDepth).toBe("full");
+    expect(result.adaptiveQuestion).toBeNull();
+    expect(resumed?.safetyLevel ?? "none").toBe("none");
+    expect(listVisibleQuestionIds(resumed?.answers ?? {}, resumed?.safetyLevel ?? "none")).toContain(
+      "Q9.3",
+    );
   });
 
   it("keeps safety flags out of marketing export", async () => {

@@ -864,6 +864,7 @@ export async function runAssessmentCheckpoint(
       .filter((item) => item.assessmentId === assessment.id)
       .at(-1)?.snapshot;
 
+    const priorHigh = assessment.safetyLevel === "high";
     const adapters = createVendorAdapters();
     const result = await runCheckpoint({
       assessmentId: assessment.id,
@@ -871,6 +872,7 @@ export async function runAssessmentCheckpoint(
       answers: assessment.answers,
       existingAdaptive: existing,
       previousCaseState: previous,
+      previousSafetyLevel: assessment.safetyLevel,
       llm: adapters.llm,
     });
 
@@ -881,37 +883,41 @@ export async function runAssessmentCheckpoint(
       createdAt: new Date().toISOString(),
     });
 
-    assessment.safetyLevel = result.safetyLevel;
-    assessment.reportDepth = result.reportDepth;
-    if (result.safetyLevel === "high") {
+    const safetyLevel =
+      priorHigh || result.safetyLevel === "high" ? "high" : result.safetyLevel;
+    const reportDepth = safetyLevel === "high" ? "reduced" : result.reportDepth;
+    assessment.safetyLevel = safetyLevel;
+    assessment.reportDepth = reportDepth;
+    if (safetyLevel === "high" && !priorHigh) {
       for (const flag of result.caseState.safetyFlags) {
         store.safetyFlags.push({ ...flag, assessmentId: assessment.id });
       }
     }
 
-    if (result.adaptiveQuestion) {
+    const adaptiveQuestion = safetyLevel === "high" ? null : result.adaptiveQuestion;
+    if (adaptiveQuestion) {
       store.adaptiveQuestions.push({
         assessmentId: assessment.id,
-        id: result.adaptiveQuestion.id,
-        checkpoint: result.adaptiveQuestion.checkpoint,
-        forkId: result.adaptiveQuestion.forkId as ForkId,
-        questionText: result.adaptiveQuestion.questionText,
-        rationale: result.adaptiveQuestion.rationale,
+        id: adaptiveQuestion.id,
+        checkpoint: adaptiveQuestion.checkpoint,
+        forkId: adaptiveQuestion.forkId as ForkId,
+        questionText: adaptiveQuestion.questionText,
+        rationale: adaptiveQuestion.rationale,
       });
     }
 
     return {
-      adaptiveQuestion: result.adaptiveQuestion
+      adaptiveQuestion: adaptiveQuestion
         ? {
-            id: result.adaptiveQuestion.id,
-            checkpoint: result.adaptiveQuestion.checkpoint,
-            forkId: result.adaptiveQuestion.forkId,
-            questionText: result.adaptiveQuestion.questionText,
+            id: adaptiveQuestion.id,
+            checkpoint: adaptiveQuestion.checkpoint,
+            forkId: adaptiveQuestion.forkId,
+            questionText: adaptiveQuestion.questionText,
           }
         : null,
-      safetyLevel: result.safetyLevel,
-      supportCopy: result.supportCopy,
-      reportDepth: result.reportDepth,
+      safetyLevel,
+      supportCopy: safetyLevel === "high" ? SUPPORT_COPY : result.supportCopy,
+      reportDepth,
     };
   });
 }
